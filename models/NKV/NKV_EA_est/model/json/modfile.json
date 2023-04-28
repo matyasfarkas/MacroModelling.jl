@@ -1,0 +1,162 @@
+{
+"endogenous": [{"name":"D_PI_ANN_PCT", "texName":"D\\_PI\\_ANN\\_PCT", "longName":"D_PI_ANN_PCT"}
+, {"name":"D_Y_GAP_PCT", "texName":"D\\_Y\\_GAP\\_PCT", "longName":"D_Y_GAP_PCT"}
+, {"name":"ETA", "texName":"ETA", "longName":"ETA"}
+, {"name":"I", "texName":"I", "longName":"I"}
+, {"name":"PI", "texName":"PI", "longName":"PI"}
+, {"name":"PI_OYA", "texName":"PI\\_OYA", "longName":"PI_OYA"}
+, {"name":"Y_GAP", "texName":"Y\\_GAP", "longName":"Y_GAP"}
+, {"name":"Y_GAP_PCT", "texName":"Y\\_GAP\\_PCT", "longName":"Y_GAP_PCT"}
+, {"name":"VX", "texName":"VX", "longName":"VX"}
+, {"name":"ROBS", "texName":"ROBS", "longName":"ROBS"}
+, {"name":"AUX_ENDO_LAG_2_1", "texName":"AUX\\_ENDO\\_LAG\\_2\\_1", "longName":"AUX_ENDO_LAG_2_1"}
+, {"name":"AUX_ENDO_LAG_2_2", "texName":"AUX\\_ENDO\\_LAG\\_2\\_2", "longName":"AUX_ENDO_LAG_2_2"}
+]
+, "exogenous":[{"name":"EPS_Y_GAP", "texName":"EPS\\_Y\\_GAP", "longName":"EPS_Y_GAP"}
+, {"name":"EPS_PI", "texName":"EPS\\_PI", "longName":"EPS_PI"}
+, {"name":"EPS_ETA", "texName":"EPS\\_ETA", "longName":"EPS_ETA"}
+, {"name":"EPS_MP", "texName":"EPS\\_MP", "longName":"EPS_MP"}
+]
+, "exogenous_deterministic": []
+, "parameters": [{"name":"alpha", "texName":"alpha", "longName":"alpha"}
+, {"name":"beta", "texName":"beta", "longName":"beta"}
+, {"name":"epsilon", "texName":"epsilon", "longName":"epsilon"}
+, {"name":"gamma_eta", "texName":"gamma\\_eta", "longName":"gamma_eta"}
+, {"name":"kappa", "texName":"kappa", "longName":"kappa"}
+, {"name":"lambda", "texName":"lambda", "longName":"lambda"}
+, {"name":"lambda_eta", "texName":"lambda\\_eta", "longName":"lambda_eta"}
+, {"name":"lambda_eta_eta", "texName":"lambda\\_eta\\_eta", "longName":"lambda_eta_eta"}
+, {"name":"omega", "texName":"omega", "longName":"omega"}
+, {"name":"phi", "texName":"phi", "longName":"phi"}
+, {"name":"phi_pi", "texName":"phi\\_pi", "longName":"phi_pi"}
+, {"name":"phi_y", "texName":"phi\\_y", "longName":"phi_y"}
+, {"name":"sigma", "texName":"sigma", "longName":"sigma"}
+, {"name":"sigma_y", "texName":"sigma\\_y", "longName":"sigma_y"}
+, {"name":"theta", "texName":"theta", "longName":"theta"}
+, {"name":"theta_eta", "texName":"theta\\_eta", "longName":"theta_eta"}
+, {"name":"theta_y", "texName":"theta\\_y", "longName":"theta_y"}
+, {"name":"sigma_eta", "texName":"sigma\\_eta", "longName":"sigma_eta"}
+, {"name":"rho_eta1", "texName":"rho\\_eta1", "longName":"rho_eta1"}
+, {"name":"rho_eta2", "texName":"rho\\_eta2", "longName":"rho_eta2"}
+, {"name":"rho_eta3", "texName":"rho\\_eta3", "longName":"rho_eta3"}
+, {"name":"zeta_y", "texName":"zeta\\_y", "longName":"zeta_y"}
+, {"name":"sigma_I", "texName":"sigma\\_I", "longName":"sigma_I"}
+, {"name":"sigma_pc", "texName":"sigma\\_pc", "longName":"sigma_pc"}
+, {"name":"Rbar", "texName":"Rbar", "longName":"Rbar"}
+, {"name":"PibarSS", "texName":"PibarSS", "longName":"PibarSS"}
+]
+, "varobs": ["PI_OYA", "D_Y_GAP_PCT", "ETA", "ROBS"]
+, "varobs_ids": [6, 2, 3, 10]
+, "orig_endo_nbr": 10
+, "aux_vars": [
+{"endo_index": 11, "type": 1, "orig_index": 3, "orig_lead_lag": -1, "orig_expr": "ETA(-1)"}
+, {"endo_index": 12, "type": 1, "orig_index": 3, "orig_lead_lag": -2, "orig_expr": "AUX_ENDO_LAG_2_1(-1)"}
+]
+, "model_local_variables": [], 
+"model":[
+{"lhs": "Y_GAP", "rhs": "Y_GAP(1)-1/sigma*(I-PI(1))-gamma_eta*ETA-VX*EPS_Y_GAP", "line": 121, "tags": {"name": "Y_GAP"}}
+, {"lhs": "ETA", "rhs": "sigma_eta*EPS_ETA+lambda_eta*ETA(-1)+lambda_eta_eta*AUX_ENDO_LAG_2_1(-1)-Y_GAP*theta_y-Y_GAP(1)*theta_eta", "line": 124, "tags": {"name": "ETA"}}
+, {"lhs": "VX", "rhs": "sigma_y-ETA(-1)*rho_eta1-rho_eta2*AUX_ENDO_LAG_2_1(-1)-rho_eta3*AUX_ENDO_LAG_2_2(-1)-zeta_y*Y_GAP(-1)", "line": 127, "tags": {"name": "VX"}}
+, {"lhs": "PI", "rhs": "PI(1)*beta+Y_GAP*kappa+sigma_pc*EPS_PI", "line": 130, "tags": {"name": "PI"}}
+, {"lhs": "I", "rhs": "PI*phi_pi+Y_GAP*phi_y+sigma_I*EPS_MP", "line": 133, "tags": {"name": "I"}}
+, {"lhs": "D_Y_GAP_PCT", "rhs": "Y_GAP_PCT-Y_GAP_PCT(-1)", "line": 141, "tags": {"name": "D_Y_GAP_PCT"}}
+, {"lhs": "PI_OYA", "rhs": "PI+(PibarSS-1)*100", "line": 144, "tags": {"name": "PI_OYA"}}
+, {"lhs": "Y_GAP_PCT", "rhs": "Y_GAP*100", "line": 148, "tags": {"name": "Y_GAP_PCT"}}
+, {"lhs": "D_PI_ANN_PCT", "rhs": "PI_OYA-PI_OYA(-1)", "line": 151, "tags": {"name": "D_PI_ANN_PCT"}}
+, {"lhs": "ROBS", "rhs": "I*4+(Rbar-1)*400", "line": 154, "tags": {"name": "ROBS"}}
+, {"lhs": "AUX_ENDO_LAG_2_1", "rhs": "ETA(-1)"}
+, {"lhs": "AUX_ENDO_LAG_2_2", "rhs": "AUX_ENDO_LAG_2_1(-1)"}
+
+]
+, "xrefs": {"parameters": [], "endogenous": [], "exogenous": [], "exogenous_deterministic": []}
+, "abstract_syntax_tree":[
+{ "number":0, "line":121, "tags": {"name": "Y_GAP"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 1}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "BinaryOpNode", "op" : "/", "arg1" : {"node_type" : "NumConstNode", "value" : 1}, "arg2" : {"node_type" : "VariableNode", "name" : "sigma", "type" : "parameter", "lag" : 0}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "I", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "PI", "type" : "endogenous", "lag" : 1}}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "gamma_eta", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "ETA", "type" : "endogenous", "lag" : 0}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "VX", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "EPS_Y_GAP", "type" : "exogenous", "lag" : 0}}}}}, { "number":1, "line":124, "tags": {"name": "ETA"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "ETA", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "sigma_eta", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "EPS_ETA", "type" : "exogenous", "lag" : 0}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "lambda_eta", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "ETA", "type" : "endogenous", "lag" : -1}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "lambda_eta_eta", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_1", "type" : "endogenous", "lag" : -1}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "theta_y", "type" : "parameter", "lag" : 0}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 1}, "arg2" : {"node_type" : "VariableNode", "name" : "theta_eta", "type" : "parameter", "lag" : 0}}}}}}, { "number":2, "line":127, "tags": {"name": "VX"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "VX", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "sigma_y", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "ETA", "type" : "endogenous", "lag" : -1}, "arg2" : {"node_type" : "VariableNode", "name" : "rho_eta1", "type" : "parameter", "lag" : 0}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "rho_eta2", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_1", "type" : "endogenous", "lag" : -1}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "rho_eta3", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_2", "type" : "endogenous", "lag" : -1}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "zeta_y", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : -1}}}}}, { "number":3, "line":130, "tags": {"name": "PI"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "PI", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "PI", "type" : "endogenous", "lag" : 1}, "arg2" : {"node_type" : "VariableNode", "name" : "beta", "type" : "parameter", "lag" : 0}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "kappa", "type" : "parameter", "lag" : 0}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "sigma_pc", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "EPS_PI", "type" : "exogenous", "lag" : 0}}}}}, { "number":4, "line":133, "tags": {"name": "I"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "I", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "PI", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "phi_pi", "type" : "parameter", "lag" : 0}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "phi_y", "type" : "parameter", "lag" : 0}}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "sigma_I", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "EPS_MP", "type" : "exogenous", "lag" : 0}}}}}, { "number":5, "line":141, "tags": {"name": "D_Y_GAP_PCT"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "D_Y_GAP_PCT", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP_PCT", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "Y_GAP_PCT", "type" : "endogenous", "lag" : -1}}}}, { "number":6, "line":144, "tags": {"name": "PI_OYA"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "PI_OYA", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "VariableNode", "name" : "PI", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "PibarSS", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "NumConstNode", "value" : 1}}, "arg2" : {"node_type" : "NumConstNode", "value" : 100}}}}}, { "number":7, "line":148, "tags": {"name": "Y_GAP_PCT"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP_PCT", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "Y_GAP", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "NumConstNode", "value" : 100}}}}, { "number":8, "line":151, "tags": {"name": "D_PI_ANN_PCT"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "D_PI_ANN_PCT", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "PI_OYA", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "PI_OYA", "type" : "endogenous", "lag" : -1}}}}, { "number":9, "line":154, "tags": {"name": "ROBS"}, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "ROBS", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "+", "arg1" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "VariableNode", "name" : "I", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "NumConstNode", "value" : 4}}, "arg2" : {"node_type" : "BinaryOpNode", "op" : "*", "arg1" : {"node_type" : "BinaryOpNode", "op" : "-", "arg1" : {"node_type" : "VariableNode", "name" : "Rbar", "type" : "parameter", "lag" : 0}, "arg2" : {"node_type" : "NumConstNode", "value" : 1}}, "arg2" : {"node_type" : "NumConstNode", "value" : 400}}}}}, { "number":10, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_1", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "ETA", "type" : "endogenous", "lag" : -1}}}, { "number":11, "AST": {"node_type" : "BinaryOpNode", "op" : "=", "arg1" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_2", "type" : "endogenous", "lag" : 0}, "arg2" : {"node_type" : "VariableNode", "name" : "AUX_ENDO_LAG_2_1", "type" : "endogenous", "lag" : -1}}}], "variable_mapping":[
+{"name": "D_PI_ANN_PCT", "equations":["D_PI_ANN_PCT"]}
+, {"name": "D_Y_GAP_PCT", "equations":["D_Y_GAP_PCT"]}
+, {"name": "ETA", "equations":["Y_GAP", "ETA", "VX"]}
+, {"name": "I", "equations":["Y_GAP", "I", "ROBS"]}
+, {"name": "PI", "equations":["Y_GAP", "PI", "I", "PI_OYA"]}
+, {"name": "PI_OYA", "equations":["PI_OYA", "D_PI_ANN_PCT"]}
+, {"name": "Y_GAP", "equations":["Y_GAP", "ETA", "VX", "PI", "I", "Y_GAP_PCT"]}
+, {"name": "Y_GAP_PCT", "equations":["D_Y_GAP_PCT", "Y_GAP_PCT"]}
+, {"name": "VX", "equations":["Y_GAP", "VX"]}
+, {"name": "ROBS", "equations":["ROBS"]}
+, {"name": "EPS_Y_GAP", "equations":["Y_GAP"]}
+, {"name": "EPS_PI", "equations":["PI"]}
+, {"name": "EPS_ETA", "equations":["ETA"]}
+, {"name": "EPS_MP", "equations":["I"]}
+], "dynamic_tmp_nbr": [0, 0, 0, 0], "dynamic_g1_sparse_rowval": [2, 3, 11, 9, 3, 6, 2, 3, 12, 3, 9, 6, 1, 2, 1, 5, 10, 4, 5, 7, 7, 9, 1, 2, 4, 5, 8, 6, 8, 1, 3, 10, 11, 12, 1, 4, 1, 2, 1, 4, 2, 5], 
+"dynamic_g1_sparse_colval": [3, 3, 3, 6, 7, 8, 11, 11, 11, 12, 13, 14, 15, 15, 16, 16, 16, 17, 17, 17, 18, 18, 19, 19, 19, 19, 19, 20, 20, 21, 21, 22, 23, 24, 29, 29, 31, 31, 37, 38, 39, 40], 
+"dynamic_g1_sparse_colptr": [1, 1, 1, 4, 4, 4, 5, 6, 7, 7, 7, 10, 11, 12, 13, 15, 18, 21, 23, 28, 30, 32, 33, 34, 35, 35, 35, 35, 35, 37, 37, 39, 39, 39, 39, 39, 39, 40, 41, 42, 43]
+, "static_tmp_nbr": [0, 0, 0, 0], "static_g1_sparse_rowval": [9, 6, 1, 2, 3, 11, 1, 5, 10, 1, 4, 5, 7, 7, 2, 3, 4, 5, 8, 8, 1, 3, 10, 2, 3, 11, 12, 3, 12], 
+"static_g1_sparse_colval": [1, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 7, 7, 7, 7, 7, 8, 9, 9, 10, 11, 11, 11, 11, 12, 12], 
+"static_g1_sparse_colptr": [1, 2, 3, 7, 10, 14, 15, 20, 21, 23, 24, 28, 30]
+, "statements": [{"statementName": "param_init", "name": "alpha", "value": "0.3333333333333333"}, 
+{"statementName": "param_init", "name": "beta", "value": "0.99"}, 
+{"statementName": "param_init", "name": "epsilon", "value": "6"}, 
+{"statementName": "param_init", "name": "phi", "value": "1"}, 
+{"statementName": "param_init", "name": "phi_pi", "value": "1.5"}, 
+{"statementName": "param_init", "name": "phi_y", "value": "0.125"}, 
+{"statementName": "param_init", "name": "sigma", "value": "1"}, 
+{"statementName": "param_init", "name": "theta", "value": "0.6666666666666666"}, 
+{"statementName": "param_init", "name": "gamma_eta", "value": "0.01"}, 
+{"statementName": "param_init", "name": "lambda_eta", "value": "1.97"}, 
+{"statementName": "param_init", "name": "lambda_eta_eta", "value": "(-1.01)"}, 
+{"statementName": "param_init", "name": "sigma_y", "value": "0.17"}, 
+{"statementName": "param_init", "name": "theta_eta", "value": "0.31"}, 
+{"statementName": "param_init", "name": "theta_y", "value": "0.08"}, 
+{"statementName": "param_init", "name": "sigma_eta", "value": "0.01"}, 
+{"statementName": "param_init", "name": "sigma_I", "value": "0.1"}, 
+{"statementName": "param_init", "name": "sigma_pc", "value": "0.1"}, 
+{"statementName": "param_init", "name": "rho_eta1", "value": "0.75"}, 
+{"statementName": "param_init", "name": "rho_eta2", "value": "0.25"}, 
+{"statementName": "param_init", "name": "rho_eta3", "value": "0.25"}, 
+{"statementName": "param_init", "name": "zeta_y", "value": "0.75"}, 
+{"statementName": "param_init", "name": "PibarSS", "value": "1.00475"}, 
+{"statementName": "param_init", "name": "Rbar", "value": "1+PibarSS-1+1.003/beta-1"}, 
+{"statementName": "param_init", "name": "omega", "value": "(1-alpha)/(1-alpha+alpha*epsilon)"}, 
+{"statementName": "param_init", "name": "lambda", "value": "(1-theta)*(1-beta*theta)/theta*omega"}, 
+{"statementName": "param_init", "name": "kappa", "value": "lambda*(sigma+(alpha+phi)/(1-alpha))"}, 
+{"statementName": "shocks", "overwrite": false, "variance": [{"name": "EPS_Y_GAP", "variance": "1"}, {"name": "EPS_PI", "variance": "1"}, {"name": "EPS_ETA", "variance": "1"}, {"name": "EPS_MP", "variance": "1"}], "stderr": [], "covariance": [], "correlation": []}, 
+{"statementName": "estimated_params", "params": [{"param": "sigma_y", "init_val": "1", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 4, "mean": "1", "std": "0.7", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "sigma_eta", "init_val": "0.17", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 4, "mean": "0.17", "std": "0.7", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "sigma_pc", "init_val": "0.17", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 4, "mean": "0.17", "std": "0.7", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "sigma_I", "init_val": "0.17", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 4, "mean": "0.17", "std": "0.7", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "rho_eta1", "init_val": "0.75", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 5, "mean": "NaN", "std": "NaN", "p3": "0", "p4": "1", "jscale": "NaN"}
+, {"param": "rho_eta2", "init_val": "0.25", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 5, "mean": "NaN", "std": "NaN", "p3": "0", "p4": "1", "jscale": "NaN"}
+, {"param": "rho_eta3", "init_val": "0.25", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 5, "mean": "NaN", "std": "NaN", "p3": "0", "p4": "1", "jscale": "NaN"}
+, {"param": "zeta_y", "init_val": "0.75", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 5, "mean": "NaN", "std": "NaN", "p3": "0", "p4": "1", "jscale": "NaN"}
+, {"param": "gamma_eta", "init_val": "0.01", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 3, "mean": "0.01", "std": "0.01", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "lambda_eta", "init_val": "1.97", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 3, "mean": "1.97", "std": "1", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "lambda_eta_eta", "init_val": "(-1.01)", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 3, "mean": "(-1.01)", "std": "1", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "theta_eta", "init_val": "0.31", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 3, "mean": "0.31", "std": "1", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+, {"param": "theta_y", "init_val": "0.08", "lower_bound": "(-Inf)", "upper_bound": "Inf", "prior_distribution": 3, "mean": "0.08", "std": "1", "p3": "NaN", "p4": "NaN", "jscale": "NaN"}
+]}, 
+{"statementName": "estimation", "options": {"datafile": "nkvea_data", "first_obs": [76], "lik_init": 2, "mh_replic": 0, "mode_compute": 6, "nobs": [97], "optim_opt": "''MaxIter'',400", "prefilter": 0, "presample": 4}}, 
+{"statementName": "stoch_simul", "options": {"irf": 20, "order": 1}, "symbol_list": ["ROBS","PI_OYA","D_Y_GAP_PCT","ETA"]}]
+,"model_info": {"lead_lag_incidence": [[ 0, 7, 0],[ 0, 8, 0],[ 1, 9, 0],[ 0, 10, 0],[ 0, 11, 19],[ 2, 12, 0],[ 3, 13, 20],[ 4, 14, 0],[ 0, 15, 0],[ 0, 16, 0],[ 5, 17, 0],[ 6, 18, 0]], "nstatic": 5, 
+"nfwrd": 1, 
+"npred": 5, 
+"nboth": 1, 
+"nsfwrd": 2, 
+"nspred": 6, 
+"ndynamic": 7, 
+"maximum_endo_lag": 1, 
+"maximum_endo_lead": 1, 
+"maximum_exo_lag": 0, 
+"maximum_exo_lead": 0, 
+"maximum_exo_det_lag": 0, 
+"maximum_exo_det_lead": 0, 
+"maximum_lag": 1, 
+"maximum_lead": 1, 
+"orig_maximum_endo_lag": 3,
+"orig_maximum_endo_lead": 1,
+"orig_maximum_exo_lag": 0,
+"orig_maximum_exo_lead": 0,
+"orig_maximum_exo_det_lag": 0,
+"orig_maximum_exo_det_lead": 0,
+"orig_maximum_lag": 3,
+"orig_maximum_lead": 1,
+"orig_maximum_lag_with_diffs_expanded": 3,
+"NNZDerivatives": [42, -1, -1]}
+}

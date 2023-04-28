@@ -1,0 +1,46 @@
+{"static_model": {"model_local_variables": [], "external_functions_temporary_terms_": [], "temporary_terms_": [], 
+"residuals":[
+{"residual": {"lhs": "Y_GAP", "rhs": "Y_GAP-1/sigma*(I-PI)-gamma_eta*ETA-VX*EPS_Y_GAP"}}
+, {"residual": {"lhs": "ETA", "rhs": "sigma_eta*EPS_ETA+ETA*lambda_eta+lambda_eta_eta*AUX_ENDO_LAG_2_1-Y_GAP*theta_y-Y_GAP*theta_eta"}}
+, {"residual": {"lhs": "VX", "rhs": "sigma_y-ETA*rho_eta1-AUX_ENDO_LAG_2_1*rho_eta2-rho_eta3*AUX_ENDO_LAG_2_2-Y_GAP*zeta_y"}}
+, {"residual": {"lhs": "PI", "rhs": "PI*beta+Y_GAP*kappa+sigma_pc*EPS_PI"}}
+, {"residual": {"lhs": "I", "rhs": "PI*phi_pi+Y_GAP*phi_y+sigma_I*EPS_MP"}}
+, {"residual": {"lhs": "D_Y_GAP_PCT", "rhs": "0"}}
+, {"residual": {"lhs": "PI_OYA", "rhs": "PI+(PibarSS-1)*100"}}
+, {"residual": {"lhs": "Y_GAP_PCT", "rhs": "Y_GAP*100"}}
+, {"residual": {"lhs": "D_PI_ANN_PCT", "rhs": "0"}}
+, {"residual": {"lhs": "ROBS", "rhs": "I*4+(Rbar-1)*400"}}
+, {"residual": {"lhs": "AUX_ENDO_LAG_2_1", "rhs": "ETA"}}
+, {"residual": {"lhs": "AUX_ENDO_LAG_2_2", "rhs": "AUX_ENDO_LAG_2_1"}}
+
+]
+, "external_functions_temporary_terms_jacobian": [], "temporary_terms_jacobian": [], "jacobian": {  "nrows": 12, "ncols": 12, "entries": [{"eq": 1, "col": 3, "var": "ETA", "val": "gamma_eta"}
+, {"eq": 1, "col": 4, "var": "I", "val": "1/sigma"}
+, {"eq": 1, "col": 5, "var": "PI", "val": "(-(1/sigma))"}
+, {"eq": 1, "col": 9, "var": "VX", "val": "EPS_Y_GAP"}
+, {"eq": 2, "col": 3, "var": "ETA", "val": "1-lambda_eta"}
+, {"eq": 2, "col": 7, "var": "Y_GAP", "val": "(-((-theta_y)-theta_eta))"}
+, {"eq": 2, "col": 11, "var": "AUX_ENDO_LAG_2_1", "val": "(-lambda_eta_eta)"}
+, {"eq": 3, "col": 3, "var": "ETA", "val": "rho_eta1"}
+, {"eq": 3, "col": 7, "var": "Y_GAP", "val": "zeta_y"}
+, {"eq": 3, "col": 9, "var": "VX", "val": "1"}
+, {"eq": 3, "col": 11, "var": "AUX_ENDO_LAG_2_1", "val": "rho_eta2"}
+, {"eq": 3, "col": 12, "var": "AUX_ENDO_LAG_2_2", "val": "rho_eta3"}
+, {"eq": 4, "col": 5, "var": "PI", "val": "1-beta"}
+, {"eq": 4, "col": 7, "var": "Y_GAP", "val": "(-kappa)"}
+, {"eq": 5, "col": 4, "var": "I", "val": "1"}
+, {"eq": 5, "col": 5, "var": "PI", "val": "(-phi_pi)"}
+, {"eq": 5, "col": 7, "var": "Y_GAP", "val": "(-phi_y)"}
+, {"eq": 6, "col": 2, "var": "D_Y_GAP_PCT", "val": "1"}
+, {"eq": 7, "col": 5, "var": "PI", "val": "(-1)"}
+, {"eq": 7, "col": 6, "var": "PI_OYA", "val": "1"}
+, {"eq": 8, "col": 7, "var": "Y_GAP", "val": "(-100)"}
+, {"eq": 8, "col": 8, "var": "Y_GAP_PCT", "val": "1"}
+, {"eq": 9, "col": 1, "var": "D_PI_ANN_PCT", "val": "1"}
+, {"eq": 10, "col": 4, "var": "I", "val": "(-4)"}
+, {"eq": 10, "col": 10, "var": "ROBS", "val": "1"}
+, {"eq": 11, "col": 3, "var": "ETA", "val": "(-1)"}
+, {"eq": 11, "col": 11, "var": "AUX_ENDO_LAG_2_1", "val": "1"}
+, {"eq": 12, "col": 11, "var": "AUX_ENDO_LAG_2_1", "val": "(-1)"}
+, {"eq": 12, "col": 12, "var": "AUX_ENDO_LAG_2_2", "val": "1"}
+]}, "external_functions_temporary_terms_hessian": [], "temporary_terms_hessian": [], "hessian": {  "nrows": 12, "ncols": 144, "entries": []}, "external_functions_temporary_terms_third_derivative": [], "temporary_terms_third_derivative": [], "third_derivative": {  "nrows": 12, "ncols": 1728, "entries": []}}}

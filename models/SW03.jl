@@ -1,4 +1,4 @@
-@model SW03 begin
+@model m begin
     -q[0] + beta * ((1 - tau) * q[1] + epsilon_b[1] * (r_k[1] * z[1] - psi^-1 * r_k[ss] * (-1 + exp(psi * (-1 + z[1])))) * (C[1] - h * C[0])^(-sigma_c))
     -q_f[0] + beta * ((1 - tau) * q_f[1] + epsilon_b[1] * (r_k_f[1] * z_f[1] - psi^-1 * r_k_f[ss] * (-1 + exp(psi * (-1 + z_f[1])))) * (C_f[1] - h * C_f[0])^(-sigma_c))
     -r_k[0] + alpha * epsilon_a[0] * mc[0] * L[0]^(1 - alpha) * (K[-1] * z[0])^(-1 + alpha)
@@ -55,7 +55,7 @@
     epsilon_b[0] * (K_f[-1] * r_k_f[0] - r_k_f[ss] * K_f[-1] * exp(psi * (-1 + z_f[0]))) * (C_f[0] - h * C_f[-1])^(-sigma_c)
 end
 
-@parameters SW03 begin  
+@parameters m begin  
     lambda_p = .368
     G_bar = .362
     lambda_w = 0.5
@@ -89,17 +89,15 @@ end
     rho_G = 0.949
     rho_pi_bar = 0.924
 
-    std_scaling_factor = 10
-
-    std_eta_b = 0.336 / std_scaling_factor
-    std_eta_L = 3.52 / std_scaling_factor
-    std_eta_I = 0.085 / std_scaling_factor
-    std_eta_a = 0.598 / std_scaling_factor
-    std_eta_w = 0.6853261 / std_scaling_factor
-    std_eta_p = 0.7896512 / std_scaling_factor
-    std_eta_G = 0.325 / std_scaling_factor
-    std_eta_R = 0.081 / std_scaling_factor
-    std_eta_pi = 0.017 / std_scaling_factor
+    std_eta_b = 0.336
+    std_eta_L = 3.52
+    std_eta_I = 0.085
+    std_eta_a = 0.598
+    std_eta_w = 0.6853261
+    std_eta_p = 0.7896512
+    std_eta_G = 0.325
+    std_eta_R = 0.081
+    std_eta_pi = 0.017
 
     calibr_pi_obj | 1 = pi_obj[ss]
     calibr_pi | pi[ss] = pi_obj[ss]

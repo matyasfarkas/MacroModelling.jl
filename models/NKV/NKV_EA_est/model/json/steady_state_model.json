@@ -1,0 +1,11 @@
+{"steady_state_model": [{"lhs": "D_PI_ANN_PCT", "rhs":"0"}
+,{"lhs": "D_Y_GAP_PCT", "rhs":"0"}
+,{"lhs": "ETA", "rhs":"0"}
+,{"lhs": "I", "rhs":"0"}
+,{"lhs": "PI", "rhs":"0"}
+,{"lhs": "PI_OYA", "rhs":"(PibarSS-1)*100"}
+,{"lhs": "Y_GAP", "rhs":"0"}
+,{"lhs": "Y_GAP_PCT", "rhs":"0"}
+,{"lhs": "VX", "rhs":"sigma_y"}
+,{"lhs": "ROBS", "rhs":"(Rbar-1)*400"}
+, {"lhs": "AUX_ENDO_LAG_2_1", "rhs": "ETA"}, {"lhs": "AUX_ENDO_LAG_2_2", "rhs": "AUX_ENDO_LAG_2_1"}]}
