@@ -1,5 +1,9 @@
+
+import Pkg; Pkg.instantiate();
+
 using MacroModelling
 import Turing, StatsPlots
+Turing.setadbackend(:forwarddiff)
 
 @model RBC begin
 	K[0] = (1 - δ) * K[-1] + I[0]
@@ -62,11 +66,10 @@ loglikelihood = loglikelihood_function(RBC)
 
 n_samples = 10
 
-Turing.setadbackend(:forwarddiff)
 
 # using Zygote
 # Turing.setadbackend(:zygote)
-samps = Turing.sample(loglikelihood, Turing.NUTS(), n_samples, progress = true)#, init_params = sol)
+# samps = Turing.sample(loglikelihood, Turing.NUTS(), n_samples, progress = true)#, init_params = sol)
 
 
 
@@ -86,12 +89,35 @@ end
 
 loglikelihood_second_order = loglikelihood_second_order_function(RBC)
 
-samps = Turing.sample(loglikelihood_second_order, Turing.NUTS(), n_samples, progress = true)#, init_params = sol)
+#samps = Turing.sample(loglikelihood_second_order, Turing.NUTS(), n_samples, progress = true)#, init_params = sol)
 
 
 
 
+data = randn(1,10)
 
+#Likelihood evaluation function using `Zygote.Buffer()` to create internal arrays that don't interfere with gradients.
+function svlikelihood2(𝐒₁, 𝐒₂, x_iv,Ω_1,observables,noise) #Accumulate likelihood
+    # Initialize
+    T = size(observables,2)
+    u = ([zero(x_iv) for _ in 1:T]) #Fix type: Array of vector of vectors?
+    # vol = Zygote.Buffer([zeros(1) for _ in 1:T]) #Fix type: Array of vector of vectors?
+    u[1] = x_iv 
+    𝐒₁ = [𝐒₁[:,1:m.timings.nFuture_not_past_and_mixed] zeros(size(𝐒₁,1)) 𝐒₁[:,m.timings.nFuture_not_past_and_mixed+1:end]]
+    #vol[1] = [μ_σ] #Start at mean: could make random but won't for now
+    for t in 2:T
+        #vol[t] = ρ_σ * vol[t-1] .+ (1 - ρ_σ) * μ_σ .+ σ_σ * volshocks[t - 1]
+        aug_state = [u[t-1]
+                        1 
+                        noise[:,t-1]]
+        # sol[3]'  |>Matrix
+        u[t] =  𝐒₁ * aug_state #+ 𝐒₂ * kron(aug_state, aug_state) / 2 
+        # u[t] = A * u[t - 1] .+ exp.(vol[t]) .* (B * noise[t - 1])[:]
+    end
+    loglik = sum([logpdf(MvNormal(ℒ.Diagonal(Ω_1 * ones(size(observables,1)))), observables[:,t] .- ℒ.I * u[t][1:size(x_iv,1)]) for t in 1:T])
+    return loglik
+end
+ 
 Turing.@model function loglikelihood_scaling_function(m, data)
     σ     ~ MacroModelling.Beta(0.01, 0.02, μσ = true)
     α     ~ MacroModelling.Beta(0.5, 0.1, μσ = true)
@@ -99,7 +125,7 @@ Turing.@model function loglikelihood_scaling_function(m, data)
     ρ     ~ MacroModelling.Beta(0.2, 0.1, μσ = true)
     δ     ~ MacroModelling.Beta(0.02, 0.05, μσ = true)
     γ     ~ Turing.Normal(1, 0.05)
-    
+    T= size(data, 2)
     initial_conditions ~ Turing.filldist(Turing.TDist(4),m.timings.nVars) # Initial conditions 
 
     solution = get_solution(m,[σ, α, β, ρ, δ, γ], algorithm = :second_order)
@@ -114,16 +140,17 @@ Turing.@model function loglikelihood_scaling_function(m, data)
 
     x_iv = long_run_covariance * initial_conditions #scale initial condition with ergodic variance
 
-    ϵ_draw ~ Turing.filldist(Turing.TDist(4), m.timings.nExo * size(data, 2)) #Shocks are t-distributed!
+    ϵ_draw ~ Turing.filldist(Turing.TDist(4), m.timings.nExo * T) #Shocks are t-distributed!
+    ϵ = reshape(ϵ_draw, size(m.exo,1), T)
 
-    Turing.@addlogprob! sum(x_iv) / 1e6
+    Turing.@addlogprob! svlikelihood2(solution[2], solution[3],x_iv,0.01,data,ϵ) 
 end
-
-data = randn(1,10)
-
 
 loglikelihood_scaling = loglikelihood_scaling_function(RBC, data)
 
 samps = Turing.sample(loglikelihood_scaling, Turing.NUTS(), n_samples, progress = true)#, init_params = sol)
 
-
+svlikelihood2(solution[2], solution[3],x_iv,0.01,data,rand(1,10)) 
+x_iv = rand(2)
+noise[:,t-1]
+solution[3]
