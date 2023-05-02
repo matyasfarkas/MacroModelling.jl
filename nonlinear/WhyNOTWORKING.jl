@@ -2,7 +2,7 @@ import Pkg; Pkg.instantiate();
 using MacroModelling, LinearAlgebra, Zygote, Distributions, Symbolics, Plots, Random, StatsPlots
 # Model declaration
 @model RBC begin
-    1 / (- k[0] + (1 - δ) * k[-1] +  exp(z[-1]) * k[-1]^α ) - (β / (- k[1] + (1 - δ) * k[0] +  exp(z[0]) * k[0]^α )) * (α * exp(z[0]) * k[-1]^(α - 1) + (1 - δ)) =0
+    1 / (- k[0]  + (1 - δ ) * k[-1] + (exp(z[-1]) * k[-1]^α)) = (β   / (- k[+1]  + (1 - δ) * k[0] +(exp(z[0]) * k[0]^α))) * (α* exp(z[0]) * k[0] ^(α - 1) + (1 - δ));
     #    1 / c[0] - (β / c[1]) * (α * exp(z[1]) * k[1]^(α - 1) + (1 - δ)) =0
     #    q[0] = exp(z[0]) * k[0]^α 
     z[0] =  ρ * z[-1] - σ* EPSz[x]

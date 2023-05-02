@@ -6,10 +6,10 @@ using Plots
 #Build the RBC model
 ∞ = Inf
 @variables α, β, ρ, δ, σ, Ω_1
-@variables t::Integer, k(..), z(..), c(..), q(..)
+@variables t::Integer,  z(..), c(..), k(..), q(..)
 
-x = [k, z] # states
-y = [c, q] # controls
+x = [z , c] # states
+y = [k, q] # controls
 p = [α, β, ρ, δ, σ, Ω_1] # parameters
 
 H = [1 / c(t) - (β / c(t + 1)) * (α * exp(z(t + 1)) * k(t + 1)^(α - 1) + (1 - δ)),
@@ -18,10 +18,11 @@ H = [1 / c(t) - (β / c(t + 1)) * (α * exp(z(t + 1)) * k(t + 1)^(α - 1) + (1 -
      z(t + 1) - ρ * z(t)]  # system of model equations
 
 # analytic solutions for the steady state.  Could pass initial values and run solver and use initial values with steady_states_iv
-steady_states = [k(∞) ~ (((1 / β) - 1 + δ) / α)^(1 / (α - 1)),
+steady_states = [
                  z(∞) ~ 0,
                  c(∞) ~ (((1 / β) - 1 + δ) / α)^(α / (α - 1)) -
                         δ * (((1 / β) - 1 + δ) / α)^(1 / (α - 1)),
+                 k(∞) ~ (((1 / β) - 1 + δ) / α)^(1 / (α - 1)),
                  q(∞) ~ (((1 / β) - 1 + δ) / α)^(α / (α - 1))]
 
 
@@ -34,9 +35,8 @@ steady_states = [k(∞) ~ (((1 / β) - 1 + δ) / α)^(1 / (α - 1)),
 
 # OBSEVABLES ARE CHANGED TO BE THE STATES!
 #observation matrix.  order is "y" then "x" variables, so [c,q,k,z] in this example
-# observation matrix.  order is "y" then "x" variables, so [c,q,k,z] in this example
-Q = [0 0  1.0   0; # select c as first "z" observable
-     0   0  0 1.0] # select k as second "z" observable
+ Q = [0 0  1.0 0; # select z as first "z" observable
+      0 0  0 1.0] # select c as second "z" observable
 
 
 # diagonal cholesky of covariance matrix for observation noise (so these are standard deviations).  Non-diagonal observation noise not currently supported
@@ -44,23 +44,23 @@ Q = [0 0  1.0   0; # select c as first "z" observable
 
 # Generates the files and includes if required.  If the model is already created, then just loads
 overwrite_model_cache  = true
-model_rbc = @make_and_include_perturbation_model("rbc_notebook_example", H, (; t, y, x, p, steady_states, Γ, Ω, η, Q, overwrite_model_cache)) # Convenience macro.  Saves as ".function_cache/rbc_notebook_example.jl"
+model_rbc4 = @make_and_include_perturbation_model("rbc_notebook_example4", H, (; t, y, x, p, steady_states, Γ, Ω, η, Q, overwrite_model_cache)) # Convenience macro.  Saves as ".function_cache/rbc_notebook_example.jl"
 
 #Solve model at some fixed parameters
 p_f = (ρ = 0.2, δ = 0.02, σ = 0.01, Ω_1 = 0) # Fixed parameters
 p_d = (α = 0.5, β = 0.95) # Pseudo-true values
 m = model_rbc  # ensure notebook executed above
-sol = generate_perturbation(m, p_d, p_f) # Solution to the first-order RBC
+sol = generate_perturbation(model_rbc4, p_d, p_f) # Solution to the first-order RBC
+m = model_rbc4
 # Simulate T observations from a random initial condition
 T = 20
+Random.seed!(12345) #Fix seed to reproduce data
 dof = 4 #Student t degrees of freedom
 shockdist = TDist(dof) #Shocks are student-t
-Random.seed!(12345) #Fix seed to reproduce data
 
 # draw from t scaled by approximate invariant variance) for the initial condition
 x_iv = sol.x_ergodic_var * rand(shockdist,sol.n_x)
 
-Random.seed!(12345) #Fix seed to reproduce data
 # Generate noise sequence
 noiseshocks = rand(shockdist,T)
 noise = Matrix(noiseshocks') # the ϵ shocks are "noise" in DifferenceEquations for SciML compatibility 
@@ -68,7 +68,6 @@ noise = Matrix(noiseshocks') # the ϵ shocks are "noise" in DifferenceEquations 
 #Solve problem forward with Student-t noise
 problem = LinearStateSpaceProblem(sol, x_iv, (0, T); noise)
 sim=solve(problem)
-
 # Collapse to simulated observables as a matrix  - as required by current DifferenceEquations.jl likelihood
 # see https://github.com/SciML/DifferenceEquations.jl/issues/55 for direct support of this datastructure
 z_rbc = hcat(sim.z...)
@@ -108,15 +107,9 @@ n_adapts = 50
 alg = NUTS(n_adapts,δ)
 chain_1_joint = sample(turing_model, alg, n_samples; progress = true)
 
-
-
 #Plot the chains and posteriors
 Plots.plot(chain_1_joint[["α"]]; colordim=:parameter, legend=true)
 Plots.plot(chain_1_joint[["β"]]; colordim=:parameter, legend=true)
-
-Plots.plot(chain_1_joint[["xnought[1]"]]; colordim=:parameter, legend=true)
-Plots.plot(chain_1_joint[["lp"]]; colordim=:parameter, legend=true)
-
 
 #Plot true and estimated latents to see how well we backed them out
 symbol_to_int(s) = parse(Int, string(s)[9:end-1])
