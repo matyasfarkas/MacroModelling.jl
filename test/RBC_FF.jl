@@ -23,6 +23,51 @@ end
     δ = 0.02
 end
 
+solution = get_solution(RBC, RBC.parameter_values, algorithm = :second_order)
+
+
+### Simulate T observations from a random initial condition
+
+T = 20
+Random.seed!(12345) #Fix seed to reproduce data
+ϵ = randn(T+1)'  #Shocks are normal can be made anything e.g.  student-t
+calculate_covariance_ = calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(1:m.timings.nVars))
+long_run_covariance = calculate_covariance_(solution[2])
+initial_conditions = long_run_covariance[m.timings.past_not_future_and_mixed_idx,m.timings.past_not_future_and_mixed_idx] * randn(m.timings.nPast_not_future_and_mixed)
+state = zeros(typeof(initial_conditions[1]),m.timings.nVars, T+1)
+state_predictions = zeros(typeof(initial_conditions[1]),m.timings.nVars, T+1)
+
+aug_state = [initial_conditions
+1 
+0]
+
+state[:,1] =  𝐒₁ * aug_state + solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+state_predictions[:,1] =  𝐒₁ * aug_state + solution[3] * ℒ.kron(aug_state, aug_state) / 2
+
+for t in 2:T+1
+    aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                1 
+                ϵ[:,t]]
+    state[:,t] .=  𝐒₁ * aug_state + solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+end
+
+observables_index = sort(indexin([:K, :Z], m.timings.var))
+data = state[observables_index,2:end]
+
+aug_state = [initial_conditions
+1 
+0]
+for t in 2:T+1
+    aug_state = [state_predictions[m.timings.past_not_future_and_mixed_idx,t-1]
+                1 
+                0]
+    state_predictions[:,t] .=  𝐒₁ * aug_state + solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+end
+
+state_deviations = data[:,1:end] - state_predictions[observables_index,2:end]
+sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)])
+##
+
 zsim = simulate(RBC)
 zsim1 = hcat(zsim([:k,:z],:,:)...)
 zdata = ℒ.reshape(zsim1,2,40)
@@ -56,7 +101,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables)
 
     aug_state = [initial_conditions
     1 
-    ϵ[:,1]]
+    zeros(size(m.timings.nExo))]
     state[:,1] .=  𝐒₁ * aug_state + solution[3] * ℒ.kron(aug_state, aug_state) / 2 
 
     for t in 2:size(data, 2)+1
@@ -75,7 +120,6 @@ end
 
 import   Random
 Random.seed!(54321)
-n_samples = 1000
 
 loglikelihood_scaling = loglikelihood_scaling_function(RBC, zdata,[:k,:z])
 n_samples = 300
