@@ -15,10 +15,10 @@ T18 = exp(y(2))*y(1)^params(1);
 T19 = (-y(1))+y(1)*(1-params(5))+T18;
 T26 = (1-params(5)+exp(y(2))*params(1)*y(1)^(params(1)-1))*params(2);
 lhs =T19;
-rhs =T19/T26-0.00265085515766751*x(1);
+rhs =T19/T26;
 residual(1)= lhs-rhs;
 lhs =y(2);
-rhs =y(2)*params(4)+x(1)*params(3);
+rhs =y(2)*params(4)+params(3)*x(1);
 residual(2)= lhs-rhs;
 if ~isreal(residual)
   residual = real(residual)+imag(residual).^2;

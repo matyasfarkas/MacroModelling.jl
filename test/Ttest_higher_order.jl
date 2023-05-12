@@ -135,7 +135,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables,Ω)
 
     ϵ = reshape(ϵ_draw, m.timings.nExo,  size(data, 2))
 
-    state = zeros(typeof(initial_conditions[1]),m.timings.nVars, size(data, 2)+1)
+    state = zeros(typeof(initial_conditions[1]),m.timings.nVars, size(data, 2))
 
     # state[m.timings.past_not_future_and_mixed_idx,1] .= initial_conditions
 
@@ -157,7 +157,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables,Ω)
     
     # println(sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)] ))
 
-    Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(Ω*I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
+    Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(Ω*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
 
 
     # Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)])

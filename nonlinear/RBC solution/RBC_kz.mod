@@ -45,7 +45,7 @@ model;
 	
 	 %c = - k(+1)  + (1 - delta) * k + q;
      %q = exp(z) * k^alpha;
-     (- k  + (1 - delta) * k(-1) + (exp(z(-1)) * k(-1)^alpha)) = ((- k(+1)  + (1 - delta) * k +(exp(z) * k^alpha))) / ((alpha * exp(z) * k ^(alpha - 1) + (1 - delta))*beta) - (0.002650855157668)*EPSz ;
+     (- k  + (1 - delta) * k(-1) + (exp(z(-1)) * k(-1)^alpha)) = ((- k(+1)  + (1 - delta) * k +(exp(z) * k^alpha))) / ((alpha * exp(z) * k ^(alpha - 1) + (1 - delta))*beta); %- (0.002650855157668)*EPSz ;
      
 	 z =rho* z(-1) + sigma * EPSz;
 	 
