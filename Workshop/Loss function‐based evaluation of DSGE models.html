@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<!-- saved from url=(0056)https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582 -->
+<html xmlns:m="http://www.w3.org/1998/Math/MathML" lang="en" style="display: none" id="simpleViewer"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Loss function‐based evaluation of DSGE models</title>
+
+        
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- OsanoScriptEnabled: true -->
+
+<style>
+/* Osano - Hide close and reject all buttons */
+.osano-cm-denyAll,
+.osano-cm-dialog__close {
+    display: none
+}
+</style>
+<script type="text/javascript" async="" src="./Loss function‐based evaluation of DSGE models_files/insight.min.js.download"></script><script>
+!function(e="v1"){let n=location.host.split(".").slice(-3).join(".");var o=document.cookie,a=new Date;a.setFullYear(a.getFullYear()+1),0>o.indexOf("lit_osano="+e)&&(document.cookie="lit_osano="+e+"; expires="+a+"; path=/; domain="+n+";",o.indexOf("osano_consentmanager_uuid=")>=0&&(document.cookie="osano_consentmanager_uuid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain="+n+";"),o.indexOf("osano_consentmanager=")>=0&&(document.cookie="osano_consentmanager=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain="+n+";"),localStorage.removeItem("osano_consentmanager"),localStorage.removeItem("osano_consentmanager_tattles-cookie"),localStorage.removeItem("osano_consentmanager_tattles-iframe"),localStorage.removeItem("osano_consentmanager_tattles-ignore"),localStorage.removeItem("osano_consentmanager_tattles-script"),localStorage.removeItem("osano_consentmanager_uuid"),console.log("[OsanoDebug] lit_osano reset"));let t=["Du kan lukke dette banner for at forts\xe6tte med kun vigtige cookies.","Puede cerrar este banner para continuar con solo las cookies esenciales","Puoi chiudere questo banner per continuare con solo i cookie essenziali","Sie k\xf6nnen dieses Banner schlie\xdfen, um nur mit essenziellen Cookies fortzufahren.","Tento banner můžete zavř\xedt a pokračovat pouze se z\xe1kladn\xedmi soubory cookie.","U kunt deze banner sluiten om verder te gaan met alleen essenti\xeble cookies.","Voc\xea pode fechar este banner para continuar apenas com os cookies essenciais.","Voit sulkea t\xe4m\xe4n bannerin jatkaaksesi vain v\xe4ltt\xe4m\xe4tt\xf6mien ev\xe4steiden k\xe4ytt\xf6\xe4.","Vous pouvez fermer cette banni\xe8re pour continuer avec uniquement les cookies essentiels.","You may close this banner to continue with only essential cookies.","Μπορείτε να κλείσετε αυτό το banner για να συνεχίσετε μόνο με βασικά cookies","Можете да затворите този банер, за да продължите само с основните бисквитки."];var s,i="Osano",r="data";(s=window)[i]=s[i]||function(){s[i][r].push(arguments)},s[i][r]=s[i][r]||[],window.Osano("onUiChanged",(e,n)=>{if(console.log("[OsanoDebug] Event onUiChanged: ",e,", ",n),"dialog"===e&&"show"===n){let o=document.querySelector(".osano-cm-message");if(o){let a=o.textContent,s=t.find(e=>a.includes(e));o.textContent=a.replace(s,"")}}})}();
+</script>
+
+<link rel="preload" href="./Loss function‐based evaluation of DSGE models_files/osano.js.download" as="script">
+<script src="./Loss function‐based evaluation of DSGE models_files/osano.js.download"></script>
+
+
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+    
+    <meta name="dc.identifier" content="10.1002/jae.582">
+
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link rel="preload" as="style" href="./Loss function‐based evaluation of DSGE models_files/css">
+<link rel="stylesheet" href="./Loss function‐based evaluation of DSGE models_files/css" media="all" onload="this.media=&#39;all&#39;">
+
+<link rel="prefetch" href="https://onlinelibrary.wiley.com/cloud-reader/dist/fonts/MaterialIcons-Regular.8a9a261c8b8dfe90db11f1817a9d22e1.woff2" as="font">
+<link rel="prefetch" href="https://onlinelibrary.wiley.com/cloud-reader/dist/fonts/ereader-icon-font.159b7674813c31f40a7eeb84fdd2538d.woff" as="font">
+
+<link title="eReader-css" rel="stylesheet" type="text/css" href="./Loss function‐based evaluation of DSGE models_files/shared.8072622c00c3079e2856.css">
+
+    <link rel="stylesheet" type="text/css" href="./Loss function‐based evaluation of DSGE models_files/pdf-renderer.0468e3ec823d3c465bd6.css">
+
+
+
+<style rel="text/css">
+    @import url("/templates/jsp/cloudReader/css/d.css");
+</style>
+<script type="text/javascript">
+    window.LIT = window.LIT || {};
+    LIT.Reader = LIT.Reader || {};
+    LIT.Reader.LogEnabled = false;
+    LIT.Reader.isSecureConnection = 'serviceWorker' in navigator && 'caches' in window && location.protocol !== "http:";
+    window.READER_OFFLINE = navigator && navigator.onLine === false;
+    
+    var verifyOfflineMode = function () {
+        
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+            window.READER_OFFLINE = xhr.readyState === 4 && xhr.status !== 200;
+            if (window.READER_OFFLINE && true) {
+                
+                let mathjaxUrl = "/cloud-reader/dist/MathJax.min.c020646cc8490f4bd5d4.js";
+                fetch(mathjaxUrl).then(function (res) {
+                    res.text().then(function (txt) {
+                        LIT.Reader.MathJaxUrl = window.URL.createObjectURL(new Blob([txt], {'type': 'text/javascript'}));
+                    })
+                })
+            }
+        };
+        xhr.open("HEAD", "/templates/jsp/images/singlePixel.gif?t=" + new Date().getTime());
+        
+        xhr.setRequestHeader("Cache-Control", "no-cache,must-revalidate,max-age=0");
+        xhr.setRequestHeader("Pragma", "no-cache");
+        xhr.send();
+    };
+    
+    verifyOfflineMode();
+
+    var path = (window.location && window.location.pathname) ? window.location.pathname : '';
+
+    
+    path = path.replace(/(.*)\/.*\.[x]?html$/, "$1");
+
+    
+    path = path.charAt(path.length - 1) === '/'
+        ? path.substr(0, path.length - 1)
+        : path;
+
+    
+    var readerResourcesPath = "/cloud-reader/dist";
+
+    var HTTPServerRootFolder =
+        window.location ? (
+            window.location.protocol
+            + "//"
+            + window.location.hostname
+            + (window.location.port ? (':' + window.location.port) : '')
+            + readerResourcesPath
+        ) : ''
+    ;
+</script>
+        
+            
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+    window.adobeDataLayer = window.adobeDataLayer || [];
+    var adobeDataLayerJson = {"site":{"environment":"LIVE","hub":"pericles","locale":"en-US"},"user":{"login-status":"guest","identities":[{"type":"InstitutionUser","uuid":"d284f837-d940-4f2d-829a-ce2424dbe0ab","customerRecords":[{"customerDomain":"ALM-CU","customerNumber":"EAL00000080801"}]},{"type":"SmartGroupUser","uuid":"b238ab85-6bb4-49e4-84ca-a0d9f3ee5a35"},{"type":"BasicGroup","uuid":"60de13b8-2661-4132-9a9b-c66c7b0540f9"},{"type":"InstitutionUser","uuid":"a8ea2a6a-a974-4fb8-b407-7e50c6c792af"},{"type":"BasicGroup","uuid":"e623deab-c83b-41e3-84a2-d9f1d46c5f17"},{"type":"ReferrerUser","uuid":"5a2c1d70-1255-4a45-95f3-a3aa3a2771fb"},{"type":"SmartGroupUser","uuid":"da88d808-3f7b-4bde-9210-10862b6d121b"},{"type":"RegionUser","uuid":"dd484ee8-aba9-4975-aa92-91a5d20cd139"},{"type":"ReferrerUser","uuid":"6401b279-b825-4f41-a389-04e29feb967f"},{"type":"RegionUser","uuid":"20d013f5-e22b-4df0-ba93-d6d925db9e32"},{"type":"BasicGroup","uuid":"197fe835-5b5f-4f4e-b8e9-a74d68491a84"},{"type":"SmartGroupUser","uuid":"b2dbfe27-ecae-4bb6-bb0d-d75e5caa3762"},{"type":"BasicGroup","uuid":"2f6750d5-f13f-4356-939b-048ac1423e64"}]},"content":{"item":{"title":"Loss function‐based evaluation of DSGE models","doi":"10.1002/jae.582","access":"full","type":"article","topics":[{"taxonomyUri":"global-subject-codes","topicLabel":"Applied Probability \u0026 Statistics","topicUri":"st20"},{"taxonomyUri":"global-subject-codes","topicLabel":"STATISTICS","topicUri":"st"},{"taxonomyUri":"global-subject-codes","topicLabel":"ECONOMICS","topicUri":"ec"}],"published-date":"2001-02-05","access-denial":"no","format-available":["Abstract","Cited by","First page image","PDF","References"],"format-viewed":"epdf"},"group":{"title":"Inference and Decision Making","doi":"10.1002/jae.v15:6","access":"full","type":"issue","volume":"15","issue":"6","published-date":"2000-11-01","topics":[{"taxonomyUri":"global-subject-codes","topicLabel":"Probability \u0026 Mathematical Statistics","topicUri":"st10"},{"taxonomyUri":"global-subject-codes","topicLabel":"Applied Probability \u0026 Statistics","topicUri":"st20"},{"taxonomyUri":"global-subject-codes","topicLabel":"STATISTICS","topicUri":"st"},{"taxonomyUri":"global-subject-codes","topicLabel":"General \u0026 Introductory Economics","topicUri":"ec00"},{"taxonomyUri":"global-subject-codes","topicLabel":"General \u0026 Introductory Statistics","topicUri":"st00"},{"taxonomyUri":"global-subject-codes","topicLabel":"ECONOMICS","topicUri":"ec"},{"taxonomyUri":"global-subject-codes","topicLabel":"Econometric \u0026 Statistical Methods","topicUri":"st27"},{"taxonomyUri":"global-subject-codes","topicLabel":"Econometrics","topicUri":"ec30"},{"taxonomyUri":"global-subject-codes","topicLabel":"Statistics for Finance, Business \u0026 Economics","topicUri":"st26"}]},"series":{"title":"Journal of Applied Econometrics","doi":"10.1002/(ISSN)1099-1255","access":"no","type":"journal","code":"10991255","eissn":"1099-1255","topics":[{"taxonomyUri":"gpt-sitename","topicLabel":"wly.economics_000047","topicUri":"wly.economics_000047"},{"taxonomyUri":"global-subject-codes","topicLabel":"Probability \u0026 Mathematical Statistics","topicUri":"st10"},{"taxonomyUri":"global-subject-codes","topicLabel":"Applied Probability \u0026 Statistics","topicUri":"st20"},{"taxonomyUri":"global-subject-codes","topicLabel":"STATISTICS","topicUri":"st"},{"taxonomyUri":"global-subject-codes","topicLabel":"General \u0026 Introductory Economics","topicUri":"ec00"},{"taxonomyUri":"global-subject-codes","topicLabel":"General \u0026 Introductory Statistics","topicUri":"st00"},{"taxonomyUri":"global-subject-codes","topicLabel":"ECONOMICS","topicUri":"ec"},{"taxonomyUri":"global-subject-codes","topicLabel":"Econometric \u0026 Statistical Methods","topicUri":"st27"},{"taxonomyUri":"global-subject-codes","topicLabel":"Econometrics","topicUri":"ec30"},{"taxonomyUri":"global-subject-codes","topicLabel":"Statistics for Finance, Business \u0026 Economics","topicUri":"st26"},{"taxonomyUri":"gpt-zonename","topicLabel":"j-app-econometrics_JAE","topicUri":"j-app-econometrics_jae"}]}},"page":{"brand":"wol","type":"article","primary-section":"journal","secondary-section":"article","tertiary-section":"epdf"}};
+    if (adobeDataLayerJson) {
+        if (true) {
+            window.adobeDataLayer.push(adobeDataLayerJson);
+            var additionalAdobeDataLayer = {};
+            additionalAdobeDataLayer.event = 'page-load';
+            additionalAdobeDataLayer.user = {};
+            const intervalID = setInterval(() => {
+                if (Osano) {
+                    clearInterval(intervalID);
+                    const osanoConsent = Osano.cm.getConsent();
+                    additionalAdobeDataLayer.user["consent-osano"] = 'analytics: ' + osanoConsent["ANALYTICS"] + ' | marketing: ' + osanoConsent["MARKETING"] + ' | personalization: ' + osanoConsent["PERSONALIZATION"] + ' | essential: ' + osanoConsent["ESSENTIAL"];
+                    window.adobeDataLayer.push(additionalAdobeDataLayer);
+                }
+            }, 50);
+        } else {
+            adobeDataLayerJson.event = 'page-load';
+            window.adobeDataLayer.push(adobeDataLayerJson);
+        }
+    }
+</script>
+
+    <script src="./Loss function‐based evaluation of DSGE models_files/launch-1ff1f800248b.min.js.download"></script><script src="./Loss function‐based evaluation of DSGE models_files/fbevents.js.download" async=""></script>
+
+
+        
+        
+
+
+
+
+
+        
+        
+        <script type="text/javascript">
+    history.replaceState('', '', removeParam("paRef" , window.location.href));
+
+    function removeParam(key, sourceURL) {
+        var rtn = sourceURL.split("?")[0],
+            param,
+            params_arr = [],
+            queryString = (sourceURL.indexOf("?") !== -1) ? sourceURL.split("?")[1] : "";
+        if (queryString !== "") {
+            params_arr = queryString.split("&");
+            for (var i = params_arr.length - 1; i >= 0; i -= 1) {
+                param = params_arr[i].split("=")[0];
+                if (param === key) {
+                    params_arr.splice(i, 1);
+                }
+            }
+            rtn = rtn + "?" + params_arr.join("&");
+        }
+        return rtn;
+    }
+
+</script>
+    <script src="./Loss function‐based evaluation of DSGE models_files/RC3797e571b3fe4a8486804b775c3d3c35-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RC30ebeefa701c4f83b3dca8285abb624c-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RCa7699bdb83d6406da20828ea63a91ca8-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RC38e1c840b4ba44ad84defa64f6104a02-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RCcbd123da511b46f199194b01bcdba50f-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RCb602669b048c41aea853a60eb9e95abe-source.min.js.download" async=""></script><script src="./Loss function‐based evaluation of DSGE models_files/RC5ac0580ff0354571b2c5e15e0c016c8f-source.min.js.download" async=""></script></head>
+    
+    <body class="info-visible keyboard" style="display: none">
+    
+    <h1 aria-live="assertive" role="status" id="statusHeading" class="visually-hidden">Publication loaded</h1>
+        
+
+
+
+
+
+
+
+
+
+<noscript>
+    <div id="alert_box" class="popup_container full noScript">
+        <div class="popup_content">
+            <div class="flex-container">
+                <div class="text">
+                    <span class="popupIcon icon material-icons" data-type="">error_outline</span>
+                    <div>
+                        <h1 class="popupTitle">JavaScript disabled</h1>
+                        <p class="popupDescription">You have to enable JavaScript in your browser's settings in order to use the eReader.</p>
+                        
+                            <p class="popupDescription">Or try downloading the content offline</p>
+                            <a href="/doi/pdfdirect/10.1002/jae.582?download=true" target="_blank" class="btn--bordered__light">DOWNLOAD</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        #app-container, .navbar {display: none !important;}
+    </style>
+</noscript>
+        <nav id="app-navbar" class="navbar isFixed" role="banner" aria-label="Toolbar"><div class="btn-group navbar-left">
+        <div class="grouped hide-lg lpanel_toggle_wrapper">
+    <button id="leftPanelmobile" class="l-panel--trigger btn expanded" title="Publication Info [i]" type="button" tabindex="0" accesskey="i">
+        <span class="icon material-icons flip-horizontal" aria-hidden="true">menu</span>
+        <span class="icon material-icons expanded flip-horizontal" aria-hidden="true">close</span>
+    </button>
+</div>
+<div id="reader-left-panel" class="tabs" aria-label="" role="navigation"><div class="lpbutton show-lg">
+    <div class="l-panel--button-container">
+        <button class="l-panel--trigger btn--rounded btn expanded" id="leftPanelbtn" title="Publication Info [i]" aria-label="Toggle left panel" data-tooltip-position="right" type="button" tabindex="0" accesskey="i">
+            <span class="icon reader-double-arrow" aria-hidden="true"></span>
+        </button>
+
+        <button class="btn--rounded btn--cta__light btn active" id="infoDesktop" title="Details" aria-label="Toggle Details panel" data-tooltip-position="right" data-trigger="#info" type="button" tabindex="0">
+            <span class="icon material-icons" aria-hidden="true">info
+                
+                
+            </span>
+        </button>
+        <button class="btn--rounded btn--cta__light btn" id="chaptersDesktop" title="Outline" aria-label="Toggle Outline panel" data-tooltip-position="right" data-trigger="#chapters" type="button" tabindex="0">
+            <span class="icon material-icons" aria-hidden="true">list
+                
+                
+            </span>
+        </button>
+        <button class="btn--rounded btn--cta__light btn" id="filesDesktop" title="Materials" aria-label="Toggle Materials panel" data-tooltip-position="right" data-trigger="#files" type="button" tabindex="0">
+            <span class="icon reader-material-folder" aria-hidden="true">
+                
+                
+            </span>
+        </button>
+        <button class="btn--rounded btn--cta__light btn" id="linksDesktop" title="Links" aria-label="Toggle Links panel" data-tooltip-position="right" data-trigger="#links" type="button" tabindex="0">
+            <span class="icon material-icons rotate-135" aria-hidden="true">link
+                
+                
+            </span>
+        </button>
+    </div>
+</div>
+
+<div class="overflow-container submenu-visible">
+    <div class="extra_actions show-sm-flex">
+        <button class="l-panel--trigger btn--action__text btn expanded" type="button" tabindex="0">
+            <span class="tab-text">CLOSE</span>
+        </button>
+    </div>
+
+    <div class="l-panel-tabs-container">
+        <div id="logoMobile" class="hide-lg hide-md">
+        <div class="logoContainer grouped">
+
+
+<a tabindex="0" aria-label="Home Page" class="logo btn btn--light site-logo" href="https://onlinelibrary.wiley.com/" target="_blank" title="" data-original-title="" onclick="this.blur()" data-tooltip-position="bottom">
+
+    <span class="icon material-icons home d-none hide-sm" aria-hidden="true">home</span>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 193.78 18.164"><title>wol-logo</title><path d="M15.963,14.563H12.323L9.782,5.521,7.222,14.563H3.581L0,.44H3.541l2.081,9.722L8.182.44h3.141l2.641,9.722L16.023.44h3.521Z"></path><path d="M20.96,2.82V.44h3.061V2.82Zm0,11.743V4.121h3.061V14.563Z"></path><path d="M26.8,14.563V.44H29.86V14.563Z"></path><path d="M35.04,9.982v.12a2.349,2.349,0,0,0,2.38,2.48,2.79,2.79,0,0,0,2.641-1.86l2.321,1.2a5.881,5.881,0,0,1-5.2,3.021c-3.181,0-5.281-2.021-5.281-5.4,0-2.621,1.28-5.741,5.361-5.741,3.92,0,5.241,3.141,5.241,6.041v.14Zm4.281-1.92A2.013,2.013,0,0,0,37.241,6a2.269,2.269,0,0,0-2.2,2.061Z"></path><path d="M52.921,4.121,49.241,15.4a4.855,4.855,0,0,1-1.02,1.961,2.585,2.585,0,0,1-2.181.8H43.82V15.7h1.32c.84,0,1.04-.4,1.04-.76a3.117,3.117,0,0,0-.22-1L42.919,4.121H46.2L47.92,11.6l1.721-7.482Z"></path><path d="M66.581,0c5.141,0,7.162,4.241,7.162,7.6,0,3.781-2.581,7.382-7.122,7.382-4.661,0-7.021-3.661-7.021-7.542C59.6,4.221,61.48,0,66.581,0Zm.06,11.982c2.621,0,3.561-2.44,3.561-4.421,0-2.561-1.12-4.6-3.621-4.6-2.681,0-3.5,2.541-3.5,4.441C63.08,9.662,64.1,11.982,66.641,11.982Z"></path><path d="M82.221,14.563V8.122c0-.98-.28-1.8-1.521-1.8-1.42,0-1.62,1-1.62,2.4v5.842H76V4.121H79.12v.92a3.748,3.748,0,0,1,2.94-1.18c2.121,0,3.241,1.08,3.241,3.2v7.5Z"></path><path d="M88.059,14.563V.44h3.062V14.563Z"></path><path d="M93.9,2.82V.44H96.96V2.82Zm0,11.743V4.121H96.96V14.563Z"></path><path d="M105.981,14.563V8.122c0-.98-.28-1.8-1.521-1.8-1.421,0-1.621,1-1.621,2.4v5.842h-3.08V4.121h3.12v.92a3.75,3.75,0,0,1,2.941-1.18c2.12,0,3.24,1.08,3.24,3.2v7.5Z"></path><path d="M114.219,9.982v.12a2.349,2.349,0,0,0,2.38,2.48,2.79,2.79,0,0,0,2.641-1.86l2.32,1.2a5.879,5.879,0,0,1-5.2,3.021c-3.181,0-5.281-2.021-5.281-5.4,0-2.621,1.281-5.741,5.361-5.741,3.921,0,5.241,3.141,5.241,6.041v.14Zm4.28-1.92A2.014,2.014,0,0,0,116.419,6a2.268,2.268,0,0,0-2.2,2.061Z"></path><path d="M129.3,14.563V.44h3.521V11.583h5.521v2.981Z"></path><path d="M140.158,2.82V.44h3.062V2.82Zm0,11.743V4.121h3.062V14.563Z"></path><path d="M149,.44V5.081a3.43,3.43,0,0,1,2.98-1.26c2.5,0,4.461,1.9,4.461,5.321,0,2.681-1.18,5.7-4.561,5.7a3.755,3.755,0,0,1-3.041-1.381v1.1H146V.44Zm2.341,5.621c-1.3,0-2.421.78-2.421,3.2,0,1.661.46,3.3,2.3,3.3,2.08,0,2.221-2.42,2.221-3.341C153.44,8.282,153.259,6.061,151.339,6.061Z"></path><path d="M161.439,4.121V5.2a3.846,3.846,0,0,1,1.22-.78,5.283,5.283,0,0,1,1.8-.42v2.72l-1.021.16c-1.62.26-1.92.68-1.92,1.8v5.882h-3.062V4.121Z"></path><path d="M172.12,14.563v-.94a5.081,5.081,0,0,1-3.2,1.221,3.161,3.161,0,0,1-3.421-3.181,3.359,3.359,0,0,1,2.2-3,24.83,24.83,0,0,1,4.12-.96v-.58a1.1,1.1,0,0,0-1.18-1.26c-1.3,0-1.54.76-1.62,1.22h-3.081c0-2.3,2.12-3.241,4.4-3.241,1.8,0,4.5.48,4.5,3v6.1a2.536,2.536,0,0,0,.3,1.621Zm-2.281-4.341c-1.06.34-1.32.84-1.32,1.3a1.115,1.115,0,0,0,1.181,1.06,2.312,2.312,0,0,0,2.12-2.561v-.46Z"></path><path d="M180.6,4.121V5.2a3.846,3.846,0,0,1,1.22-.78,5.283,5.283,0,0,1,1.8-.42v2.72l-1.021.16c-1.62.26-1.92.68-1.92,1.8v5.882h-3.062V4.121Z"></path><path d="M193.78,4.121,190.1,15.4a4.856,4.856,0,0,1-1.021,1.961,2.584,2.584,0,0,1-2.18.8h-2.221V15.7H186c.84,0,1.04-.4,1.04-.76a3.141,3.141,0,0,0-.22-1l-3.041-9.823h3.28l1.721,7.482L190.5,4.121Z"></path></svg></a>
+
+
+</div>
+</div>
+
+        <ul class="drawerMenu dark slider submenu-visible" role="menu">
+            <li class="list-item d-block" role="menuitem" aria-haspopup="true" aria-expanded="true" aria-disabled="false">
+                <button id="info" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">info</span>
+                    <span class="tab-text">Details</span>
+                </button>
+
+                <div id="info-tab-pane" class="submenu"><div class="paddedPane">
+    <div class="stickify show-lg">
+        <h3 class="primaryTitle">Details</h3>
+    </div>
+
+
+    <div class="item-info">
+        <div class="metadata" lang="en">
+   <div id="detailsContainer">
+      <div class="cover"><a id="coverLink" href="https://onlinelibrary.wiley.com/toc/10991255/2000/15/6" target="_blank"><img src="./Loss function‐based evaluation of DSGE models_files/jae.v38.3.cover.gif" alt="Cover Image" class="cover"></a></div>
+      <div id="issueInfo">
+         <div class="journal-details"><a target="_blank" id="journalHomeLink" href="https://onlinelibrary.wiley.com/journal/10991255">Journal of Applied Econometrics</a></div>
+         <div class="issue-details"><a id="issueTocLink" href="https://onlinelibrary.wiley.com/toc/10991255/2000/15/6" target="_blank"><span class="details-entry"><span class="details-label">Volume</span><span class="details-value"> 15</span></span>, <span class="details-entry"><span class="details-label">Issue</span><span class="details-value"> 6</span></span><span class="details-entry"><span class="details-value">: Inference and Decision Making</span></span></a><div class="details-entry issue-pub-date"><span class="details-value">Nov 2000</span></div>
+            <div class="details-entry issue-pages"><span class="details-label">Pages</span><span class="details-value">545-744</span></div>
+         </div>
+      </div>
+   </div>
+   <div id="publicationType">
+      <h6>ARTICLE</h6>
+   </div>
+   <div class="title-group">
+      <h4 class="title" lang="en">Loss function-based evaluation of DSGE models</h4>
+   </div>
+   <div class="fullText-container"><a id="fullTextLink" class="ref nowrap" href="https://onlinelibrary.wiley.com/doi/full/10.1002/jae.582"> View article page</a></div>
+   <div class="authors"><span class="author">Frank Schorfheide</span></div><a href="https://onlinelibrary.wiley.com/action/showCitFormats?doi=10.1002%2Fjae.582&amp;mobileUi=0" id="citeButton" class="btn btn--secondary citation_btn " target="_blank" accesskey="c" aria-label="export citation">
+    <span class="icon material-icons">format_quote</span>
+    <span class="text">CITE</span>
+</a>
+
+   <div class="publication-details">
+      <div class="copyright">Copyright © 2000 John Wiley &amp; Sons, Ltd.</div><a class="doi-link" target="_blank" accesskey="c" aria-label="doi" href="https://doi.org/10.1002/jae.582"><span class="text">https://doi.org/10.1002/jae.582</span><span class="icon material-icons">open_in_new</span></a><div class="details-section">
+         <div class="issn">
+            <div class="details-entry"><span class="details-label">ISSN</span><span class="details-value">0883-7252</span></div>
+         </div>
+         <div class="details-entry"><span class="details-label">eISSN</span><span class="details-value">1099-1255</span></div>
+         <div class="details-entry"><span class="details-label">Online</span><span class="details-value">5 February 2001</span></div>
+         <div class="details-entry"><span class="details-label">Revised</span><span class="details-value">24 August 2000</span></div>
+         <p class="received-date">
+            </p><div class="details-entry"><span class="details-label">Received</span><span class="details-value">23 September 1999</span></div>
+         <p></p>
+         <div class="details-entry"><span class="details-label">Pages</span><span class="details-value">645
+                    -
+                    670</span></div>
+      </div>
+   </div>
+   <div class="abstract">
+      <div lang="en">
+         <h6>Abstract</h6>
+         <p>In this paper we propose a Bayesian econometric procedure for the evaluation and comparison of DSGE models. Unlike in many previous econometric approaches we explicitly take into account the possibility that the DSGE models are misspecified and introduce a reference model to complete the model space. Three loss functions are proposed to assess the discrepancy between DSGE model predictions and an overall posterior distribution of population characteristics that the researcher is trying to match. The evaluation procedure is applied to the comparison of a standard cash-in-advance (CIA) and a portfolio adjustment cost (PAC) model. We find that the CIA model has higher posterior probability than the PAC model and achieves a better in-sample time series fit. Both models overpredict the magnitude of the negative correlation between output growth and inflation. However, unlike the PAC model, the CIA model is not able to generate a positive real effect of money growth shocks on aggregate output. Overall, the impulse response dynamics of the PAC model resemble the posterior mean impulse response functions more closely than the responses of the CIA model. Copyright © 2000 John Wiley &amp; Sons, Ltd.</p>
+      </div>
+   </div>
+</div>
+        
+    </div>
+</div></div>
+            </li>
+
+            <li class="list-item d-block" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="chapters" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                    <span class="back-btn btn--action__text">
+                        <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                        BACK
+                    </span>
+                    <span class="icon material-icons" aria-hidden="true">list</span>
+                    <span class="tab-text">Outline</span>
+                </button>
+
+                <div id="reader-toc-body" class="submenu"><div class="paddedPane error-pane">
+        <h3 class="primaryTitle show-lg">Outline</h3>
+    <div class="panel-error">
+        <span class="error-icon icon material-icons" data-type="content">list</span>
+        <div class="error-text">This publication does not have an outline.</div>
+    </div>
+</div>
+</div>
+            </li>
+
+            <li class="list-item show-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="files" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">perm_media</span>
+                    <span class="tab-text">Materials</span>
+                </button>
+                <div id="files-tab-pane" class="submenu"><div class="paddedPane scrollToTop ">
+    <div class="stickify ">
+        <h3 class="primaryTitle">Materials</h3>
+        <ul class="tab-nav active" role="tablist">
+            <!-- if changes are made in these files, update left-panel-mobile.html -->
+            <li role="tab">
+                <a class="figures active" href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#figures-tab-pane" role="tab" aria-controls="figures-tab-pane" aria-disabled="false" aria-selected="true" tabindex="0">
+                    <span class="tab-text">FIGURES</span>
+                    <span class="icon material-icons pull-right hidden-desktop" aria-hidden="true" aria-labelledby="">navigate_next</span>
+                </a>
+            </li>
+            <li role="tab">
+                <a class="supplementary" href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#supplementary-tab-pane" aria-selected="false" role="tab" aria-controls="supplementary-tab-pane" aria-disabled="false" tabindex="0">
+                    <span class="tab-text">SUPPLEMENTS</span>
+                    <span class="icon material-icons pull-right hidden-desktop" aria-hidden="true" aria-labelledby="">navigate_next</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content ">
+        <div class="panels" data-vport="1024" data-panel-desktop="figures">
+            <div id="figures-tab-pane" class="tab-pane active has-error" role="tabpanel" aria-label="" aria-hidden="false" tabindex="0"><div class="paddedPane error-pane">
+    <div class="panel-error">
+        <span class="error-icon icon material-icons" data-type="content">photo</span>
+        <div class="error-text">Figures for this publication are not available for display.</div>
+    </div>
+</div>
+</div>
+        </div>
+        <div class="panels" data-vport="1024" data-panel-desktop="supplements">
+            <div id="supplementary-tab-pane" class="tab-pane has-error" role="tabpanel" aria-hidden="true" aria-label="" tabindex="0"><div class="paddedPane error-pane">
+    <div class="panel-error">
+        <span class="error-icon icon material-icons" data-type="content">perm_media</span>
+        <div class="error-text">Supplementary materials for this publication are not available for display.</div>
+    </div>
+</div>
+</div>
+        </div>
+    </div>
+</div></div>
+            </li>
+            <li class="list-item d-block hide-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="figures" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">image</span>
+                    <span class="tab-text">Figures</span>
+                </button>
+                <div class="submenu hide-lg">
+                    <div class="paddedPane">
+                        <div data-vport="1024" data-panel-mobile="figures" data-figures-panel-mobile="figures-panel"></div>
+                    </div>
+                </div>
+            </li>
+            <li class="list-item d-block hide-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="supplementary" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">perm_media</span>
+                    <span class="tab-text">Supplements</span>
+                </button>
+                <div class="submenu hide-lg">
+                    <div class="paddedPane">
+                        <div data-vport="1024" data-panel-mobile="supplements"></div>
+                    </div>
+                </div>
+            </li>
+
+
+            <li class="list-item show-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="links" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons rotate-135" aria-hidden="true">link</span>
+                    <span class="tab-text">Links</span>
+                </button>
+                <div id="links-tab-pane" class="submenu"><div class="paddedPane ">
+    <div class="stickify ">
+        <h3 class="primaryTitle">Links</h3>
+        <ul class="tab-nav active" role="tablist">
+            <!-- if changes are made in these files, update left-panel-mobile.html -->
+            <li role="tab">
+                <a class="references" href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#references-tab-pane" role="tab" aria-controls="references-tab-pane" aria-disabled="false" aria-selected="false" tabindex="0">
+                    <span class="tab-text">REFERENCES</span>
+                    <span class="icon material-icons pull-right hidden-desktop" aria-hidden="true" aria-labelledby="">navigate_next</span>
+                </a>
+            </li>
+            <li role="tab">
+                <a class="citations" href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#citations-tab-pane" aria-selected="false" role="tab" aria-controls="citations-tab-pane" aria-disabled="false" tabindex="0">
+                    <span class="tab-text">CITED BY</span>
+                    <span class="icon material-icons pull-right hidden-desktop" aria-hidden="true" aria-labelledby="">navigate_next</span>
+                </a>
+            </li>
+            <li role="tab">
+                <a class="recommended" href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#recommended-tab-pane" aria-selected="false" role="tab" aria-controls="recommended-tab-pane" aria-disabled="false" tabindex="0">
+                    <span class="tab-text">RECOMMENDED</span>
+                    <span class="icon material-icons pull-right hidden-desktop" aria-hidden="true" aria-labelledby="">navigate_next</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content has-tabs">
+        <div class="panels" data-vport="1024" data-panel-desktop="ref">
+            <div id="references-tab-pane" class="tab-pane" role="tabpanel" aria-label="" aria-hidden="true" tabindex="0"><div class="tabbedPane"><div class="references-list">
+    <div class="body">
+        <ul class="rlist separator references-tab__collection">
+            <li id="e_1_2_1_2_1" class="reference" doi="10.2307/2526758">
+                <p class="refNum">1</p>
+                <span class="author">Altug, S.</span>(<span class="pubYear">1989</span>), ‘<span class="articleTitle">Time-to-build and aggregate fluctuations: some new evidence</span>’,<i>International Economic Review</i>,<span class="vol">30</span>(<span class="citedIssue">4</span>),<span class="pageFirst">889</span>–<span class="pageLast">920</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_3_1" class="reference" doi="">
+                <p class="refNum">2</p>
+                <span class="author">Blanchard, O. J.</span>and<span class="author">D. Quah</span>(<span class="pubYear">1989</span>), ‘<span class="articleTitle">The dynamic effects of aggregate demand and supply disturbances</span>’,<i>American Economic Review</i>,<span class="vol">79</span>,<span class="pageFirst">655</span>–<span class="pageLast">673</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_4_1" class="reference" doi="10.2307/2982063">
+                <p class="refNum">3</p>
+                <span class="author">Box, G. E. P.</span>(<span class="pubYear">1980</span>), ‘<span class="articleTitle">Sampling and Bayes' inference in scientific modelling and robustness</span>’,<i>Journal of the Royal Statistical Society A</i>,<span class="vol">143</span>,<span class="pageFirst">383</span>–<span class="pageLast">430</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_5_1" class="reference" doi="10.1002/jae.3950090508">
+                <p class="refNum">4</p>
+                <span class="author">Canova, F.</span>(<span class="pubYear">1994</span>), ‘<span class="articleTitle">Statistical inference in calibrated models</span>’,<i>Journal of Applied Econometrics</i>,<span class="vol">9</span>,<span class="pageFirst">S123–144</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_6_1" class="reference" doi="">
+                <p class="refNum">5</p>
+                <span class="author">Canova, F.</span>,<span class="author">M. Finn</span>and<span class="author">A. R. Pagan</span>(<span class="pubYear">1994</span>), ‘<span class="chapterTitle">Evaluating a real business cycle model</span>’, in<span class="editor">C. P. Hargreaves</span>(Ed.),<span class="bookTitle">Nonstationary Time Series Analysis and Cointegration</span>,Oxford University Press,<span class="publisherLocation">Oxford</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_7_1" class="reference" doi="">
+                <p class="refNum">6</p>
+                <span class="author">Christiano, L. J.</span>(<span class="pubYear">1991</span>), ‘<span class="articleTitle">Modeling the liquidity effect of a money shock</span>’,<i>Federal Reserve Bank of Minneapolis — Quarterly Review</i>, Winter,<span class="pageFirst">3</span>–<span class="pageLast">34</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_8_1" class="reference" doi="">
+                <p class="refNum">7</p>
+                <span class="author">Christiano, L. J.</span>and<span class="author">M. Eichenbaum</span>(<span class="pubYear">1992a</span>), ‘<span class="articleTitle">Current real-business cycle theory and aggregate labor- market fluctuations</span>’,<i>American Economic Review</i>,<span class="vol">82</span>,<span class="pageFirst">430</span>–<span class="pageLast">450</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_9_1" class="reference" doi="">
+                <p class="refNum">8</p>
+                <span class="author">Christiano, L.</span>and<span class="author">M. Eichenbaum</span>(<span class="pubYear">1992b</span>), ‘<span class="articleTitle">Liquidity effects and the monetary transmission mechanism</span>’,<i>American Economic Review</i>,<span class="vol">82</span>,<span class="pageFirst">346</span>–<span class="pageLast">353</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_10_1" class="reference" doi="">
+                <p class="refNum">9</p>
+                <span class="author">Cogley, T.</span>and<span class="author">J. M. Nason</span>(<span class="pubYear">1995</span>), ‘<span class="articleTitle">Output dynamics in real business cycle models</span>’,<i>American Economic Review</i>,<span class="vol">85</span>,<span class="pageFirst">492</span>–<span class="pageLast">511</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_11_1" class="reference" doi="10.1007/BF00052346">
+                <p class="refNum">10</p>
+                <span class="author">Crowder, M.</span>(<span class="pubYear">1988</span>), ‘<span class="articleTitle">Asymptotic expansions of posterior expectations, distributions, and densities for stochastic processes</span>’,<i>Annals of the Institute for Statistical Mathematics</i>,<span class="vol">40</span>,<span class="pageFirst">297</span>–<span class="pageLast">309</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_12_1" class="reference" doi="10.2307/1392095">
+                <p class="refNum">11</p>
+                <span class="author">DeJong, D. N.</span>,<span class="author">B. F. Ingram</span>and<span class="author">C. H. Whiteman</span>(<span class="pubYear">1996</span>), ‘<span class="articleTitle">A Bayesian approach to calibration</span>’,<i>Journal of Business Economics and Statistics</i>,<span class="vol">14</span>,<span class="pageFirst">1</span>–<span class="pageLast">9</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_13_1" class="reference" doi="10.1016/S0304-4076(00)00019-1">
+                <p class="refNum">12</p>
+                <span class="author">DeJong, D. N.</span>,<span class="author">B. F. Ingram</span>and<span class="author">C. H. Whiteman</span>(<span class="pubYear">2000</span>), ‘<span class="articleTitle">A Bayesian approach to dynamic macroeconomics</span>’,<i>Journal of Econometrics</i>, (forthcoming).
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_14_1" class="reference" doi="10.1111/1467-937X.00052">
+                <p class="refNum">13</p>
+                <span class="author">Diebold, F. X.</span>,<span class="author">L. E. Ohanian</span>and<span class="author">J. Berkowitz</span>(<span class="pubYear">1998</span>), ‘<span class="articleTitle">Dynamic equilibrium economies: a framework for comparing models and data</span>’,<i>Review of Economic Studies</i>,<span class="vol">65</span>,<span class="pageFirst">433</span>–<span class="pageLast">452</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_15_1" class="reference" doi="10.4159/harvard.9780674333444">
+                <p class="refNum">14</p>
+                <span class="author">Fair, R.</span>(<span class="pubYear">1994</span>),<span class="bookTitle">Testing Macroeconometric Models</span>,Harvard University Press,<span class="publisherLocation">Cambridge, MA</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_16_1" class="reference" doi="10.1016/0304-3932(92)90021-S">
+                <p class="refNum">15</p>
+                <span class="author">Fuerst, T.</span>(<span class="pubYear">1992</span>), ‘<span class="articleTitle">Liquidity, loanable funds, and real activity</span>’,<i>Journal of Monetary Economics</i>,<span class="vol">29</span>,<span class="pageFirst">3</span>–<span class="pageLast">24</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_17_1" class="reference" doi="10.1111/j.1574-6941.2001.tb00841.x">
+                <p class="refNum">16</p>
+                <span class="author">Gelman, A.</span>,<span class="author">J. B. Carlin, H. S.</span><span class="author">Stern</span>and<span class="author">D. B. Rubin</span>(<span class="pubYear">1995</span>),<span class="bookTitle">Bayesian Data Analysis</span>,Chapman &amp; Hall,<span class="publisherLocation">New York</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_18_1" class="reference" doi="">
+                <p class="refNum">17</p>
+                <span class="author">Geweke, J.</span>(<span class="pubYear">1999a</span>), ‘<span class="bookTitle">Computational experiments and reality</span>’,<span class="publisherLocation">Mimeo</span>,University of Minnesota.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_19_1" class="reference" doi="10.1080/07474939908800428">
+                <p class="refNum">18</p>
+                <span class="author">Geweke, J.</span>(<span class="pubYear">1999b</span>), ‘<span class="articleTitle">Using simulation methods for Bayesian econometric models: inference, development and communication</span>’,<i>Econometric Reviews</i>,<span class="vol">18</span>,<span class="pageFirst">1</span>–<span class="pageLast">126</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_20_1" class="reference" doi="10.1111/j.2517-6161.1952.tb00104.x">
+                <p class="refNum">19</p>
+                <span class="author">Good, I. J.</span>(<span class="pubYear">1952</span>), ‘<span class="articleTitle">Rational decisions</span>’,<i>Journal of the Royal Statistical Society B</i>,<span class="vol">14</span>,<span class="pageFirst">107</span>–<span class="pageLast">114</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_21_1" class="reference" doi="">
+                <p class="refNum">20</p>
+                <span class="author">Ireland, P. N.</span>(<span class="pubYear">1998</span>), ‘<span class="bookTitle">A method for taking models to the data</span>’,<span class="publisherLocation">Mimeo</span>,Rutgers University.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_22_1" class="reference" doi="10.1080/01621459.1995.10476572">
+                <p class="refNum">21</p>
+                <span class="author">Kass, R. E.</span>and<span class="author">A. E. Raftery</span>(<span class="pubYear">1995</span>), ‘<span class="articleTitle">Bayes factors</span>’,<i>Journal of the American Statistical Association</i>,<span class="vol">90</span>,<span class="pageFirst">773</span>–<span class="pageLast">795</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_23_1" class="reference" doi="10.1016/S0304-3932(99)00054-9">
+                <p class="refNum">22</p>
+                <span class="author">Kim, J.</span>(<span class="pubYear">2000</span>), ‘<span class="articleTitle">Constructing and estimating a realistic optimizing model of monetary policy</span>’,<i>Journal of Monetary Economics</i>,<span class="vol">45</span>,<span class="pageFirst">329</span>–<span class="pageLast">360</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_24_1" class="reference" doi="10.1257/jep.10.1.69">
+                <p class="refNum">23</p>
+                <span class="author">Kydland, F.</span>and<span class="author">E. Prescott</span>(<span class="pubYear">1996</span>), ‘<span class="articleTitle">The computational experiment: an econometric tool</span>’,<i>Journal of Economic Perspectives</i>,<span class="vol">10</span>,<span class="pageFirst">69</span>–<span class="pageLast">85</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_25_1" class="reference" doi="">
+                <p class="refNum">24</p>
+                <span class="author">Leeper, E. M.</span>and<span class="author">C. A. Sims</span>(<span class="pubYear">1994</span>), ‘<span class="chapterTitle">Toward a modern macroeconomic model usable for policy analysis</span>’, in<span class="editor">S. Fischer</span>and<span class="editor">J. J. Rotemberg</span>(Eds),<span class="bookTitle">NBER Macroeconomics Annual 1994</span>,MIT Press,<span class="publisherLocation">Cambridge, MA</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_26_1" class="reference" doi="10.1002/jae.3950090504">
+                <p class="refNum">25</p>
+                <span class="author">Nason, J. M.</span>and<span class="author">T. Cogley</span>(<span class="pubYear">1994</span>), ‘<span class="articleTitle">Testing the implications of long-run neutrality for monetary business cycle models</span>’,<i>Journal of Applied Econometrics</i>,<span class="vol">9</span>,<span class="pageFirst">S37</span>–<span class="pageLast">70</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_27_1" class="reference" doi="10.2307/2171845">
+                <p class="refNum">26</p>
+                <span class="author">Phillips, C. B.</span>(<span class="pubYear">1996</span>), ‘<span class="articleTitle">Econometric model determination</span>’,<i>Econometrica</i>,<span class="vol">64</span>,<span class="pageFirst">763</span>–<span class="pageLast">812</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_28_1" class="reference" doi="">
+                <p class="refNum">27</p>
+                <span class="author">Rotemberg, J.</span>and<span class="author">M. Woodford</span>(<span class="pubYear">1996</span>), ‘<span class="articleTitle">Real business cycle models and the forecastable movements in output, hours, and consumption</span>’,<i>American Economic Review</i>,<span class="vol">86</span>,<span class="pageFirst">71</span>–<span class="pageLast">89</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_29_1" class="reference" doi="10.2307/2534318">
+                <p class="refNum">28</p>
+                <span class="author">Sims, C. A.</span>(<span class="pubYear">1982</span>), ‘<span class="articleTitle">Policy analysis with econometric models</span>’,<i>Brookings Paper of Economic Activity</i>,<span class="pageFirst">107</span>–<span class="pageLast">164</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_30_1" class="reference" doi="10.1257/jep.10.1.105">
+                <p class="refNum">29</p>
+                <span class="author">Sims, C. A.</span>(<span class="pubYear">1996</span>), ‘<span class="articleTitle">Macroeconomics and methodology</span>’,<i>Journal of Economic Perspectives</i>,<span class="vol">10</span>,<span class="pageFirst">105</span>–<span class="pageLast">120</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_31_1" class="reference" doi="10.1002/jae.3950080506">
+                <p class="refNum">30</p>
+                <span class="author">Smith, A. A. Jr</span>(<span class="pubYear">1993</span>), ‘<span class="articleTitle">Estimating nonlinear time-series models using simulated vector autoregressions</span>’,<i>Journal of Applied Econometrics</i>,<span class="vol">8</span>,<span class="pageFirst">S63–S84</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_32_1" class="reference" doi="10.1002/jae.3950090507">
+                <p class="refNum">31</p>
+                <span class="author">Söderlind, P.</span>(<span class="pubYear">1994</span>), ‘<span class="articleTitle">Cyclical properties of a real business cycle model</span>’,<i>Journal of Applied Econometrics</i>,<span class="vol">9</span>,<span class="pageFirst">S113</span>–<span class="pageLast">122</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_33_1" class="reference" doi="10.2307/1391742">
+                <p class="refNum">32</p>
+                <span class="author">Taylor, J. B.</span>and<span class="author">H. Uhlig</span>(<span class="pubYear">1990</span>), ‘<span class="articleTitle">Solving non-linear stochastic growth models: a comparison of alternative solution methods</span>’,<i>Journal of Business Economics and Statistics</i>,<span class="vol">8</span>,<span class="pageFirst">1</span>–<span class="pageLast">34</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+            <li id="e_1_2_1_34_1" class="reference" doi="">
+                <p class="refNum">33</p>
+                <span class="author">Zellner, A.</span>(<span class="pubYear">1971</span>),<span class="bookTitle">Introduction to Bayesian Inference in Econometrics</span>,John Wiley,<span class="publisherLocation">New York</span>.
+                <ul class="reference-links getFTR getFTR--loading">
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div></div></div>
+        </div>
+        <div class="panels" data-vport="1024" data-panel-desktop="cit">
+            <div id="citations-tab-pane" class="tab-pane" role="tabpanel" aria-hidden="true" aria-label="" tabindex="0"></div>
+        </div>
+        <div class="panels" data-vport="1024" data-panel-desktop="recommended">
+            <div id="recommended-tab-pane" class="tab-pane" role="tabpanel" aria-hidden="true" aria-label="" tabindex="0">
+                
+            </div>
+        </div>
+    </div>
+</div></div>
+            </li>
+            <li class="list-item d-block hide-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="references" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons rotate-135" aria-hidden="true">link</span>
+                    <span class="tab-text">References</span>
+                </button>
+                <div class="submenu hide-lg">
+                    <div class="paddedPane">
+                        <div data-vport="1024" data-panel-mobile="ref" data-links-panel-mobile="links-panel"></div>
+                    </div>
+                </div>
+            </li>
+            <li class="list-item d-block hide-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="citations" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">format_quote</span>
+                    <span class="tab-text">Cited by</span>
+                </button>
+                <div class="submenu hide-lg">
+                    <div class="paddedPane">
+                        <div data-vport="1024" data-panel-mobile="cit" data-links-panel-mobile="links-panel"></div>
+                    </div>
+                </div>
+            </li>
+            <li class="list-item d-block hide-lg" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+                <button id="recommended" class="drawerMenu--trigger list-button toggle-submenu btn" type="button" tabindex="0">
+                <span class="back-btn btn--action__text">
+                    <span class="icon material-icons hidden-desktop" aria-hidden="true">navigate_before</span>
+                    BACK
+                </span>
+                    <span class="icon material-icons" aria-hidden="true">more_horiz</span>
+                    <span class="tab-text">Recommended</span>
+                </button>
+                <div class="submenu hide-lg">
+                    <div class="paddedPane">
+                        <div data-vport="1024" data-panel-mobile="recommended" data-links-panel-mobile="links-panel"></div>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+</div>
+
+        <div class="logoContainer grouped hide-sm">
+
+
+<a tabindex="0" aria-label="Home Page" class="logo btn btn--light site-logo" href="https://onlinelibrary.wiley.com/" target="_blank" title="" data-original-title="Wiley Online Library" onclick="this.blur()" data-tooltip-position="bottom">
+
+    <span class="icon material-icons home d-none hide-sm" aria-hidden="true">home</span>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 193.78 18.164"><title>wol-logo</title><path d="M15.963,14.563H12.323L9.782,5.521,7.222,14.563H3.581L0,.44H3.541l2.081,9.722L8.182.44h3.141l2.641,9.722L16.023.44h3.521Z"></path><path d="M20.96,2.82V.44h3.061V2.82Zm0,11.743V4.121h3.061V14.563Z"></path><path d="M26.8,14.563V.44H29.86V14.563Z"></path><path d="M35.04,9.982v.12a2.349,2.349,0,0,0,2.38,2.48,2.79,2.79,0,0,0,2.641-1.86l2.321,1.2a5.881,5.881,0,0,1-5.2,3.021c-3.181,0-5.281-2.021-5.281-5.4,0-2.621,1.28-5.741,5.361-5.741,3.92,0,5.241,3.141,5.241,6.041v.14Zm4.281-1.92A2.013,2.013,0,0,0,37.241,6a2.269,2.269,0,0,0-2.2,2.061Z"></path><path d="M52.921,4.121,49.241,15.4a4.855,4.855,0,0,1-1.02,1.961,2.585,2.585,0,0,1-2.181.8H43.82V15.7h1.32c.84,0,1.04-.4,1.04-.76a3.117,3.117,0,0,0-.22-1L42.919,4.121H46.2L47.92,11.6l1.721-7.482Z"></path><path d="M66.581,0c5.141,0,7.162,4.241,7.162,7.6,0,3.781-2.581,7.382-7.122,7.382-4.661,0-7.021-3.661-7.021-7.542C59.6,4.221,61.48,0,66.581,0Zm.06,11.982c2.621,0,3.561-2.44,3.561-4.421,0-2.561-1.12-4.6-3.621-4.6-2.681,0-3.5,2.541-3.5,4.441C63.08,9.662,64.1,11.982,66.641,11.982Z"></path><path d="M82.221,14.563V8.122c0-.98-.28-1.8-1.521-1.8-1.42,0-1.62,1-1.62,2.4v5.842H76V4.121H79.12v.92a3.748,3.748,0,0,1,2.94-1.18c2.121,0,3.241,1.08,3.241,3.2v7.5Z"></path><path d="M88.059,14.563V.44h3.062V14.563Z"></path><path d="M93.9,2.82V.44H96.96V2.82Zm0,11.743V4.121H96.96V14.563Z"></path><path d="M105.981,14.563V8.122c0-.98-.28-1.8-1.521-1.8-1.421,0-1.621,1-1.621,2.4v5.842h-3.08V4.121h3.12v.92a3.75,3.75,0,0,1,2.941-1.18c2.12,0,3.24,1.08,3.24,3.2v7.5Z"></path><path d="M114.219,9.982v.12a2.349,2.349,0,0,0,2.38,2.48,2.79,2.79,0,0,0,2.641-1.86l2.32,1.2a5.879,5.879,0,0,1-5.2,3.021c-3.181,0-5.281-2.021-5.281-5.4,0-2.621,1.281-5.741,5.361-5.741,3.921,0,5.241,3.141,5.241,6.041v.14Zm4.28-1.92A2.014,2.014,0,0,0,116.419,6a2.268,2.268,0,0,0-2.2,2.061Z"></path><path d="M129.3,14.563V.44h3.521V11.583h5.521v2.981Z"></path><path d="M140.158,2.82V.44h3.062V2.82Zm0,11.743V4.121h3.062V14.563Z"></path><path d="M149,.44V5.081a3.43,3.43,0,0,1,2.98-1.26c2.5,0,4.461,1.9,4.461,5.321,0,2.681-1.18,5.7-4.561,5.7a3.755,3.755,0,0,1-3.041-1.381v1.1H146V.44Zm2.341,5.621c-1.3,0-2.421.78-2.421,3.2,0,1.661.46,3.3,2.3,3.3,2.08,0,2.221-2.42,2.221-3.341C153.44,8.282,153.259,6.061,151.339,6.061Z"></path><path d="M161.439,4.121V5.2a3.846,3.846,0,0,1,1.22-.78,5.283,5.283,0,0,1,1.8-.42v2.72l-1.021.16c-1.62.26-1.92.68-1.92,1.8v5.882h-3.062V4.121Z"></path><path d="M172.12,14.563v-.94a5.081,5.081,0,0,1-3.2,1.221,3.161,3.161,0,0,1-3.421-3.181,3.359,3.359,0,0,1,2.2-3,24.83,24.83,0,0,1,4.12-.96v-.58a1.1,1.1,0,0,0-1.18-1.26c-1.3,0-1.54.76-1.62,1.22h-3.081c0-2.3,2.12-3.241,4.4-3.241,1.8,0,4.5.48,4.5,3v6.1a2.536,2.536,0,0,0,.3,1.621Zm-2.281-4.341c-1.06.34-1.32.84-1.32,1.3a1.115,1.115,0,0,0,1.181,1.06,2.312,2.312,0,0,0,2.12-2.561v-.46Z"></path><path d="M180.6,4.121V5.2a3.846,3.846,0,0,1,1.22-.78,5.283,5.283,0,0,1,1.8-.42v2.72l-1.021.16c-1.62.26-1.92.68-1.92,1.8v5.882h-3.062V4.121Z"></path><path d="M193.78,4.121,190.1,15.4a4.856,4.856,0,0,1-1.021,1.961,2.584,2.584,0,0,1-2.18.8h-2.221V15.7H186c.84,0,1.04-.4,1.04-.76a3.141,3.141,0,0,0-.22-1l-3.041-9.823h3.28l1.721,7.482L190.5,4.121Z"></path></svg></a>
+
+
+</div>
+
+</div>
+
+
+<div class="btn-group navbar-center">
+        <div class="dropdown-widget paging grouped" data-persist="">
+    <button id="" class="dropdown-trigger btn btn--light fxl" title="Select page [P]" aria-label="Select page" data-tooltip-position="" aria-haspopup="true" type="button" tabindex="0" accesskey="p" aria-expanded="false">
+        <span class="d-none d-md-inline-block pagination_button_text">Page</span><span class="cpage">1</span><span class="separator">/</span><span class="allpages">26</span><span class="animated_arrow_down"></span>
+    </button>
+    <div id="" class="dropdown-content dropdown-list medium" aria-label="" aria-labelledby="">
+        <div class="dropdown-content-wrapper scrollToTop">
+            <ul role="list">
+    <li class="list-item">
+        <button class="nodeTraverse next list-button btn" type="button" tabindex="0">
+            <span class="icon material-icons" aria-hidden="true">skip_next</span>
+            <span class="tab-text">Next</span>
+        </button>
+    </li>
+    <li class="list-item">
+        <button class="nodeTraverse previous list-button btn" type="button" tabindex="0" disabled="disabled">
+            <span class="icon material-icons" aria-hidden="true">skip_previous</span>
+            <span class="tab-text">Previous</span>
+        </button>
+    </li>
+    <li class="list-item">
+        <button class="js__paging-first list-button btn" type="button" tabindex="0">
+            <span class="icon reader-previous" aria-hidden="true"></span>
+            <span class="tab-text">Go to start</span>
+        </button>
+    </li>
+    <li class="list-item">
+        <button class="js__paging-last list-button btn" type="button" tabindex="0">
+            <span class="icon reader-next" aria-hidden="true"></span>
+            <span class="tab-text">Go to the end</span>
+        </button>
+    </li>
+    <li class="list-item content-item">
+        <div class="page-selector">
+                    <span class="list_title">go to page</span>
+            <div role="group" aria-label="Go to specified page">
+                <input type="number" name="page-select" value="" id="page_num" min="0" max="26" placeholder="Number" aria-label="page number" data-no-tooltip="">
+                <button id="gotopage" class="js__paging-select btn--cta__light btn" title="Go to specified page" data-alt-title="Go to specified page" type="button" tabindex="0">
+                    <span class="icon reader-double-arrow flip-horizontal" aria-hidden="true"></span>
+                </button>
+                <div class="errors" aria-label="Go to specified page"></div>
+            </div>
+        </div>
+    </li>
+    
+</ul>
+
+        </div>
+    </div>
+</div>
+
+        <div class="dropdown-widget grouped reading_options settings-dialog reading-options-navbar" data-persist="">
+    <button id="readingOptionsBtn" class="dropdown-trigger btn btn--light" title="Reading options [r]" aria-label="Select node" data-tooltip-position="" aria-haspopup="true" type="button" tabindex="0" accesskey="r" aria-expanded="false">
+        <span class="icon material-icons reflow" aria-hidden="true">format_size</span><span class="icon reader-reading-options fxl" aria-hidden="true"></span>
+    </button>
+    <div id="" class="dropdown-content dropdown-list slim" aria-label="" aria-labelledby="readingOptionsBtn">
+        <div class="dropdown-content-wrapper scrollToTop">
+            <div class="options-fields reflow">
+    <div class="option-field option-alignment">
+        <span class="option-title">Alignment</span>
+        <div class="option-items">
+            <div class="toggle-btn-group can-unchecked" role="radiogroup" aria-label="Text alignment" tabindex="0">
+                <input type="radio" id="align-left" name="justify" value="auto" aria-label="Align left">
+                <label for="align-left">
+                    <span class="icon material-icons">format_align_left</span>
+                </label>
+                <input type="radio" id="align-justify" name="justify" value="justify" aria-label="Justify">
+                <label for="align-justify">
+                    <span class="icon material-icons">format_align_justify</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-field option-font-size">
+        <span class="option-title">Font Size</span>
+        <div class="option-items" role="group" aria-label="Font size">
+            <button class="btn btn--rounded btn--secondary__light font-btn minus" aria-label="Decrease" type="button" tabindex="0">
+                <span class="icon material-icons" aria-hidden="true">remove</span>
+            </button>
+            <button class="btn btn--rounded btn--secondary__light font-btn plus" aria-label="Increase" type="button" tabindex="0">
+                <span class="icon material-icons" aria-hidden="true">add</span>
+            </button>
+            <input type="hidden" id="font-size-input" value="100">
+        </div>
+    </div>
+
+    <div class="option-field options-hyphenation">
+        <div class="toggle-checkbox">
+            <input class="light" type="checkbox" name="hyphenate" id="hyphenate-checkbox">
+            <label class="option-title" for="hyphenate-checkbox">Hyphenation</label>
+        </div>
+    </div>
+
+    <div class="options-return-defaults">
+        <button class="btn btn-link" type="button" tabindex="0">
+            <i class="material-icons icon" aria-hidden="true">close</i>
+            Return to default styles
+        </button>
+    </div>
+</div>
+<div class="options-fields">
+    <div class="option-field option-reading-flow">
+        <span class="option-title">Reading Flow</span>
+        <div class="option-items">
+            <div class="toggle-btn-group" role="radiogroup" aria-label="Reading flow">
+                <input type="radio" id="flow-vertical" name="scrolling" value="continuous" aria-label="Vertical continuous scroll">
+                <label for="flow-vertical">
+                    <span class="icon material-icons">swap_vert</span>
+                </label>
+                <input type="radio" id="flow-horizontal" name="scrolling" value="auto" aria-label="Horizontal paginated">
+                <label for="flow-horizontal">
+                    <span class="icon material-icons">swap_horiz</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    
+</div>
+
+        </div>
+    </div>
+</div>
+
+</div>
+
+
+<div class="btn-group navbar-right">
+    <div class="left">
+        <div class="zoom-wrapper fxl grouped left d-none d-md-flex">
+
+    <button class="zoom-btn width btn--light btn" title="Fit Width [h]" aria-label="fit width " type="button" tabindex="0" accesskey="h">
+        <span class="icon material-icons" aria-hidden="true">fullscreen</span>
+    </button>
+    <button class="zoom-btn height d-none btn--light btn" title="Fit Height [h]" aria-label="fit height" type="button" tabindex="0" accesskey="h">
+        <span class="icon material-icons" aria-hidden="true">fullscreen_exit</span>
+    </button>
+
+    <input tabindex="0" type="text" value="100%" disabled="" class="d-none">
+    <button class="zoom-btn out btn--light btn" title="Zoom Out [z]" aria-label="zoom out" type="button" tabindex="0" accesskey="z">
+        <span class="icon material-icons" aria-hidden="true">remove_circle_outline</span>
+    </button>
+    <button class="btn zoom-btn in btn--light" title="Zoom In [x]" aria-label="zoom in" type="button" tabindex="0" accesskey="x">
+        <span class="icon material-icons" aria-hidden="true">add_circle_outline</span>
+    </button>
+</div>
+<div></div>
+
+    </div>
+    <div class="grouped center">
+        <div class="dropdown-widget search" data-persist="true">
+    <button id="" class="dropdown-trigger btn btn--light search-trigger" title="Search [s]" aria-label="Search document" data-tooltip-position="" aria-haspopup="true" type="button" tabindex="0" accesskey="s" aria-expanded="false">
+        <span class="icon material-icons" aria-hidden="true">search</span>
+    </button>
+    <div id="" class="dropdown-content " aria-label="" aria-labelledby="">
+        <div class="dropdown-content-wrapper scrollToTop">
+            <div class="row">
+    <div class="topRow">
+        <div class="form-container">
+            <form method="post" action="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582#" role="search">
+                <div class="fieldWithButton">
+                    <input class="search-field" placeholder="Search this document...">
+                    <button type="submit" class="btn--cta small submit">
+                        <span class="d-none d-md-inline-block">SEARCH</span>
+                        <span class="d-inline-block d-md-none icon material-icons">search</span>
+                    </button>
+                </div>
+            </form>
+            <button type="button" class="close-search-btn d-inline-flex btn dropdown-trigger" aria-haspopup="true" aria-expanded="false">
+                <span class="d-inline-block icon material-icons">close</span>
+            </button>
+        </div>
+    </div>
+    <div class="results"></div>
+</div>
+        </div>
+    </div>
+</div>
+<div class="d-inline-flex clipboard share-access-navbar"><button id="shareTrigger" class="btn shareAccessUrl btn--light" title="Share access [j]" aria-label="share access" data-tooltip-position="" type="button" tabindex="0" accesskey="j">
+    <span class="icon material-icons" aria-hidden="true">group_add</span>
+</button>
+<div class="d-none"><button class="shareAccessUrlClip btn" type="button" tabindex="0">Copy Access</button></div>
+</div><div class="dropdown-widget " data-persist="">
+    <button id="settings_button" class="dropdown-trigger btn btn--light rpanel_toggle" title="More [o]" aria-label="view more options" data-tooltip-position="bottom" aria-haspopup="true" type="button" tabindex="0" accesskey="o" aria-expanded="false">
+        <span class="icon material-icons" aria-hidden="true">more_horiz</span>
+    </button>
+    <div id="reader-right-panel" class="dropdown-content dropdown-list wide" aria-label="" aria-labelledby="settings_button">
+        <div class="dropdown-content-wrapper scrollToTop">
+            <ul class="drawerMenu slider" role="menu">
+            <li class="list-item print" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+    <button id="" class="btn drawerMenu--trigger list-button" title="Print document" aria-label="Print document" data-tooltip-position="" type="button" tabindex="0">
+    <span class="icon material-icons" aria-hidden="true">print</span><span class="tab-text">Print document</span>
+</button>
+
+
+</li>
+
+        <li class="separator offlineSeparator" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">Offline reading</li>
+
+<li class="list-item offline_library general" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+    <div class="offline drawerMenu--trigger list-button trigger" data-disable-offline="true">
+
+        <div class="icons stack-icons">
+            <span class="icon idle reader-offline_pin"></span>
+            <svg class="adding removing progress-ring" height="24" width="24" viewBox="0 0 24 24">
+                <circle class="progress-ring__track" stroke-width="2" fill="transparent" r="10" cx="12" cy="12"></circle>
+                <circle class="progress-ring__circle" transform="rotate(-90 12 12)" stroke-dashoffset="90" stroke-dasharray="90" stroke-width="2" fill="transparent" r="10" cx="12" cy="12"></circle>
+            </svg>
+            <button class="cancel adding btn" type="button" tabindex="0">
+                <span class="icon material-icons" aria-hidden="true">stop</span>
+            </button>
+            <span class="icon material-icons done">offline_pin</span>
+        </div>
+
+        <button class="general btn idle" type="button" tabindex="0">
+            <span class="tab-text">Save for offline reading</span>
+        </button>
+        <span class="adding tab-text">Saving for offline reading</span>
+        <div class="desc idle adding">
+            &nbsp;•&nbsp;
+            <span class="file-desc">265.7 KB</span>
+        </div>
+        <div class="done">
+            <span class="tab-text">Saved for offline reading</span>
+            <button class="remove btn" type="button" tabindex="0">Remove</button>
+        </div>
+
+        <div class="removing">
+            <span class="tab-text">Removing from offline documents</span>
+        </div>
+    </div>
+</li>
+
+<li class="list-item offline_documents " role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+    <a href="https://onlinelibrary.wiley.com/reader/library" class="drawerMenu--trigger list-button btn" target="_blank" aria-label="View Offline documents">
+        <span class="icon material-icons">library_books</span>
+        <span class="tab-text">View Offline documents</span>
+    </a>
+</li>
+
+        <li class="list-item user_id" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-disabled="false">
+    
+<a href="https://onlinelibrary.wiley.com/action/showLogin?redirectUri=%2Fdoi%2Fepdf%2F10.1002%2Fjae.582" class="btn--action__text-secondary">Login</a>
+<span class="btn--action__text-secondary no-hover">/</span>
+<a href="https://onlinelibrary.wiley.com/action/registration?redirectUri=%2Fdoi%2Fepdf%2F10.1002%2Fjae.582" class="btn--action__text-secondary">Register</a>
+
+</li>
+
+
+</ul>
+
+        </div>
+    </div>
+</div>
+
+    </div>
+    <div class="grouped right">
+        <a aria-label="Download PDF • 265.7 KB" class="navbar-download btn btn--cta_roundedColored" href="https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/jae.582?download=true" id="" target="_blank" title="Download [g]" accesskey="g" data-tooltip-position="bottom" data-single-download="true" data-download-files-key="pdf">
+    <span class="icon material-icons">get_app</span>
+</a>
+
+    </div>
+</div>
+
+
+<div class="progress">
+  <div class="progress-bar" role="progressbar" aria-valuenow="0.0020032051282051285" aria-valuemin="1" aria-valuemax="100" style="width: 3.84615%;"></div>
+</div>
+</nav>
+    <div id="app-container" style="display: none">
+            
+                
+                
+                    
+                
+            
+
+                <div id="reading-area" role="main" class="isFixed scroll">
+                <div id="outerContainer"><div id="mainContainer"><div id="viewerContainer" tabindex="0"><div id="viewer" class="pdfViewer"><div class="page" data-page-number="1" role="region" style="width: 944px; height: 1228px;" data-loaded="true"><div class="canvasWrapper" style="width: 944px; height: 1228px;"><canvas width="945" height="1229" style="width: 945px; height: 1229px;"></canvas></div><div class="textLayer" style="width: 944px; height: 1228px;"><span dir="ltr" style="left: 139.37px; top: 150.102px; font-size: 23.2467px; font-family: sans-serif; transform: scaleX(1.05774);">LOSS FUNCTION-BASED EVALUATION OF DSGE MODELS</span><span dir="ltr" style="left: 386.078px; top: 204.612px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.08936);">FRANK SCHORFHEIDE*</span><span dir="ltr" style="left: 168.095px; top: 227.607px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.967274);">Department of Economics, University of Pennsylvania, 3718 Locust Walk, Philadelphia, PA 19104-6297, USA</span><span dir="ltr" style="left: 435.968px; top: 270.659px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.11191);">SUMMARY</span><span dir="ltr" style="left: 139.379px; top: 292.201px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.981079);">In this paper we propose a Bayesian econometric procedure for the evaluation and comparison of DSGE</span><span dir="ltr" style="left: 139.379px; top: 308.83px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.00034);">models. Unlike in many previous econometric approaches we explicitly take into account the possibility</span><span dir="ltr" style="left: 139.379px; top: 325.459px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.986985);">that the DSGE models are misspeciÆed and introduce a reference model to complete the model space.</span><span dir="ltr" style="left: 139.379px; top: 341.994px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.996761);">Three loss functions are proposed to assess the discrepancy between DSGE model predictions and an</span><span dir="ltr" style="left: 139.379px; top: 358.623px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.0386);">overall posterior distribution of population characteristics that the researcher is trying to match. The</span><span dir="ltr" style="left: 139.379px; top: 375.252px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.00773);">evaluation procedure is applied to the comparison of a standard cash-in-advance (CIA) and a portfolio</span><span dir="ltr" style="left: 139.379px; top: 391.88px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.985928);">adjustment cost (PAC) model. We Ænd that the CIA model has higher posterior probability than the PAC</span><span dir="ltr" style="left: 139.379px; top: 408.415px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.01789);">model and achieves a better in-sample time series Æt. Both models overpredict the magnitude of the</span><span dir="ltr" style="left: 139.379px; top: 425.044px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.975565);">negative correlation between output growth and inØation. However, unlike the PAC model, the CIA model</span><span dir="ltr" style="left: 139.379px; top: 441.673px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.00343);">is not able to generate a positive real eect of money growth shocks on aggregate output. Overall, the</span><span dir="ltr" style="left: 139.379px; top: 458.302px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.991025);">impulse response dynamics of the PAC model resemble the posterior mean impulse response functions</span><span dir="ltr" style="left: 139.379px; top: 474.837px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(0.991831);">more closely than the responses of the CIA model. Copyright</span><span dir="ltr" style="left: 543.871px; top: 474.837px; font-size: 14.9433px; font-family: sans-serif;">#</span><span dir="ltr" style="left: 563.807px; top: 474.837px; font-size: 14.9433px; font-family: sans-serif; transform: scaleX(1.00127);">2000 John Wiley &amp; Sons, Ltd.</span><span dir="ltr" style="left: 399.023px; top: 552.386px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.08781);">1. INTRODUCTION</span><span dir="ltr" style="left: 139.361px; top: 583.945px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.05112);">The quantitative evaluation of dynamic stochastic general equilibrium (DSGE) models in</span><span dir="ltr" style="left: 139.361px; top: 603.883px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00503);">macroeconomics is often conducted without formal statistical methods. While DSGE models</span><span dir="ltr" style="left: 139.361px; top: 623.82px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.961652);">provide a complete multivariate stochastic process representation for the data, they impose very</span><span dir="ltr" style="left: 139.361px; top: 643.758px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.980823);">strong restrictions on actual time series and are in many cases rejected against less restrictive</span><span dir="ltr" style="left: 139.361px; top: 663.601px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.939999);">speciÆcations such as vector autoregressions (VAR). Nevertheless, DSGE models are interesting</span><span dir="ltr" style="left: 139.361px; top: 683.539px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.969735);">from a theoretical perspective and it is important to assess their empirical adequacy. This paper</span><span dir="ltr" style="left: 139.361px; top: 703.476px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.97429);">provides an econometric procedure that enables a coherent model evaluation. Our approach is</span><span dir="ltr" style="left: 139.361px; top: 723.414px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.995519);">applied to the evaluation of two types of standard monetary models: a cash-in-advance (CIA)</span><span dir="ltr" style="left: 139.361px; top: 743.352px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00448);">model and its extension with portfolio adjustment costs (PAC).</span><span dir="ltr" style="left: 155.991px; top: 763.289px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.988468);">The potential misspeciÆcation of the candidate models poses a conceptual diÅculty for the</span><span dir="ltr" style="left: 139.361px; top: 783.227px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.05263);">design of econometric procedures. The inference problem is not to determine whether a</span><span dir="ltr" style="left: 139.361px; top: 803.164px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01188);">particular model, for example the CIA or PAC model in our application, is `true'. Instead, the</span><span dir="ltr" style="left: 139.361px; top: 823.007px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.977495);">goal is to determine which model summarizes the regular features of the data more accurately.</span><span dir="ltr" style="left: 139.361px; top: 842.945px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01972);">Our evaluation procedure diers from existing econometric approaches with respect to the</span><span dir="ltr" style="left: 139.361px; top: 862.883px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.983396);">treatment of candidate model misspeciÆcation and the explicit incorporation of loss functions.</span><span dir="ltr" style="left: 155.991px; top: 882.82px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.001);">Macroeconomists generally judge DSGE models based on their ability to replicate realistic</span><span dir="ltr" style="left: 139.361px; top: 902.758px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02049);">patterns of co-movements among key macroeconomic variables and impulse responses to</span><span dir="ltr" style="left: 139.361px; top: 922.696px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.956629);">structural shocks, such as unexpected changes in the growth rate of money supply or total factor</span><span dir="ltr" style="left: 139.37px; top: 77.2768px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(1.06182);">JOURNAL OF APPLIED ECONOMETRICS</span><span dir="ltr" style="left: 139.37px; top: 92.206px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.983177);">J. Appl. Econ.</span><span dir="ltr" style="left: 224.219px; top: 92.206px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.899261);">15</span><span dir="ltr" style="left: 237.542px; top: 92.206px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.931947);">: 645±670 (2000)</span><span dir="ltr" style="left: 139.37px; top: 1031.53px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02125);">Copyright</span><span dir="ltr" style="left: 217.515px; top: 1030.31px; font-size: 16.605px; font-family: sans-serif;">#</span><span dir="ltr" style="left: 239.721px; top: 1031.53px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00275);">2000 John Wiley &amp; Sons, Ltd.</span><span dir="ltr" style="left: 616.364px; top: 1024.92px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.914844);">Received 23 September 1999</span><span dir="ltr" style="left: 648.963px; top: 1044.76px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.930618);">Revised 24 August 2000</span><span dir="ltr" style="left: 139.37px; top: 981.907px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(1.00677);">*Correspondence to: Frank Schorfheide, Department of Economics, University of Pennsylvania, 3718 Locust Walk,</span><span dir="ltr" style="left: 139.37px; top: 996.836px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.966975);">Philadelphia, PA 19104-6297, USA. e-mail: schorf@ssc.upenn.edu</span><div class="endOfContent"></div></div></div><div class="page" data-page-number="2" role="region" style="width: 944px; height: 1228px;" data-loaded="true"><div class="canvasWrapper" style="width: 944px; height: 1228px;"><canvas width="945" height="1229" style="width: 945px; height: 1229px;"></canvas></div><div class="textLayer" style="width: 944px; height: 1228px;"><span dir="ltr" style="left: 155.905px; top: 110.276px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.981258);">productivity. However, neither population moments nor impulse response functions are directly</span><span dir="ltr" style="left: 155.905px; top: 130.213px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.965332);">observable in the data. Therefore we will construct a probabilistic representation of the data that</span><span dir="ltr" style="left: 155.905px; top: 150.151px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.953513);">serves as a benchmark for the DSGE model comparison.</span><span dir="ltr" style="left: 560.328px; top: 150.151px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.03773);">A priori</span><span dir="ltr" style="left: 619.007px; top: 150.151px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.974305);">this benchmark is a mixture of</span><span dir="ltr" style="left: 155.903px; top: 169.994px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.9888);">the DSGE models and a reference model. The reference model is introduced to cope with the</span><span dir="ltr" style="left: 155.903px; top: 189.932px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.955415);">potential misspeciÆcation of the DSGE models. It should impose weaker restrictions on the data</span><span dir="ltr" style="left: 155.903px; top: 209.869px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02882);">than the DSGE models and achieve an acceptable Æt. In our application, we use a vector</span><span dir="ltr" style="left: 155.903px; top: 229.807px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02663);">autoregression (VAR). Based on this mixture of DSGE models and a reference model, it is</span><span dir="ltr" style="left: 155.903px; top: 249.744px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00928);">possible to compute posterior distributions for correlations, impulse response functions, and</span><span dir="ltr" style="left: 155.903px; top: 269.682px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.999552);">other population characteristics. The mixture weights for DSGE models and reference model</span><span dir="ltr" style="left: 155.903px; top: 289.62px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.954173);">are given by the posterior model probabilities and reØect the statistical Æt of the various models.</span><span dir="ltr" style="left: 172.533px; top: 311.163px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.966999);">For each DSGE model predicted, correlations and impulse response functions are computed.</span><span dir="ltr" style="left: 155.903px; top: 331.101px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.975636);">A loss function that penalizes deviations from actual and predicted population characteristics is</span><span dir="ltr" style="left: 155.903px; top: 351.038px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.959206);">chosen. Then the expected loss of the DSGE model predictions is calculated. The expectation is</span><span dir="ltr" style="left: 155.903px; top: 370.976px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.0465);">taken with respect to the overall posterior distribution that takes the reference model into</span><span dir="ltr" style="left: 155.903px; top: 390.914px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.0901);">account. The DSGE model that attains the smallest posterior prediction loss wins the</span><span dir="ltr" style="left: 155.903px; top: 410.851px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.98339);">comparison. This idea is generalized to take parameter uncertainty into account, and to derive</span><span dir="ltr" style="left: 155.903px; top: 430.694px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01623);">loss function-based parameter estimates. Due to the explicit consideration of loss functions</span><span dir="ltr" style="left: 155.903px; top: 450.632px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.969294);">deÆned over time series characteristics that are of interest to macroeconomists, our procedure</span><span dir="ltr" style="left: 155.903px; top: 470.569px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.984701);">goes beyond model determination based on posterior probabilities or Bayes factors, e.g. Kass</span><span dir="ltr" style="left: 155.903px; top: 490.507px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.977008);">and Raftery (1995) and Phillips (1996). The evaluation is robust, if the results are insensitive to</span><span dir="ltr" style="left: 155.903px; top: 510.445px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.992827);">the choice of loss function.</span><span dir="ltr" style="left: 172.533px; top: 531.988px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.984428);">The evaluation approach remains sensible even in a situation where all DSGE models have</span><span dir="ltr" style="left: 155.903px; top: 551.926px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.05156);">posterior probabilities that are close to or equal to zero. We will argue that under special</span><span dir="ltr" style="left: 155.903px; top: 571.863px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.99018);">conditions our evaluation procedure resembles a calibration approach (Kydland and Prescott,</span><span dir="ltr" style="left: 155.903px; top: 591.801px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00656);">1996), in which point predictions of DSGE models are simply compared to sample moments</span><span dir="ltr" style="left: 155.903px; top: 611.738px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.995532);">without systematically taking standard errors of moment estimates into account. On the other</span><span dir="ltr" style="left: 155.903px; top: 631.676px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.9822);">hand, if a parsimonious DSGE model has very high posterior probability in the presence of the</span><span dir="ltr" style="left: 155.903px; top: 651.614px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.04957);">more densly parameterized reference model, this DSGE model is likely to win the model</span><span dir="ltr" style="left: 155.903px; top: 671.551px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.968627);">comparisons regardless of the employed loss functions.</span><span dir="ltr" style="left: 172.533px; top: 693.095px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.990718);">Many evaluation techniques that were previously proposed in the literature are based on</span><span dir="ltr" style="left: 819.989px; top: 693.095px; font-size: 16.605px; font-family: sans-serif;">p</span><span dir="ltr" style="left: 828.305px; top: 693.095px; font-size: 16.605px; font-family: sans-serif;">-</span><span dir="ltr" style="left: 155.903px; top: 713.032px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.10441);">values for various sample characteristics of the data. The</span><span dir="ltr" style="left: 630.723px; top: 713.032px; font-size: 16.605px; font-family: sans-serif;">p</span><span dir="ltr" style="left: 639.134px; top: 713.032px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.07231);">-values measure how far</span><span dir="ltr" style="left: 155.903px; top: 732.97px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01478);">transformations of the data fall in the tails of their respective sampling distributions, that are</span><span dir="ltr" style="left: 155.903px; top: 752.908px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00524);">derived from the DSGE models. A non-exhaustive list of examples are Canova</span><span dir="ltr" style="left: 742.13px; top: 752.908px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01886);">et al</span><span dir="ltr" style="left: 774.162px; top: 752.908px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.964385);">. (1994),</span><span dir="ltr" style="left: 155.903px; top: 772.75px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.995963);">Christiano and Eichenbaum (1992a), Nason and Cogley (1994), Smith (1993), and So</span><span dir="ltr" style="left: 779.17px; top: 773.129px; font-size: 16.605px; font-family: sans-serif;">»</span><span dir="ltr" style="left: 783.612px; top: 772.75px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00878);">derlind</span><span dir="ltr" style="left: 155.905px; top: 792.688px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.993509);">(1994). Canova (1994) computes Bayesian versions of these</span><span dir="ltr" style="left: 607.669px; top: 792.688px; font-size: 16.605px; font-family: sans-serif;">p</span><span dir="ltr" style="left: 615.985px; top: 792.688px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02184);">-values following Box (1980).</span><span dir="ltr" style="left: 155.905px; top: 812.626px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.990786);">However,</span><span dir="ltr" style="left: 232.065px; top: 812.626px; font-size: 16.605px; font-family: sans-serif;">p</span><span dir="ltr" style="left: 240.381px; top: 812.626px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01926);">-values are not designed for model comparisons. Moreover, in cases where it is</span><span dir="ltr" style="left: 155.907px; top: 832.563px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.982279);">believed that the structural models are severely misspeciÆed it is implausible to use sampling</span><span dir="ltr" style="left: 155.907px; top: 852.501px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.968156);">distributions as a benchmark, that were derived from misspeciÆed models.</span><span dir="ltr" style="left: 172.537px; top: 874.044px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.01601);">As an alternative, Diebold</span><span dir="ltr" style="left: 370.78px; top: 874.044px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00981);">et al</span><span dir="ltr" style="left: 402.529px; top: 874.044px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.99435);">. (1998) propose a loss function-based evaluation of DSGE</span><span dir="ltr" style="left: 155.907px; top: 893.982px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.02746);">model predictions under the sampling distribution obtained from a non-parametric spectral</span><span dir="ltr" style="left: 155.907px; top: 913.92px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.03319);">representation of the data. In the language of this paper, the conceptual drawback of their</span><span dir="ltr" style="left: 155.907px; top: 933.857px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.00643);">approach is that their non-parametric representation (reference model) has always posterior</span><span dir="ltr" style="left: 155.907px; top: 953.795px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.9996);">probability one, regardless of the statistical Æt of the DSGE models. Our approach takes the</span><span dir="ltr" style="left: 155.907px; top: 973.732px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.09648);">potential impact of the DSGE model predictions on the shape of the overall posterior</span><span dir="ltr" style="left: 155.907px; top: 993.67px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(1.0466);">distribution of population characteristics into account. Despite low posterior probability of</span><span dir="ltr" style="left: 435.685px; top: 73.3085px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(1.06995);">F. SCHORFHEIDE</span><span dir="ltr" style="left: 155.905px; top: 70.5908px; font-size: 16.605px; font-family: sans-serif; transform: scaleX(0.899306);">646</span><span dir="ltr" style="left: 155.905px; top: 1053.62px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(1.01947);">Copyright</span><span dir="ltr" style="left: 218.172px; top: 1052.3px; font-size: 13.2833px; font-family: sans-serif;">#</span><span dir="ltr" style="left: 235.841px; top: 1053.62px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.99899);">2000 John Wiley &amp; Sons, Ltd.</span><span dir="ltr" style="left: 641.565px; top: 1053.62px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.983177);">J. Appl. Econ.</span><span dir="ltr" style="left: 726.508px; top: 1053.62px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.899261);">15</span><span dir="ltr" style="left: 739.735px; top: 1053.62px; font-size: 13.2833px; font-family: sans-serif; transform: scaleX(0.931947);">: 645±670 (2000)</span><div class="endOfContent"></div></div></div><div class="page" data-page-number="3" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="4" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="5" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="6" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="7" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="8" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="9" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="10" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="11" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="12" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="13" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="14" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="15" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="16" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="17" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="18" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="19" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="20" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="21" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="22" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="23" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="24" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="25" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div><div class="page" data-page-number="26" role="region" style="width: 944px; height: 1228px;"><div class="loadingIcon" role="img"></div></div></div></div></div></div></div>
+        </div>
+        <script type="text/javascript">
+            var readerConfig = {"user":{"isLoggedIn":false,"loginLink":"/action/showLogin?redirectUri\u003d%2Fdoi%2Fepdf%2F10.1002%2Fjae.582","registerLink":"https://onlinelibrary.wiley.com/action/registration?redirectUri\u003d%2Fdoi%2Fepdf%2F10.1002%2Fjae.582"},"readingProgress":{"syncProgress":false,"syncUrl":"/reader/saveProgress","retrieveUrl":"/reader/retrieveProgress"},"doi":"10.1002/jae.582","title":"Loss function‐based evaluation of DSGE models","epubConfig":{"overrideEpubUrlParam":true,"epubUrl":"/doi/pdfdirect/10.1002/jae.582?hmac\u003d1683282993-cTvq85Toc3jl7T6ET7XCBFGtDuVBHNSkSRaIIzZQc9E%3D"},"epubActions":{"offline":{"available":true,"fileSize":"265.7 KB","simultaneousRetrievalsLimit":10},"download":{"files":{"pdf":{"shortCode":"pdf","name":"PDF","available":true,"size":"265.7 KB","url":"/doi/pdfdirect/10.1002/jae.582?download\u003dtrue","doi":"10.1002/jae.582"}}},"print":true,"shareAccess":true,"preview":false,"rental":false,"print_pdf_pages":50},"displayOptions":{"displayFormat":"auto","displayMode":"scroll-continuous"},"annotationsConfig":{"enabled":false},"materialTabs":{"figuresSuppressed":false,"mediaSuppressed":true,"tablesSuppressed":true,"supplementsSuppressed":false,"linkOutUrl":"/doi/suppl/10.1002/jae.582","supplementsLinkOut":false,"openDownloadLinkInNewTab":false},"analyticsConfig":{"enabled":true,"providers":[{"enabled":true,"name":"atm","siteId":"","version":"","url":""}]},"waterMarkConfig":{"enabled":true,"defaultMessage":"10991255, 2001, 6, Downloaded from https://onlinelibrary.wiley.com/doi/10.1002/jae.582. By Cochrane Germany, Wiley Online Library on [05/05/2023]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License","optionalMessage":"","location":"right/left","hideOnFirstPage":true,"timeZone":""},"metadataUrl":"/doi/reader/metadata/10.1002/jae.582","referencesUrl":"/doi/reader/references/10.1002/jae.582","citedByUrl":"/doi/reader/citedBy/10.1002/jae.582","figuresUrl":"/doi/reader/figures/10.1002/jae.582","tablesUrl":"/doi/reader/tables/10.1002/jae.582","mediaUrl":"/doi/reader/media/10.1002/jae.582","recommendationsUrl":"/doi/reader/recommended/10.1002/jae.582","siteUrl":"/doi/10.1002/jae.582","searchUrl":"/reader/search","currentUrl":"https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582","permissionsUrl":"/action/availableUsageRights","consumePermissionsUrl":"/action/consumeUsage","format":"pdf","publicationType":"article","citationsExportUrl":"/action/showCitFormats?doi\u003d10.1002%2Fjae.582\u0026mobileUi\u003d0","dbStoreName":"readerOfflineStore","shareAccessUrl":"/action/generateShareUrl","readerSettingsLocalStorageKey":"article_reader_settings","recommendedEnabled":true,"permissionsEnabled":false,"isOfflineSupportedForBrowser":true,"isOfflineDisabled":false,"isDownloadDisabled":false,"isShareDisabled":false,"isPrintDisabled":false,"nodeNavigationDisabled":false,"navigationMode":"PAGEBREAK","usageRightsEnabled":true,"print_pdf_pages":0,"authorizeSharing":"/action/authorizeSharing","shareMode":false,"sharedAccessConfig":{"alwaysDisplaySharingTermsPopup":false,"shareSponsorLink":"https://onlinelibrary.wiley.com/researchers/tools-resources/sharing","shareSponsorMessage":"Some features may be limited or disabled","shareMediaMessage":"Some features may be limited or disabled","isShared":false,"isPermissionEnabled":false,"isShareBannerEnabled":false,"displayAccessButton":true,"accessUrl":"/doi/pdf/10.1002/jae.582","displaySupplementsMessage":true},"inDocAdsEnabled":true,"campaigns":"{}","suspendAdsInSinglePagePdfs":true,"adsImpressionDuration":0,"campaignUrl":"/action/showReaderCampaign?doi\u003d10.1002%2Fjae.582","eventsConfig":{"readerEventsAnalyticsUrl":"/action/readerEventsAnalytics?doi\u003d10.1002%2Fjae.582\u0026format\u003dpdf","adImpressionDuration":5000,"episodeRemainingTime":300000,"enabled":true,"allowedNumOfEventsPerReq":50,"excludedEvents":"read,openLeftMenu"},"content_buffer_size":2000,"isPrintSupportedForBrowser":true,"isMaterialDownloadable":true,"isEpubLazyLoadingEnabled":true,"isPdfLazyLoadingEnabled":true,"loadedPagesLimit":7,"maxPdfKeepSize":20,"switchFormats":{"enabled":false,"current":"pdf","available":{"pdf":{"name":"pdf","url":"/doi/epdf/10.1002/jae.582"}}},"supplementsUrl":"/action/showReaderSupplements?doi\u003d10.1002%2Fjae.582","tabsSuppressionConfig":{"materialsSuppressed":false,"notesSuppressed":true,"linksSuppressed":false,"infosSuppressed":false,"tocSuppressed":false},"fetchFiguresFromEpub":false,"mediaPlayersConfig":{"enabled":false,"player":{"enabled":false,"name":"flowplayer","css":"//releases.flowplayer.org/6.0.5/commercial/skin/functional.css","key":"$471173155739872","playerScript":"//releases.flowplayer.org/6.0.5/flowplayer.min.js"}},"adsInclusionEnabled":true,"helpEnabled":false,"profileConfig":{"activeProfile":"DEFAULT","printSuppressed":false,"offlineSuppressed":false,"downloadSuppressed":false,"switchFormatsSuppressed":true,"materialsSuppressed":false,"notesSuppressed":true,"linksSuppressed":false,"infoSuppressed":false,"siteLinkOutSuppressed":false,"accessSharingSuppressed":false},"isReadingFlowEnabled":true,"showCrossmarkButton":false,"restrictContent":true,"isScitrusHelpGuideEnabled":false,"referencesNumberingSupported":true,"freeToReadConfig":{"learnMoreLink":"","bannerMessage":"Downloading and printing are disabled.","isFreeToRead":false,"isBannerEnabled":true,"isGetAccessButtonVisible":true,"accessUrl":"/doi/ftr/10.1002/jae.582"},"doiMappingConfig":{"enabled":false},"rendererData":{"src":"/cloud-reader/dist/pdf-renderer.9567086ee2c8b88ec47b.js","cssSrc":"/cloud-reader/dist/pdf-renderer.0468e3ec823d3c465bd6.css","templatesSrc":""},"fileSize":272114,"faqLinkData":{"enabled":false},"pdfjsDisableStream":true,"pdfjsDefaultRangeChunkSize":262144,"pdfjs2PagesEnabled":false,"scitrusDecommissionMessageConfig":{"show":false,"date":"early May","faqLink":"https://www.scitrus.com/faq"},"locationHistoryEnabled":false,"pdfjsPrintResolution":300,"pdfjsPrintLimitEnabled":true,"issn":"0883-7252","eissn":"1099-1255","issue":"6","volume":"15","userSuppressed":false,"openLeftMenu":true,"bannerConfig":{"bannerText":"Wiley Online Library","bannerImagePath":"/userimages/803a2d5c-7fb9-403d-9947-52e562b090c5/ereader-banner-1851525fa2d"},"healthCareDisclaimerConfig":{"enabled":false,"message":"\u003cdiv class\u003d\"healthcare-disclaimer-alert\" role\u003d\"alert\"\u003e\u003cp class\u003d\"healthcare-disclaimer-alert__text\"\u003eThis material is only for use by healthcare professionals.\u003cbr\u003e By continuing to view this site you are confirming that you are a healthcare professional.\u003c/p\u003e\u003cbutton class\u003d\"healthcare-disclaimer-alert__btn\"\u003econfirm\u003c/button\u003e\u003c/div\u003e"},"getFTRConfig":{"enabled":true,"referencesUrl":"/action/showReaderReferencesItems?doi\u003d10.1002%2Fjae.582","referencesLinksUrl":"/references/links/10.1002/jae.582?linkSource\u003dEREADER","citationsConfig":{"citedCount":331,"citationsUrl":"/action/getCitedBy?doi\u003d10.1002%2Fjae.582","pageSize":100},"citationLinksUrl":"/citedBy/links/10.1002/jae.582?linkSource\u003dEREADER","crossrefEnabled":false,"numberOfGetFTRLinks":10},"displayCiteButton":true,"metisUrl":"https://wiley.met.vgwort.de/na/pw-base64-dmd6bS42MDY1MC0xMC4xMDAyLWphZS41ODI\u003d","newUXEnabled":false,"termsAndConditionsUrl":"https://onlinelibrary.wiley.com/termsAndConditions"};
+            readerConfig.contentCacheName = "readerPubPathsCache";
+            readerConfig.libraryPath='/reader/library';
+        </script>
+        
+
+
+
+
+
+<script type="text/javascript">
+    
+    readerConfig.alertPopupMsg = {
+        
+        PRINTING_DISABLED_MESSAGE : "<i class='material-icons'>info_outline</i> <h2>Do not print this page</h2> <h3>To view your printing options, return to the document and click the print option in the menu in the top right corner of the page.</h3>",
+        
+        USER_UNAUTHORIZED: "You do not have the required license. The publication cannot be <span>X</span>.",
+        
+        SHARING_DISABLED: "Sharing access to publications is not currently enabled.",
+        SHARING_UNAUTHORIZED: "This content has license restrictions and cannot be shared via Shared Access.",
+        SHARING_UNAVAILABLE: "This content has license restrictions and cannot be shared via Shared Access.",
+        SHARING_TEMPORARY_ERROR: "<span>X</span> failed. Please try again."
+    };
+
+    LIT.Reader.config = {
+        /* http://requirejs.org/docs/api.html#config-waitSeconds */
+        waitSeconds: 0,
+        config: {
+            'readerConfig': {
+                'mathJaxUrl': '/cloud-reader/dist/MathJax.min.c020646cc8490f4bd5d4.js',
+                'annotationCSSUrl': HTTPServerRootFolder + '/css/annotations.css',
+                'iframeContentCSSUrl': "/cloud-reader/dist/iframe-content.bb3409ccbe0ada944463.css" || '/cloud-reader/dist/iframe-content.css',
+                'jsLibRoot': HTTPServerRootFolder + '/scripts/zip/',
+                'useSimpleLoader': false,
+                'epubLibraryPath': undefined,
+                'imagePathPrefix': '/cloud-reader/src/',
+                'canHandleUrl': false,
+                'canHandleDirectory': false,
+                'pdfjsWorkerUrl': "/cloud-reader/dist/worker_loader.78e30d313d48935b9123.js",
+                'soundwave': "/cloud-reader/dist/images/soundwave.edc4862724cd89dcdf214bcb1e4c8416.svg",
+                'soundwave_white': "/cloud-reader/dist/images/soundwave_white.6a5609529967424c478295a103957ca7.svg",
+                'getFTR_full_text_version':"/cloud-reader/dist/images/getFTR-full-text-version.b82028595a0bbe8f561e3607ab7d440f.svg",
+                'getFTR_alternative_version':"/cloud-reader/dist/images/getFTR-alternative-version.a2b5c76c16cca33ce1b2512b00cefe16.svg",
+                'jwplayer': "/cloud-reader/dist/jwplayer.d25dd361b4a5f2117d34.js",
+                'icons': {
+                    ereader_icon_font_ttf: "/cloud-reader/dist/fonts/ereader-icon-font.231a8b94d7536bb828e122492e498cf2.ttf",
+                    ereader_icon_font_woff: "/cloud-reader/dist/fonts/ereader-icon-font.159b7674813c31f40a7eeb84fdd2538d.woff",
+                    ereader_icon_font_svg: "/cloud-reader/dist/images/ereader-icon-font.b75d8612428484241f9683df05e58531.svg",
+                    MaterialIcons_Regular_eot: "/cloud-reader/dist/fonts/MaterialIcons-Regular.016c14adad95a0e21a2ae4fbc36955c6.eot",
+                    MaterialIcons_Regular_woff2: "/cloud-reader/dist/fonts/MaterialIcons-Regular.8a9a261c8b8dfe90db11f1817a9d22e1.woff2",
+                    MaterialIcons_Regular_woff: "/cloud-reader/dist/fonts/MaterialIcons-Regular.c38ebd3cd38c98fbd16bf31d1d24ce64.woff",
+                    MaterialIcons_Regular_ttf: "/cloud-reader/dist/fonts/MaterialIcons-Regular.55242ea5c378da626cab5b4aaf9c2255.ttf",
+                },
+                'epubReadingSystemUrl': undefined,
+                "customConfig": readerConfig
+            }
+        }
+    };
+</script>
+
+
+            
+            
+            
+                <script type="text/javascript" src="./Loss function‐based evaluation of DSGE models_files/templates.c2578cf007d889c01f76.js.download"></script>
+                
+                <script type="text/javascript" src="./Loss function‐based evaluation of DSGE models_files/vendor.3913877a2b959d82c82d.js.download"></script>
+                <script type="text/javascript" src="./Loss function‐based evaluation of DSGE models_files/shared.2500566144290819c7d9.js.download"></script>
+                <script type="text/javascript" src="./Loss function‐based evaluation of DSGE models_files/i18n.bdc6ec60f72e93aa9cf2.js.download"></script>
+            
+
+        
+        
+        
+            
+                
+                    <script type="module">
+                        if ('serviceWorker' in navigator && !window.READER_OFFLINE) {
+                            window.addEventListener("load", function (evt) {
+                                
+                                var CACHE_BUSTER_MARKER = 6;
+
+                                var assetsCacheName = 'readerAssetsCache-1034855-' + CACHE_BUSTER_MARKER;
+                                var readerContentUrl = window.location.pathname;
+                                import ('/templates/jsp/cloudReader/js/readerServiceWorkerHelper.js').then(function (swHelper) {
+                                    swHelper.registerServiceWorkers(true, readerContentUrl, readerContentPage, assetsCacheName, readerConfig.format, readerConfig.bannerConfig?.bannerImagePath);
+                                });
+                            });
+                            
+                            var readerContentPage = "<!DOCTYPE html>"+$('html')[0].outerHTML;
+                        }
+                    </script>
+                
+                
+            
+        
+    <script defer="" src="./Loss function‐based evaluation of DSGE models_files/v52afc6f149f6479b8c77fa569edb01181681764108816" integrity="sha512-jGCTpDpBAYDGNYR5ztKt4BQPGef1P0giN6ZGVUi835kFF88FOmmn8jBQWNgrNd8g/Yu421NdgWhwQoaOPFflDw==" data-cf-beacon="{&quot;rayId&quot;:&quot;7c2857d3dfc52bd6&quot;,&quot;token&quot;:&quot;f3dd54df2ac243bab2129483f57546d1&quot;,&quot;version&quot;:&quot;2023.4.0&quot;,&quot;si&quot;:100}" crossorigin="anonymous"></script>
+
+
+<script>_satellite["_runScript1"](function(event, target, Promise) {
+return alloy("getIdentity")
+   .then(function(result) {
+     _satellite.setVar("ECID", result.identity.ECID);
+   });
+});</script><div id="pdf-printContainer"></div><div class="material-viewer">
+    <nav class="material-viewer_reg_top navbar" role="banner" aria-label="Toolbar">
+        <div class="btn-group material-viewer_top_left">
+            <div class="d-block d-md-none">
+                <div class="element-view">
+                    <div class="grouped">
+                        <button class="btn material-viewer_ctrl_caption" title="Element menu" type="button" tabindex="0">
+                            <span class="icon material-icons">sort</span>
+                        </button>
+                    </div>
+                    <div class="grouped">
+                        <!-- previous figure button -->
+                        <button class="btn material-viewer_ctrl_prev" title="Previous" type="button" tabindex="0">
+                            <span class="icon material-icons flip-horizontal">play_circle_filled</span>
+                        </button>
+                        <!-- next figure button -->
+                        <button class="btn material-viewer_ctrl_next" title="Next" type="button" tabindex="0">
+                            <span class="icon material-icons">play_circle_filled</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid-view">
+                    <button class="btn material-viewer_ctrl_return small" title="Return" type="button" tabindex="0">
+                        <span class="icon material-icons">arrow_back</span>
+                        <span class="text">BACK</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grouped d-none d-md-block">
+                <h2 class="material-viewer_title material-viewer_title_chapter" title="Chapter Title">chapter title
+                    here</h2>
+            </div>
+        </div>
+
+        <div class="btn-group material-viewer_top_center d-none d-md-flex">
+            <div class="element-view flex-container">
+                <div class="grouped">
+                    <h2 class="material-viewer_title material-viewer_title_text" title="Element Title" tabindex="0">figure title
+                        here</h2>
+                </div>
+
+                <div class="grouped download-toggle-hidden">
+                    <a href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582" target="_blank" class="btn media__download" title="Download element" download="" aria-label="download element" tabindex="0">
+                        <span class="icon material-icons">get_app</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid-view">
+                <div class="grouped dropdown-widget">
+                    <button id="dropdownSort" class="dropdown-trigger btn" title="Select filtering" type="button" tabindex="0" aria-label="select filtering" aria-haspopup="true" aria-expanded="false">
+                        <span class="sorting_title_selection"><span class="text">All Materials</span>&nbsp;(<span class="counter">0</span>)</span>
+                        <span class="animated_arrow_down"></span>
+                    </button>
+
+                    <div class="dropdown-content materialViewer-sorting" aria-labelledby="dropdownSort">
+                        <div class="panels" data-vport="767" data-panel-desktop="materialViewerSorting">
+                            <fieldset class="sorting-list">
+                                <legend class="d-block d-md-none">SHOW</legend>
+                                <input type="radio" name="sorting-type" value="all" id="all-radio" class="on_light_bg" checked="">
+                                <label for="all-radio">
+                                    <span class="text">All materials</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="figure" id="image-radio" class="on_light_bg">
+                                <label for="image-radio">
+                                    <span class="text">Figures</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="table" id="table-radio" class="on_light_bg">
+                                <label for="table-radio">
+                                    <span class="text">Tables</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="video" id="video-radio" class="on_light_bg">
+                                <label for="video-radio">
+                                    <span class="text">Videos</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="audio" id="audio-radio" class="on_light_bg">
+                                <label for="audio-radio">
+                                    <span class="text">Audio files</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="code" id="code-radio" class="on_light_bg">
+                                <label for="code-radio">
+                                    <span class="text">Code snippets</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+
+                                <input type="radio" name="sorting-type" value="supplement" id="supplements-radio" class="on_light_bg">
+                                <label for="supplements-radio">
+                                    <span class="text">Other files</span>&nbsp;
+                                    <span class="counter">0</span>
+                                </label>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group material-viewer_top_right">
+            <div class="grouped element-view material-viewer_zoom d-none d-md-inline-flex">
+
+                <button class="btn zoom-fit width" title="Fit Width" aria-label="fit width">
+                    <span class="icon material-icons">fullscreen</span>
+                </button>
+
+                    <button class="btn zoom-fit height d-none" title="Fit Height" aria-label="fit height">
+                        <span class="icon material-icons">fullscreen_exit</span>
+                    </button>
+
+                <!-- ZOOM OUT button -->
+                <button class="zoom-out btn" title="Zoom Out" type="button" tabindex="0" aria-label="zoon out">
+                    <span class="icon material-icons">remove_circle_outline</span>
+                </button>
+                <!-- ZOOM IN  button -->
+                <button class="zoom-in btn" title="Zoom In" type="button" tabindex="0" aria-label="zoom in">
+                    <span class="icon material-icons">add_circle_outline</span>
+                </button>
+            </div>
+
+            <div class="grouped material-viewer_navigation d-none d-md-inline-flex">
+                <!-- previous figure button -->
+                <button class="btn material-viewer_ctrl_prev" title="Previous" type="button" tabindex="0" aria-label="previous figure">
+                    <span class="icon material-icons flip-horizontal">play_circle_filled</span>
+                </button>
+                <!-- next figure button -->
+                <button class="btn material-viewer_ctrl_next" title="Next" type="button" tabindex="0" aria-label="next figure">
+                    <span class="icon material-icons">play_circle_filled</span>
+                </button>
+            </div>
+
+            <div class="grouped">
+                <div class="element-view">
+                    <button class="btn material-viewer_ctrl_browse" title="Browse all elements" type="button" tabindex="0" aria-label="browse all elements">
+                        <span class="icon reader-material-gallery"></span>
+                    </button>
+                </div>
+
+                <div class="grid-view">
+                    <div class="d-none d-md-inline-block">
+                        <button class="btn material-viewer_ctrl_return small" title="Return" type="button" tabindex="0" aria-label="return">
+                            <span class="icon material-icons">arrow_back</span>
+                            <span class="text">BACK</span>
+                        </button>
+                    </div>
+                    <div class="d-block d-md-none">
+                        <button class="btn material-viewer_ctrl_sorting" title="Browse sorting options" type="button" tabindex="0" aria-label="browse sorting options">
+                            <span class="icon reader-filter"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grouped">
+                <button class="btn material-viewer_ctrl_close" title="Close viewer" type="button" tabindex="0" data-tooltip-position="bottom" browse="" sorting="" options=""><span class="icon material-icons">close</span></button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="material-viewer_reg_center">
+        <div class="material-viewer_cent_left js-open">
+            <button class="material-viewer_ctrl_caption toggle_sidebar_button btn btn--aside d-none d-md-inline-flex" title="Toggle element details" type="button" tabindex="0" aria-label="toggle element details">
+                <span class="icon reader-double-arrow flip-horizontal"></span>
+            </button>
+            <div class="material-viewer_figCaption">
+                <div class="material-viewer_figCaption_top">
+                    <h3 class="subheader material-viewer_title_text" tabindex="0">figure title here</h3>
+                    <div class="fig-download d-md-none">
+                        <a href="https://onlinelibrary.wiley.com/doi/epdf/10.1002/jae.582" target="_blank" class="btn media__download" title="Download element" role="link" download="" tabindex="0">
+                            <span class="icon material-icons">get_app</span>
+                        </a>
+                    </div>
+                </div>
+                <div id="caption-tab-pane">
+                    <div class="paddedPane mediumText js__caption" tabindex="0"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="material-viewer_cent_center js-open">
+            <div class="material-viewer_hold_fig">
+                <figure class="holder"></figure>
+            </div>
+            <div class="material-viewer_hold_list"></div>
+        </div>
+
+        <div class="material-viewer_cent_right">
+            <div class="scrollingContainer">
+                <h3 class="subTitle sorting_title_selection">All Materials</h3>
+                <h4 class="mediumText d-block d-md-none material-viewer_title_chapter" title="Publication Title">publication
+                    title here</h4>
+                <div class="panels" data-vport="767" data-panel-mobile="materialViewerSorting"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</body></html>
