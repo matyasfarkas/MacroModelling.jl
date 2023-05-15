@@ -1,7 +1,7 @@
 using MacroModelling
 import Turing
 import Turing: NUTS, sample, logpdf
-import Optim, LineSearches
+import Optim, LineSearches, Plots
 using Random, CSV, DataFrames, MCMCChains, AxisKeys
 import DynamicPPL: logjoint
 import LinearAlgebra as ℒ
@@ -21,7 +21,45 @@ data = log.(data)
 observables = sort(Symbol.("log_".*names(dat)))
 
 # subset observables in data
-data = data(observables,1:20)
+data = data(observables,:)
+
+
+
+
+Turing.@model function FS2000_loglikelihood_function(data, m, observables)
+    #alp     ~ Beta(0.356, 0.02, μσ = true)
+    #bet     ~ Beta(0.993, 0.002, μσ = true)
+    #gam     ~ Normal(0.0085, 0.003)
+    #mst     ~ Normal(1.0002, 0.007)
+    #rho     ~ Beta(0.129, 0.223, μσ = true)
+    psi     ~ Beta(0.65, 0.05, μσ = true)
+    #del     ~ Beta(0.01, 0.005, μσ = true)
+    #z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
+    #z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    alp     = 0.356
+    bet     = 0.993
+    gam     = 0.0085
+    mst     = 1.0002
+    rho     = 0.129
+    #psi     = 0.65
+    del     = 0.01
+    z_e_a   = 0.035449
+    z_e_m   = 0.008862
+    
+    # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+end
+
+FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables)
+
+
+
+n_samples = 1000
+
+# using Zygote
+# Turing.setadbackend(:zygote)
+samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
+
 
 #=
 function calculate_filterfree_loglikelihood(m, data, observables ; parameters = nothing, filter = :filter_free, shock_distribution = Normal(), algorithm = :first_order, verbose::Bool = false,tol::AbstractFloat = eps())
@@ -136,13 +174,14 @@ function calculate_filterfree_loglikelihood(m, data, observables ; parameters = 
 
     return make_sure_state_equals_observable
 end
+=#
 
 alp     = 0.356
 bet     = 0.993
 gam     = 0.0085
 mst     = 1.0002
 rho     = 0.129
-psi     = 0.65
+psi     = 0.5210421181803591
 del     = 0.01
 z_e_a   = 0.035449
 z_e_m   = 0.008862
@@ -150,6 +189,11 @@ z_e_m   = 0.008862
 
 
 parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]
+
+filtered_errors = MacroModelling.get_estimated_shocks(FS2000, data; parameters= parameters)
+filtered_states = get_estimated_variables(FS2000, data; parameters= parameters)
+
+#=
 shock_distribution = Turing.Normal()
 algorithm = :first_order 
 verbose::Bool = false
@@ -165,18 +209,27 @@ verbose = false
 tol = eps()
 get_solution(m, m.parameter_values, algorithm = :first_order)
 =#
-Turing.@model function FS2000_loglikelihood_function(data, model, observables)
+
+Turing.@model function FS2000_filter_free_loglikelihood_function(data, model, observables)
     
-    alp     ~ Beta(0.356, 0.02, μσ = true)
-    bet     ~ Beta(0.993, 0.002, μσ = true)
-    gam     ~ Normal(0.0085, 0.003)
-    mst     ~ Normal(1.0002, 0.007)
-    rho     ~ Beta(0.129, 0.223, μσ = true)
+    #alp     ~ Beta(0.356, 0.02, μσ = true)
+    #bet     ~ Beta(0.993, 0.002, μσ = true)
+    #gam     ~ Normal(0.0085, 0.003)
+    #mst     ~ Normal(1.0002, 0.007)
+    #rho     ~ Beta(0.129, 0.223, μσ = true)
     psi     ~ Beta(0.65, 0.05, μσ = true)
-    del     ~ Beta(0.01, 0.005, μσ = true)
-    z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
-    z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
- 
+    #del     ~ Beta(0.01, 0.005, μσ = true)
+    #z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
+    #z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    alp     = 0.356
+    bet     = 0.993
+    gam     = 0.0085
+    mst     = 1.0002
+    rho     = 0.129
+    #psi     = 0.65
+    del     = 0.01
+    z_e_a   = 0.035449
+    z_e_m   = 0.008862
     
         # draw errors
       # ϵ_draw = zeros(m.timings.nExo * size(data, 2))
@@ -291,12 +344,12 @@ Turing.@model function FS2000_loglikelihood_function(data, model, observables)
       state_deviations = data - state[obs_indices,:]
   
       # could use sum of squared instead - Yes, now I implemented with smallish ME
-      make_sure_state_equals_observable = sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(10^(-20)*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
+      make_sure_state_equals_observable = sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(10^(-1)*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
   
     Turing.@addlogprob! make_sure_state_equals_observable#calculate_filterfree_loglikelihood(model, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
 end
 
-FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables)
+FS2000_filterfree = FS2000_filter_free_loglikelihood_function(data, FS2000, observables)
 
 
 
@@ -304,7 +357,18 @@ n_samples = 100
 
 # using Zygote
 # Turing.setadbackend(:zygote)
-samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
+samps = sample(FS2000_filterfree, NUTS(), n_samples, progress = true)#, init_params = sol)
+
+symbol_to_int(s) = parse(Int, string(s)[9:end-1])
+ϵ_chain = sort(samps[:, [Symbol("ϵ_draw[$a]") for a in 1:20], 1], lt = (x,y) -> symbol_to_int(x) < symbol_to_int(y))
+tmp = Turing.describe(ϵ_chain)
+ϵ_mean = tmp[1][:, 2]
+ϵ_std = tmp[1][:, 3]
+Plots.plot(ϵ_mean[1:end], ribbon=1.96 * ϵ_std[1:end], label="Posterior mean", title = "First-Order Joint: Estimated Latents")
+Plots.plot!(collect(filtered_errors[1,1:20]), label="True values")
+
+Plots.plot(samps[["psi"]]; colordim=:parameter, legend=true)
+
 
 function calculate_posterior_loglikelihood(parameters)
     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = parameters
