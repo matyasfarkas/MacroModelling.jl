@@ -375,6 +375,9 @@ end
 # ╔═╡ d74a5587-23f4-47cb-a6f2-a253d186530b
 get_SS(RBC1)
 
+# ╔═╡ 470168b9-d7ab-4e84-abeb-d723197a3c5c
+@bind x Slider(0.1:.01:0.8)
+
 # ╔═╡ 8beb671b-db7c-4645-ae5a-ab8db887b03e
 @bind y Slider(0.8:0.01:0.99)
 
@@ -431,15 +434,6 @@ md"Let's compare the NSSS and it's derivatives:"
 
 # ╔═╡ 6c64099e-8855-40b5-8139-7ac5e0c4137a
 get_SS(RBC_calib) |> show_pluto
-
-# ╔═╡ d59a53ee-31a5-4cd4-ab98-71eb2e395a20
-# ╠═╡ disabled = true
-#=╠═╡
-plot_irf(RBC, parameters = :α => @bind x Slider(0:0.1:1))
-  ╠═╡ =#
-
-# ╔═╡ 470168b9-d7ab-4e84-abeb-d723197a3c5c
-@bind x Slider(0.1:.01:0.8)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -784,7 +778,6 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
-git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[deps.DensityInterface]]

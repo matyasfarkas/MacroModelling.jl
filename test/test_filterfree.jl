@@ -7,7 +7,7 @@ import DynamicPPL: logjoint
 import LinearAlgebra as ℒ
 import ChainRulesCore: @ignore_derivatives, ignore_derivatives
 
-cd("D:/Customtools/.julia/packages/MacroModelling/em8im/test")
+cd("C:/Users/fm007/Documents/GitHub/MacroModelling.jl/test")
 include("models/FS2000.jl")
 
 FS2000 = m
@@ -40,20 +40,21 @@ filtered_errors = MacroModelling.get_estimated_shocks(FS2000, data; parameters= 
 # Define DSGE Turing model
 Turing.@model function FS2000_filter_free_loglikelihood_function(data, model, observables)
    
-    #alp     ~ Beta(0.356, 0.02, μσ = true)
+    alp     ~ Beta(0.356, 0.02, μσ = true)
     #bet     ~ Beta(0.993, 0.002, μσ = true)
     #gam     ~ Normal(0.0085, 0.003)
     #mst     ~ Normal(1.0002, 0.007)
-    #rho     ~ Beta(0.129, 0.223, μσ = true)
+    rho     ~ Beta(0.129, 0.223, μσ = true)
     #psi     ~ Beta(0.65, 0.05, μσ = true)
     #del     ~ Beta(0.01, 0.005, μσ = true)
     #z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
     #z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
-    alp     = 0.356
+    
+    #alp     = 0.356
     bet     = 0.993
     gam     = 0.0085
     mst     = 1.0002
-    rho     = 0.129
+    #rho     = 0.129
     psi     = 0.65
     del     = 0.01
     z_e_a   = 0.035449
@@ -189,7 +190,8 @@ Turing.@model function FS2000_filter_free_loglikelihood_function(data, model, ob
      # compute observation predictions - without ME
      state_deviations = data_in_deviations - state[obs_indices,:]
      # make_sure_state_equals_observable = sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(1e-4*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)]) *10^2
-     make_sure_state_equals_observable = -sum(abs2,state_deviations) * 1e30
+     make_sure_state_equals_observable = sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(1e-8*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
+     # make_sure_state_equals_observable = -sum(abs2,state_deviations) * 1e30
 # END OF OBJECTIVE FUNCTION 
     
     Turing.@addlogprob! make_sure_state_equals_observable#calculate_filterfree_loglikelihood(model, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
@@ -209,4 +211,4 @@ tmp = Turing.describe(ϵ_chain)
 ϵ_std = tmp[1][:, 3]
 ϵ_std = reshape(ϵ_std,  m.timings.nExo, Integer(size(ϵ_std,1)/m.timings.nExo))
 
-sum(abs,ϵ_mean[1,end-20:end]-collect(filtered_errors[1,20:end]))<10^-4
+sum(abs,ϵ_mean[1,end-20:end]-collect(filtered_errors[1,end-20:end]))<10^-4

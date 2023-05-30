@@ -143,7 +143,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables)
     state_deviations = data[:,1:end] - state[observables_index,2:end]
     #println(sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)] ))
 
-    Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)])
+    Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1))).*10^-5), state_deviations[:,t]) for t in 1:size(data, 2)])
 end
 
 loglikelihood_scaling = loglikelihood_scaling_function(RBC, data,[:K,:Z])
