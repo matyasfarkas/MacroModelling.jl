@@ -98,7 +98,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables,Ω)
     #ρ     ~ MacroModelling.Beta(0.2, 0.1, μσ = true)
     #δ     ~ MacroModelling.Beta(0.02, 0.05, μσ = true)
     #γ     ~ Turing.Normal(1, 0.05)
-    σ = 0.01
+     σ = 0.01
     α ~ Turing.Uniform(0.2, 0.8)
     β ~ Turing.Uniform(0.5, 0.99)
 
@@ -155,7 +155,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables,Ω)
 
     state_deviations = data[:,1:end] - state[observables_index,1:end]
     
-    # println(sum([Turing.logpdf(Turing.MvNormal(ℒ.Diagonal(ones(size(state_deviations,1)))), state_deviations[:,t]) for t in 1:size(data, 2)] ))
+   # println(sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(Ω*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)]))
 
     Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(zeros(size(data)[1]),Matrix(Ω*ℒ.I, size(data)[1], size(data)[1])), state_deviations[:,t]) for t in 1:size(data, 2)])
 
@@ -167,8 +167,8 @@ end
 Ω = 0.0001
 loglikelihood_scaling = loglikelihood_scaling_function(RBC, data_sim,[:k,:z], Ω)
 
-n_samples = 300
-n_adapts = 50
+n_samples = 5000
+n_adapts = 500
 δ = 0.65
 alg = Turing.NUTS(n_adapts,δ)
 
