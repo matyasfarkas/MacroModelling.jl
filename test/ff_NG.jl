@@ -142,7 +142,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     σ ~ Turing.Uniform(0.0, 0.1)
     ρ ~ Turing.Uniform(0.0, 1.0)
     γ ~ Turing.Uniform(0.0, 1.5)
-
+    DF ~ Turing.Uniform(1., 5.)
     #α ~ Turing.Uniform(kfmean[1]-2*kfstd[1], kfmean[1]+2*kfstd[1])
     #β ~ Turing.Uniform(kfmean[2]-2*kfstd[2], kfmean[2]+2*kfstd[2])
     #δ ~ Turing.Uniform(kfmean[3]-2*kfstd[3], kfmean[3]+2*kfstd[3])
@@ -161,7 +161,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     algorithm = :first_order
     parameters = [σ, α, β, ρ, δ, γ]
     # skewness
-    shock_distribution = Turing.TDist(3.0)
+    shock_distribution = Turing.TDist(DF)
 
     # Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
 
@@ -173,7 +173,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     # draw_shocks(m)
      x0 ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
     
-     calculate_covariance_ = calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(1:m.timings.nVars))
+     calculate_covariance_ = MacroModelling.calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(1:m.timings.nVars))
 
      long_run_covariance = calculate_covariance_(solution[2])
     
@@ -210,7 +210,7 @@ end
 
 loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(RBC, collect(simulated_data(:k,:,:Shock_matrix))', [:k], Ω) # ,kf_estimated_means, kf_estimated_std  # Filter free
 
-n_samples = 1000
+n_samples = 5000
 samps_ff = Turing.sample(loglikelihood_scaling_ff, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 StatsPlots.plot(samps_ff)
 
