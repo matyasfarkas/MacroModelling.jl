@@ -23,7 +23,7 @@ end
 # draw shocks
 Random.seed!(1)
 periods = 20
-shockdist = Turing.TDist(3) #  Turing.Beta(10,1) #
+shockdist = Turing.SkewNormal(0,1,2) #  Turing.Beta(10,1) #
 shocks = rand(shockdist,1,periods) #  shocks = randn(1,periods)
 
 #shocks /= Statistics.std(shocks)  # antithetic shocks
@@ -68,7 +68,6 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
 
     algorithm = :first_order
     parameters = [σ, α, β, ρ, δ, γ]
-    shock_distribution = Turing.Normal()
 
     Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
 
@@ -142,7 +141,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     σ ~ Turing.Uniform(0.0, 0.1)
     ρ ~ Turing.Uniform(0.0, 1.0)
     γ ~ Turing.Uniform(0.0, 1.5)
-    DF ~ Turing.Uniform(1., 5.)
+    DF ~ Turing.Uniform(0, 4)
     #α ~ Turing.Uniform(kfmean[1]-2*kfstd[1], kfmean[1]+2*kfstd[1])
     #β ~ Turing.Uniform(kfmean[2]-2*kfstd[2], kfmean[2]+2*kfstd[2])
     #δ ~ Turing.Uniform(kfmean[3]-2*kfstd[3], kfmean[3]+2*kfstd[3])
@@ -161,7 +160,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     algorithm = :first_order
     parameters = [σ, α, β, ρ, δ, γ]
     # skewness
-    shock_distribution = Turing.TDist(DF)
+    shock_distribution = Turing.SkewNormal(0,1,DF)
 
     # Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
 
