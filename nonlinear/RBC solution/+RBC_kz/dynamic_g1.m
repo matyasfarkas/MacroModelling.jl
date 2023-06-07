@@ -22,14 +22,16 @@ function g1 = dynamic_g1(T, y, x, params, steady_state, it_, T_flag)
 if T_flag
     T = RBC_kz.dynamic_g1_tt(T, y, x, params, steady_state, it_);
 end
-g1 = zeros(2, 6);
+g1 = zeros(3, 7);
 g1(1,1)=1-params(5)+T(6);
 g1(1,3)=(-1)-(T(5)*T(8)-T(3)*T(9))/(T(5)*T(5));
-g1(1,5)=(-((-1)/T(5)));
+g1(1,6)=(-((-1)/T(5)));
 g1(1,2)=T(1);
 g1(1,4)=(-((T(2)*T(5)-T(3)*T(4)*params(2))/(T(5)*T(5))));
 g1(2,2)=(-params(4));
 g1(2,4)=1;
-g1(2,6)=(-params(3));
+g1(2,7)=(-params(3));
+g1(3,3)=(-1);
+g1(3,5)=1;
 
 end

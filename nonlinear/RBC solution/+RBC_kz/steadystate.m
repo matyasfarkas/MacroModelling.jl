@@ -3,5 +3,6 @@ function [ys_, params, info] = steadystate(ys_, exo_, params)
     info = 0;
     ys_(2)=0;
     ys_(1)=((1/params(2)-1+params(5))/params(1))^(1/(params(1)-1));
+    ys_(3)=((1/params(2)-1+params(5))/params(1))^(1/(params(1)-1));
     % Auxiliary equations
 end

@@ -18,13 +18,16 @@ function residual = static_resid(T, y, x, params, T_flag)
 if T_flag
     T = RBC_kz.static_resid_tt(T, y, x, params);
 end
-residual = zeros(2, 1);
+residual = zeros(3, 1);
 lhs = T(2);
 rhs = T(2)/T(4);
 residual(1) = lhs - rhs;
 lhs = y(2);
 rhs = y(2)*params(4)+params(3)*x(1);
 residual(2) = lhs - rhs;
+lhs = y(3);
+rhs = y(1);
+residual(3) = lhs - rhs;
 if ~isreal(residual)
   residual = real(residual)+imag(residual).^2;
 end
