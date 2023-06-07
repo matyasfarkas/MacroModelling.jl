@@ -22,7 +22,7 @@ assert(length(T) >= 5);
 
 T(1) = exp(y(2))*y(1)^params(1);
 T(2) = exp(y(4))*y(3)^params(1);
-T(3) = y(3)*(1-params(5))-y(5)+T(2);
+T(3) = y(3)*(1-params(5))-y(6)+T(2);
 T(4) = params(1)*exp(y(4))*y(3)^(params(1)-1);
 T(5) = (1-params(5)+T(4))*params(2);
 

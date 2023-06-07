@@ -18,6 +18,6 @@ function g2 = static_g2(T, y, x, params, T_flag)
 if T_flag
     T = RBC_kz.static_g2_tt(T, y, x, params);
 end
-g2 = sparse([],[],[],2,4);
+g2 = sparse([],[],[],3,9);
 
 end

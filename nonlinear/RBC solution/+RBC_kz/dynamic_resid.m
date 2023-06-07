@@ -22,12 +22,15 @@ function residual = dynamic_resid(T, y, x, params, steady_state, it_, T_flag)
 if T_flag
     T = RBC_kz.dynamic_resid_tt(T, y, x, params, steady_state, it_);
 end
-residual = zeros(2, 1);
+residual = zeros(3, 1);
 lhs = (1-params(5))*y(1)-y(3)+T(1);
 rhs = T(3)/T(5);
 residual(1) = lhs - rhs;
 lhs = y(4);
 rhs = y(2)*params(4)+params(3)*x(it_, 1);
 residual(2) = lhs - rhs;
+lhs = y(5);
+rhs = y(3);
+residual(3) = lhs - rhs;
 
 end
