@@ -17,13 +17,13 @@ end
     β = 0.95
     ρ = 0.2
     δ = 0.02
-    γ = 1.
+    # γ = 1.
 end
 
 # draw shocks
 Random.seed!(1)
 periods = 20
-shockdist = Turing.SkewNormal(0,1,2) #  Turing.Beta(10,1) #
+shockdist = Turing.TDist(3) #  Turing.Beta(10,1) #
 shocks = rand(shockdist,1,periods) #  shocks = randn(1,periods)
 
 #shocks /= Statistics.std(shocks)  # antithetic shocks
@@ -52,15 +52,15 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     # γ     ~ Turing.Normal(1, 0.05)
     # σ     ~ MacroModelling.InverseGamma(0.01, 0.05, μσ = true)
 
-    α ~ Turing.Uniform(0.15, 0.45)
-    β ~ Turing.Uniform(0.92, 0.9999)
+    #α ~ Turing.Uniform(0.15, 0.45)
+    #β ~ Turing.Uniform(0.92, 0.9999)
     δ ~ Turing.Uniform(0.0001, 0.1)
     σ ~ Turing.Uniform(0.0, 0.1)
     ρ ~ Turing.Uniform(0.0, 1.0)
-    γ ~ Turing.Uniform(0.0, 1.5)
+    #γ ~ Turing.Uniform(0.0, 1.5)
 
-    # α = 0.25
-    # β = 0.95
+    α = 0.25
+    β = 0.95
     # σ = 0.01
     # ρ = 0.2
     # δ = 0.02
@@ -68,6 +68,7 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
 
     algorithm = :first_order
     parameters = [σ, α, β, ρ, δ, γ]
+    shock_distribution = Turing.Normal()
 
     Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
 
@@ -135,13 +136,13 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     #  γ     ~ Turing.Normal(1, 0.05)
     #σ     ~ MacroModelling.InverseGamma(0.01, 0.05, μσ = true)
 
-    α ~ Turing.Uniform(0.15, 0.45)
-    β ~ Turing.Uniform(0.92, 0.9999)
+    #α ~ Turing.Uniform(0.15, 0.45)
+    #β ~ Turing.Uniform(0.92, 0.9999)
     δ ~ Turing.Uniform(0.0001, 0.1)
     σ ~ Turing.Uniform(0.0, 0.1)
     ρ ~ Turing.Uniform(0.0, 1.0)
-    γ ~ Turing.Uniform(0.0, 1.5)
-    DF ~ Turing.Uniform(0, 4)
+    #γ ~ Turing.Uniform(0.0, 1.5)
+    DF ~ Turing.Uniform(1., 5.)
     #α ~ Turing.Uniform(kfmean[1]-2*kfstd[1], kfmean[1]+2*kfstd[1])
     #β ~ Turing.Uniform(kfmean[2]-2*kfstd[2], kfmean[2]+2*kfstd[2])
     #δ ~ Turing.Uniform(kfmean[3]-2*kfstd[3], kfmean[3]+2*kfstd[3])
@@ -150,8 +151,8 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     #γ ~ Turing.Uniform(0.0, kfmean[6]+2*kfstd[6])
 
 
-    # α = 0.25
-    # β = 0.95
+     α = 0.25
+     β = 0.95
     # σ = 0.01
     # ρ = 0.2
     # δ = 0.02
@@ -160,7 +161,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     algorithm = :first_order
     parameters = [σ, α, β, ρ, δ, γ]
     # skewness
-    shock_distribution = Turing.SkewNormal(0,1,DF)
+    shock_distribution = Turing.TDist(DF)
 
     # Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
 
@@ -234,6 +235,7 @@ data = KeyedArray(Array(collect(simulated_data(:k,:,:Shock_matrix)))',row = [:k]
 
 kf_filtered_shocks = MacroModelling.get_estimated_shocks(RBC, data, parameters = kf_estimated_means[[4, 1, 2, 5, 3,6]])
 
+
 ff_estimated_parameters_indices = indexin([Symbol("ϵ_draw[$a]") for a in 1:periods], ff_estimated_parameters )
 StatsPlots.plot(ff_estimated_means[ff_estimated_parameters_indices],
                 ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices], 
@@ -244,6 +246,3 @@ StatsPlots.plot!(collect(kf_filtered_shocks'), label = "KF filtered shocks")
 
 
 StatsPlots.plot(samps_ff[["DF"]]; colordim=:parameter, legend=true)
-
-using JLD2
-@save "FF_SKNorm_allparam.jld"
