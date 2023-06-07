@@ -62,6 +62,8 @@ end;
 shocks;
 
 var EPSz  = 1;  end;
+varobs z k;
+dynare_sensitivity;
 
 //This is used to generate the A and B matrices of the linear homoskedastic solution
 stoch_simul(order = 1, irf=12);
