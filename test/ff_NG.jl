@@ -246,3 +246,6 @@ StatsPlots.plot!(collect(kf_filtered_shocks'), label = "KF filtered shocks")
 
 
 StatsPlots.plot(samps_ff[["DF"]]; colordim=:parameter, legend=true)
+
+using JLD2
+@save "FF_NG_allparam.jld"

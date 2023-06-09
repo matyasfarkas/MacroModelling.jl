@@ -222,7 +222,7 @@ kf_z = ( kf_bias)./kf_estimated_std[1:3]
 
 grouplabel = repeat(["KF", "FF"], inner = 3)
 
-StatsPlots.groupedbar( repeat(kf_estimated_parameters, outer =2) , [kf_bias ff_bias], group = grouplabel, xlabel = "Structural Parameters Biases")
+StatsPlots.groupedbar( repeat(kf_estimated_parameters, outer =2) , [ kf_bias ff_bias ], group = grouplabel, xlabel = "Structural Parameters Biases")
 StatsPlots.groupedbar( repeat(kf_estimated_parameters, outer =2), [kf_z ff_z], group = grouplabel, xlabel = "Structural Parameter z-scores")
 data = KeyedArray(Array(collect(simulated_data(:k,:,:Shock_matrix)))',row = [:k], col = 1:1:20)
 
@@ -241,3 +241,8 @@ StatsPlots.plot!(collect(kf_filtered_shocks'), label = "KF filtered shocks")
 
 
 StatsPlots.plot(samps_ff[["DF"]]; colordim=:parameter, legend=true)
+
+
+
+using JLD2
+@save "FF_NG_3param.jld"
