@@ -23,7 +23,7 @@ end
 # draw shocks
 Random.seed!(1)
 periods = 20
-shockdist = Turing.SkewNormal(0,1,2) #  Turing.Beta(10,1) #
+shockdist = Turing.SkewNormal(0,1,1.5) #  Turing.Beta(10,1) #
 shocks = rand(shockdist,1,periods) #  shocks = randn(1,periods)
 
 #shocks /= Statistics.std(shocks)  # antithetic shocks
@@ -140,7 +140,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     σ ~ Turing.Uniform(0.0, 0.1)
     ρ ~ Turing.Uniform(0.0, 1.0)
 
-    DF ~ Turing.Uniform(0, 4)
+    DF ~ Turing.Uniform(0, 5)
     #α ~ Turing.Uniform(kfmean[1]-2*kfstd[1], kfmean[1]+2*kfstd[1])
     #β ~ Turing.Uniform(kfmean[2]-2*kfstd[2], kfmean[2]+2*kfstd[2])
     #δ ~ Turing.Uniform(kfmean[3]-2*kfstd[3], kfmean[3]+2*kfstd[3])
