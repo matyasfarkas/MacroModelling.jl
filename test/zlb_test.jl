@@ -261,9 +261,9 @@ end
 statePF = state
 SS1=  get_steady_state(AS07,   parameters = parameters , algorithm = :second_order)
 
-StatsPlots.plot((statePF[1,2:end].+SS1[1]),label = String(m.var[1])* " with Tom Holdens' FG Shocks that Implements Deterministic Simulation")
-StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2])* " with Tom Holdens' FG Shocks that Implements Deterministic Simulation")
-StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3])* " with Tom Holdens' FG Shocks that Implements Deterministic Simulation")
+StatsPlots.plot((statePF[1,2:end].+SS1[1]),label = String(m.var[1])* " with Deterministic Simulation")
+StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2])* " with Deterministic Simulation")
+StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3])* " with Deterministic Simulation")
 
 # No perfect foresight - Extended path simulation - Thore's  perference
 ϵ_wzlbep = ϵ
