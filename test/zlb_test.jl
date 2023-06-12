@@ -208,6 +208,7 @@ consthorizon = zeros(size(data, 2),1)
     end
 println(["Model spent maximum " maximum(vec(consthorizon)) " horizns at the ZLB!!!"])
 
+# Full information - Deterministic simulation equivalent - Mátyás'  perference
 
 ϵ_wzlb = ϵ
 for hmax = size(fgshlist,1)+1:-1:1
@@ -257,13 +258,68 @@ for hmax = size(fgshlist,1)+1:-1:1
        # show(consthorizon')
 end
 
-
+statePF = state
 SS1=  get_steady_state(AS07,   parameters = parameters , algorithm = :second_order)
 
-StatsPlots.plot(state[2,2:end].+SS1[2])
+StatsPlots.plot((statePF[1,2:end].+SS1[1]),label = String(m.var[1]))
+StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2]))
+StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3]))
+
+# No perfect foresight - Extended path simulation - Thore's  perference
+ϵ_wzlbep = ϵ
+
+        for t = 1:size(data, 2)
+            if t == 1
+                state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
+                aug_state_unc = [initial_conditions
+                        1 
+                        ϵ[:,t]]
+
+                    state[:,1] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                if only(state[zlbindex,t])  - zlblevel <-eps()
+                    zlb_ϵ = zeros(m.timings.nExo,1)
+                    zlb_ϵ[zlbshindex[1],1] =  only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
+                    #conditions = KeyedArray(only(-(state[zlbindex,1] .- (zlblevel))),Variables = zlbvar,Periods = (1))
+                    #shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]]),Periods = collect(1:hmax))  # if MP shock is endogenous then use: setdiff(m.exo,[fgshlist[1:hmax]; mpsh])
+                    #zlb_ϵ = get_conditional_forecast(m, conditions, shocks =shocks)[m.timings.nVars+1:end,1:hmax+1] |> collect
+                    ϵ_wzlbep[:,1] = ϵ[:,1] +zlb_ϵ
+                    aug_state_const = [initial_conditions
+                    1 
+                    ϵ_wzlbep[:,1]]
+                    state[:,1] .=  𝐒₁ * aug_state_const #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                end
+
+            else
+                aug_state_unc = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                    1 
+                    ϵ[:,t]]
+                state[:,t] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+            if only(state[zlbindex,t])  - zlblevel <-eps()
+                    zlb_ϵ = zeros(m.timings.nExo,1)
+                    zlb_ϵ[zlbshindex[1],1] =  only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
+
+                    #conditions = KeyedArray(-(state[zlbindex,1] .- (zlblevel)),Variables = zlbvar,Periods = collect(1))
+                    #shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]]),Periods = collect(1:hmax))  # if MP shock is endogenous then use: setdiff(m.exo,[fgshlist[1:hmax]; mpsh])
+                    #zlb_ϵ = get_conditional_forecast(m, conditions, shocks =shocks)[m.timings.nVars+1:end,1:hmax+1] |> collect
+                    ϵ_wzlbep[:,t] = ϵ[:,t] +zlb_ϵ
+                    aug_state_const = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                    1 
+                    ϵ_wzlbep[:,t]]
+                    state[:,t] .=  𝐒₁ * aug_state_const #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                end
+            end      
+        end
+        stateUNC = state
+
+StatsPlots.plot!((stateUNC[1,2:end].+SS1[1]),label = String(m.var[1]) * " with Extended Path Simulation")
+StatsPlots.plot!((stateUNC[2,2:end].+SS1[2]),label = String(m.var[2])* " with Extended Path Simulation")
+StatsPlots.plot!((stateUNC[3,2:end].+SS1[3]),label = String(m.var[3])* " with Extended Path Simulation")
+
+# MAIN INSIGHT: These two are equivalent!!!!
 
 
-
-simulated_data = get_irf(AS07,shocks = ϵ_wzlb, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
+#simulated_data = get_irf(AS07,shocks = ϵ_wzlb, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
 MacroModelling.plot_irf(AS07,shocks = ϵ_wzlb, periods = 0)
+MacroModelling.plot_irf(AS07,shocks = ϵ_wzlbep, periods = 0)
+
 
