@@ -101,9 +101,9 @@ shockstrue = [ zeros(8, periods); shocks[1,:]' ; -shocksSK; shocks[2,:]' ]
 #shocks /= Statistics.std(shocks)  # antithetic shocks
 #shocks .-= Statistics.mean(shocks) # antithetic shocks
 # Test for non-normality
-        HypothesisTests.ExactOneSampleKSTest(vec(shocksR),Turing.Normal(0,1))
+        HypothesisTests.ExactOneSampleKSTest(vec(shocksSK),Turing.Normal(0,1))
         StatsPlots.plot(Distributions.Normal(0,1), fill=(0, .5,:blue))
-        StatsPlots.density!(shocksR')
+        StatsPlots.density!(shocksSK')
         StatsPlots.density!(shockstrue[10,:])
 # get simulation
 simulated_data = get_irf(AS07,shocks = shockstrue, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
@@ -282,66 +282,85 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
 
     state[:,1] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
 
+   
     for t in 2:size(data, 2)
-         aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
-                     1 
-                     ϵ[:,t]]
-         state[:,t] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
-        
-     end
+        aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                    1 
+                    ϵ[:,t]]
+        state[:,t] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+    
+    end
 
-     hit = zeros(size(data, 2),1)
-        for t = 1:size(data, 2)
-            if only(state[zlbindex,t])   .< zlblevel.- solution[1][zlbindex...] 
-            hit[t,1] = 1;
-            #println("ZLB HIT!!")
-            end
-        end
-    consthorizon = zeros(size(data, 2),1)
-        for  t = 1:size(data, 2)
-            consthorizon[t,1] = sum(hit[t:size(fgshlist,1),1])
-            # Check if horizon is longer than fg shocks - throw an error
-            if maximum(vec(consthorizon))>size(fgshlist,1)
-                return Turing.@addlogprob! Inf
-                println("ZLB too long for model to solve!")
-            end
-        end
+    hit = zeros(size(data, 2),1)
     for t = 1:size(data, 2)
-        if consthorizon[t,1] == 1 # Only 1 period is constrained, then it is an anticipated MP shock
-            zlb_ϵ = zeros( m.timings.nExo)
-            zlb_ϵ[mpshindex] =  (only(state[zlbindex,t]) - (zlblevel.- solution[1][zlbindex...]))/𝐒₁[m.timings.nPast_not_future_and_mixed+1+only(mpshindex)]
+        if only(state[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+            hit[t,1] = 1;
+        #println("ZLB HIT!!")
+        end
+    end
+    consthorizon = zeros(size(data, 2),1)
+    for  t = 1:size(data, 2)-size(fgshlist,1)
+        consthorizon[t,1] = sum(hit[t:t+size(fgshlist,1),1])
+        # Check if horizon is longer than fg shocks - throw an error
+        if maximum(vec(consthorizon))>size(fgshlist,1)
+            return Turing.@addlogprob! Inf
+            println("ZLB too long for model to solve!")
+        end
+    end
         
-        else
-        for hmax = 2:size(fgshlist,1)
-            if consthorizon[t,1] == hmax
-                zlb_ϵ = zeros(m.timings.nExo)
-                conditions = KeyedArray((state[zlbindex,t:t+hmax] .- (zlblevel.- solution[1][zlbindex...])),Variables = zlbvar,Periods = collect(1:hmax+1))
-                shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]; mpsh]),Periods = collect(1:hmax+1)) 
+    println(["Model spent maximum " maximum(vec(consthorizon)) " horizns at the ZLB!!!"])
 
-                implied_path = get_conditional_forecast(m, conditions, shocks =shocks)[1]
+## Finding anticipated news shocks that implement the ZLB
+    ϵ_wzlb = ϵ
+        for hmax = size(fgshlist,1)+1:-1:1
+            for t = 1:size(data, 2)
+                if consthorizon[t,1] == hmax
+                    zlb_ϵ = zeros(m.timings.nExo,hmax+1)
+                    conditions = KeyedArray(-(state[zlbindex,t:t+hmax-1] .- (zlblevel)),Variables = zlbvar,Periods = collect(1:hmax))
+                    shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]; mpsh]),Periods = collect(1:hmax)) 
+                    #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
+                    zlb_ϵ = get_conditional_forecast(m, conditions, shocks =shocks)[m.timings.nVars+1:end,1:hmax+1] |> collect
+                    ϵ_wzlb[:,t:t+hmax] = ϵ[:,t:t+hmax] +zlb_ϵ
+                end
+
+            
+                if t == 1
+                    state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
+                    aug_state = [initial_conditions
+                            1 
+                            ϵ_wzlb[:,t]]
+
+                    state[:,1] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                else
+                    aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                        1 
+                        ϵ_wzlb[:,t]]
+                    state[:,t] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                end
+            
             end
+
+            hit = zeros(size(data, 2),1)
+            for t = 1:size(data, 2)
+                if only(state[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+                hit[t,1] = 1;
+                #println("ZLB HIT!!")
+                end
+            end
+            consthorizon = zeros(size(data, 2),1)
+            for  t = 1:size(data, 2)-size(fgshlist,1)
+                consthorizon[t,1] = sum(hit[t:t+size(fgshlist,1),1])
+                # Check if horizon is longer than fg shocks - throw an error
+                if maximum(vec(consthorizon))>size(fgshlist,1)
+                    return Turing.@addlogprob! Inf
+                    println("ZLB too long for model to solve!")
+                end
+            end
+            # show(consthorizon')
         end
-    end
 
-        end
-    end
-       state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
-        aug_state = [initial_conditions
-                         1 
-                         ϵ[:,t]]
-
-            state[:,1] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
-
-    for t in 2:size(data, 2)
-         aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
-                     1 
-                     ϵ[:,t]]
-         state[:,t] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+    
         
-     end
-
-        end
-    end
 
      observables_index = sort(indexin(observables, m.timings.var))
     
