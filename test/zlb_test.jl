@@ -266,6 +266,8 @@ StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2])* " with Det
 StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3])* " with Deterministic Simulation")
 
 # No perfect foresight - Extended path simulation - Thore's  perference
+ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
+
 ϵ_wzlbep = ϵ
 
         for t = 1:size(data, 2)
@@ -287,7 +289,7 @@ StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3])* " with Det
                     1 
                     ϵ_wzlbep[:,1]]
                     state[:,1] .=  𝐒₁ * aug_state_const #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
-                end
+                 end
 
             else
                 aug_state_unc = [state[m.timings.past_not_future_and_mixed_idx,t-1]
@@ -296,7 +298,7 @@ StatsPlots.plot!((statePF[3,2:end].+SS1[3]),label = String(m.var[3])* " with Det
                 state[:,t] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
             if only(state[zlbindex,t])  - zlblevel <-eps()
                     zlb_ϵ = zeros(m.timings.nExo,1)
-                    zlb_ϵ[zlbshindex[1],1] =  only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
+                    zlb_ϵ[zlbshindex[1],1] =  -only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
 
                     #conditions = KeyedArray(-(state[zlbindex,1] .- (zlblevel)),Variables = zlbvar,Periods = collect(1))
                     #shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]]),Periods = collect(1:hmax))  # if MP shock is endogenous then use: setdiff(m.exo,[fgshlist[1:hmax]; mpsh])
