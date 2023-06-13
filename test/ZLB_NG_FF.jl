@@ -2,6 +2,7 @@ using MacroModelling
 import Turing, StatsPlots, Random, Statistics
 import LinearAlgebra as ℒ
 using HypothesisTests, Distributions
+import ChainRulesCore: @ignore_derivatives, ignore_derivatives
 
 @model AS07 begin
 	c[0] ^ (-TAU) = r[0] * 1 / (1 + RA / 400) * c[1] ^ (-TAU) / p[1] / ((1 + GAMQ / 100) * z[1])
@@ -114,7 +115,7 @@ MacroModelling.plot_irf(AS07,shocks = shockstrue, periods = 0)
 Ω = 10^(-5)# eps()
 n_samples = 1000
 
-
+#=
 Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     
     # RA,              1,             1e-5,        10,          gamma_pdf,     0.8,        0.5;
@@ -188,6 +189,8 @@ samps = Turing.sample(loglikelihood_scaling, Turing.NUTS(), n_samples, progress 
 StatsPlots.plot(samps)
 mean(samps[["RA"]])
 
+=#
+
 
 ## FF 
 
@@ -250,17 +253,17 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     SIGFG = 0.1
     PHI = TAU*(1-NU)/NU/KAPPA/exp(PA/400)^2
 
-    data= simulated_data
-    zlbvar = [:INT]
-    zlblevel = 0
-    mpsh = [:epsr]
-    fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
-
+    # data= simulated_data
+    # zlbvar = [:INT]
+    # zlblevel = 0
+    # mpsh = [:epsr]
+    # fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
+    # observables = [:INT, :YGR , :INFL ]
+    
     zlbindex = sort(indexin(zlbvar, m.timings.var))
-    zlbshindex = sort(indexin(fgshlist, m.timings.exo))
-    mpshindex =  only(sort(indexin(mpsh, m.timings.exo)))
+    #zlbshindex = sort(indexin(fgshlist, m.timings.exo))
+    #mpshindex =  only(sort(indexin(mpsh, m.timings.exo)))
 
-    observables = [:INT, :YGR , :INFL ]
     parameters = [RA, PA, GAMQ, TAU, NU, KAPPA, PSIP, PSIY, RHOR, RHOG, RHOZ, SIGR, SIGG, SIGZ, C_o_Y, OMEGA, XI, SIGFG]
 
     algorithm = :first_order
@@ -270,42 +273,42 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
 
     solution = get_solution(m, parameters, algorithm = algorithm)
 
-     if solution[end] != true
+    if solution[end] != true
          return Turing.@addlogprob! Inf
-     end
+    end
     # draw_shocks(m)
      x0 ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
      
-     calculate_covariance_ = MacroModelling.calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(m.timings.past_not_future_and_mixed_idx) ) # subset_indices = collect(1:m.timings.nVars))
+    calculate_covariance_ = MacroModelling.calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(m.timings.past_not_future_and_mixed_idx) ) # subset_indices = collect(1:m.timings.nVars))
 
-     long_run_covariance = calculate_covariance_(solution[2])
+    long_run_covariance = calculate_covariance_(solution[2])
     
-     initial_conditions = long_run_covariance * x0
+    initial_conditions = long_run_covariance * x0
 
     𝐒₁ = hcat(solution[2][:,1:m.timings.nPast_not_future_and_mixed], zeros(m.timings.nVars), solution[2][:,m.timings.nPast_not_future_and_mixed+1:end])
     ϵ_draw ~ Turing.filldist(shock_distribution, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) * size(data, 2))
 
     ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
 
-   state_unc = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
+    state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
     
-    aug_state_unc = [initial_conditions
+    aug_state = [initial_conditions
                  1 
                  ϵ[:,1]]
     
-    state_unc[:,1] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+    state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
     
     for t in 2:size(data, 2)
-        aug_state_unc = [state_unc[m.timings.past_not_future_and_mixed_idx,t-1]
+        aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
                      1 
                      ϵ[:,t]]
-        state_unc[:,t] .=  𝐒₁ * aug_state_unc         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+        state[:,t] .=  𝐒₁ * aug_state         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
         
      end
     
      hit = zeros(size(data, 2),1)
         for t = 1:size(data, 2)
-            if only(state_unc[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+            if only(state[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
                 hit[t,1] = 1;
             #println("ZLB HIT!!")
             end
@@ -320,17 +323,22 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
             for tt = 1:size(fgshlist, 1)+1
                 looper = minimum( [tt+t, only(size(data,2))])
                 if hit[looper-1, 1] == hit[looper, 1]
-                    consthorizon = +1
+                     consthorizon = +1
                 end
             end
             for hmax = size(fgshlist, 1)+1:-1:1
                 if consthorizon == hmax
-                    zlb_ϵ = zeros(m.timings.nExo, hmax + 1)
-                    conditions = KeyedArray(-(state[zlbindex, t:t+hmax-1] .- (zlblevel)), Variables=zlbvar, Periods=collect(1:hmax))
-                    shocks = KeyedArray(zeros(m.timings.nExo - hmax - 1, size(conditions, 2)), Variables=setdiff(m.exo, [fgshlist[1:hmax]; mpsh]), Periods=collect(1:hmax))
-                    #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
-                    zlb_ϵ = get_conditional_forecast(m, conditions, shocks=shocks)[m.timings.nVars+1:end, 1:hmax+1] |> collect
-                    ϵ_wzlb[:, t:t+hmax] = ϵ[:, t:t+hmax] + zlb_ϵ
+                    if (tt+t > only(size(data,2)))
+                        ϵ_wzlb[:, t:only(size(data,2))] = ϵ[:, t:only(size(data,2))]
+                    else
+
+                        zlb_ϵ = @ignore_derivatives zeros(m.timings.nExo, hmax + 1)
+                        conditions = @ignore_derivatives KeyedArray(-(state[zlbindex, t:t+hmax-1] .- (zlblevel)), Variables=zlbvar, Periods=collect(1:hmax))
+                        shocks = @ignore_derivatives KeyedArray(zeros(m.timings.nExo - hmax - 1, size(conditions, 2)), Variables=setdiff(m.exo, [fgshlist[1:hmax]; mpsh]), Periods=collect(1:hmax))
+                        #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
+                        zlb_ϵ = @ignore_derivatives get_conditional_forecast(m, conditions, shocks=shocks)[m.timings.nVars+1:end, 1:hmax+1] |> collect
+                        ϵ_wzlb[:, t:t+hmax] = ϵ[:, t:t+hmax] + zlb_ϵ
+                    end
                 end
     
     
@@ -359,34 +367,33 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
                 #println("ZLB HIT!!")
             end
         end
-        consthorizon = zeros(size(data, 2), 1)
-        for t = 1:size(data, 2)-size(fgshlist, 1)
-            consthorizon[t, 1] = sum(hit[t:t+size(fgshlist, 1), 1])
-            # Check if horizon is longer than fg shocks - throw an error
-            if maximum(vec(consthorizon)) > size(fgshlist, 1)
-                return Turing.@addlogprob! Inf
-                println("ZLB too long for model to solve!")
-            end
-        end
-        # show(consthorizon')
     end    
-
      observables_index = sort(indexin(observables, m.timings.var))
-    
-     state_deviations = data - state[observables_index,:] .- solution[1][observables_index...]
+
+     state_deviations = data - state[vec(observables_index),:] .- solution[1][observables_index]
 
      Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(Ω * ℒ.I(size(data,1))), state_deviations[:,t]) for t in 1:size(data, 2)])
 end
 
 
-data= simulated_data
+observables_index = sort(indexin(observables,AS07.timings.var))
+
+data= collect(simulated_data[observables_index,:,1])
+
 zlbvar = [:INT]
 zlblevel = 0
 mpsh = [:epsr]
 fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
+observables = [:INT, :YGR , :INFL ]
+observables_index = sort(indexin(observables, m.timings.var))
 
-loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(RBC, collect(simulated_data(:k,:,:Shock_matrix))', [:k], Ω) # ,kf_estimated_means, kf_estimated_std  # Filter free
 
-n_samples = 5000
+loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(AS07, data, observables, Ω, zlbvar, zlblevel,fgshlist) # m, data, observables, Ω , zlbvar, zlblevel,fgshlist  # Filter free
+
+n_samples = 500
 samps_ff = Turing.sample(loglikelihood_scaling_ff, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
+
+
+
+
 StatsPlots.plot(samps_ff)
