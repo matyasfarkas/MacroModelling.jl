@@ -131,7 +131,7 @@ SIGFG = 0.1
 
 data= simulated_data
 zlbvar = [:INT]
-zlblevel = 2
+zlblevel = -3
 mpsh = [:epsr]
 fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
 m = AS07
@@ -168,8 +168,9 @@ solution = get_solution(m, parameters, algorithm = algorithm)
 #ϵ_draw ~ Turing.filldist(shock_distribution, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) * size(data, 2))
 
 Random.seed!(1)
-ϵ_draw= rand( size(data, 2) *( m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)))
+shockdist = Turing.Normal() #  Turing.Beta(10,1) #
 
+ϵ_draw= rand( shockdist,size(data, 2) *( m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)))
 # This needs to fix for arbitrary location of FG SHOCKS!
 ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
 
@@ -202,11 +203,12 @@ consthorizon = zeros(size(data, 2),1)
         consthorizon[t,1] = sum(hit[t:t+size(fgshlist,1),1])
         # Check if horizon is longer than fg shocks - throw an error
         if maximum(vec(consthorizon))>size(fgshlist,1)
-            return Turing.@addlogprob! Inf
-            println("ZLB too long for model to solve!")
+            # return Turing.@addlogprob! Inf
+            # println("ZLB too long for model to solve!")
         end
     end
 println(["Model spent maximum " maximum(vec(consthorizon)) " horizns at the ZLB!!!"])
+MacroModelling.plot_irf(AS07,shocks = ϵ, periods = 0)
 
 # Full information - Deterministic simulation equivalent - Mátyás'  perference
 
@@ -317,7 +319,68 @@ StatsPlots.plot!((stateUNC[1,2:end].+SS1[1]),label = String(m.var[1]) * " with E
 StatsPlots.plot!((stateUNC[2,2:end].+SS1[2]),label = String(m.var[2])* " with Extended Path Simulation")
 StatsPlots.plot!((stateUNC[3,2:end].+SS1[3]),label = String(m.var[3])* " with Extended Path Simulation")
 
-# MAIN INSIGHT: These two are equivalent!!!!
+# Extended path simulation take two with conditional forecasting
+ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
+
+
+ϵ_wzlbep = ϵ
+
+        for t = 1:size(data, 2)
+            if t == 1
+                state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
+                aug_state_unc = [initial_conditions
+                        1 
+                        ϵ[:,t]]
+
+                    state[:,1] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                    for texp = 2:9 # Make up to 8 horizons ahead forecasts
+                        aug_state_unc = [state[m.timings.past_not_future_and_mixed_idx,texp-1]
+                        1 
+                        zeros(m.timings.nExo,1)]
+                    state[:,texp] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                    end
+                    hit = zeros(10,1)
+                    for evalt = 1:10
+                        if only(state[zlbindex,evalt])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+                        hit[evalt,1] = 1;
+                        #println("ZLB HIT!!")
+                        end
+                    end
+
+                if only(state[zlbindex,t])  - zlblevel <-eps()
+                    zlb_ϵ = zeros(m.timings.nExo,1)
+                    zlb_ϵ[zlbshindex[1],1] =  only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
+                    #conditions = KeyedArray(only(-(state[zlbindex,1] .- (zlblevel))),Variables = zlbvar,Periods = (1))
+                    #shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]]),Periods = collect(1:hmax))  # if MP shock is endogenous then use: setdiff(m.exo,[fgshlist[1:hmax]; mpsh])
+                    #zlb_ϵ = get_conditional_forecast(m, conditions, shocks =shocks)[m.timings.nVars+1:end,1:hmax+1] |> collect
+                    ϵ_wzlbep[:,1] = ϵ[:,1] +zlb_ϵ
+                    aug_state_const = [initial_conditions
+                    1 
+                    ϵ_wzlbep[:,1]]
+                    state[:,1] .=  𝐒₁ * aug_state_const #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                 end
+
+            else
+                aug_state_unc = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                    1 
+                    ϵ[:,t]]
+                state[:,t] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+            if only(state[zlbindex,t])  - zlblevel <-eps()
+                    zlb_ϵ = zeros(m.timings.nExo,1)
+                    zlb_ϵ[zlbshindex[1],1] =  -only((only(state[zlbindex,t]) - (zlblevel))/𝐒₁[zlbindex,m.timings.nPast_not_future_and_mixed+1+only(zlbshindex[1])])
+
+                    #conditions = KeyedArray(-(state[zlbindex,1] .- (zlblevel)),Variables = zlbvar,Periods = collect(1))
+                    #shocks  = KeyedArray(zeros(m.timings.nExo-hmax-1,size(conditions,2)),Variables = setdiff(m.exo,[fgshlist[1:hmax]]),Periods = collect(1:hmax))  # if MP shock is endogenous then use: setdiff(m.exo,[fgshlist[1:hmax]; mpsh])
+                    #zlb_ϵ = get_conditional_forecast(m, conditions, shocks =shocks)[m.timings.nVars+1:end,1:hmax+1] |> collect
+                    ϵ_wzlbep[:,t] = ϵ[:,t] +zlb_ϵ
+                    aug_state_const = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                    1 
+                    ϵ_wzlbep[:,t]]
+                    state[:,t] .=  𝐒₁ * aug_state_const #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+                end
+            end      
+        end
+        stateUNC = state
 
 
 #simulated_data = get_irf(AS07,shocks = ϵ_wzlb, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
