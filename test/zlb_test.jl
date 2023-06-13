@@ -167,7 +167,7 @@ solution = get_solution(m, parameters, algorithm = algorithm)
 𝐒₁ = hcat(solution[2][:,1:m.timings.nPast_not_future_and_mixed], zeros(m.timings.nVars), solution[2][:,m.timings.nPast_not_future_and_mixed+1:end])
 #ϵ_draw ~ Turing.filldist(shock_distribution, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) * size(data, 2))
 
-Random.seed!(1)
+Random.seed!(12345)
 shockdist = Turing.Normal() #  Turing.Beta(10,1) #
 
 ϵ_draw= rand( shockdist,size(data, 2) *( m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)))
@@ -175,33 +175,33 @@ shockdist = Turing.Normal() #  Turing.Beta(10,1) #
 ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
 
 
-state = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
+state_unc = zeros(typeof(initial_conditions[1]), m.timings.nVars, size(data, 2))
 
-aug_state = [initial_conditions
+aug_state_unc = [initial_conditions
              1 
              ϵ[:,1]]
 
-state[:,1] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+state_unc[:,1] .=  𝐒₁ * aug_state_unc #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
 
 for t in 2:size(data, 2)
-     aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+    aug_state_unc = [state_unc[m.timings.past_not_future_and_mixed_idx,t-1]
                  1 
                  ϵ[:,t]]
-     state[:,t] .=  𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+    state_unc[:,t] .=  𝐒₁ * aug_state_unc         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
     
  end
 
  hit = zeros(size(data, 2),1)
     for t = 1:size(data, 2)
-        if only(state[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+        if only(state_unc[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
             hit[t,1] = 1;
         #println("ZLB HIT!!")
         end
     end
     SS1=  get_steady_state(AS07,   parameters = parameters , algorithm = :second_order)
-
-    StatsPlots.plot((fill(zlblevel,size(data,2)).+SS1[2]),label = String(m.var[2])* " with Extended Path Simulation")
-    StatsPlots.plot!((state[2,2:end].+SS1[2]),label = String(m.var[2])* " with Extended Path Simulation")
+    stateorig= state_unc
+    StatsPlots.plot((fill(zlblevel,size(data,2)).+SS1[2]),label = String(m.var[2])* " Constraint Level")
+    StatsPlots.plot!((stateorig[2,2:end].+SS1[2]),label = String(m.var[2])* " Unconstrained")
 
 # Full information - Deterministic simulation equivalent - Mátyás'  perference
 
@@ -211,7 +211,8 @@ for t = 1:size(data, 2)
 
         consthorizon = 0
         for tt = 1:size(fgshlist, 1)+1
-            if hit[t+tt-1, 1] == hit[t+tt, 1]
+            looper = minimum( [tt+t, only(size(data,2))])
+            if hit[looper-1, 1] == hit[looper, 1]
                 consthorizon = +1
             end
         end
@@ -265,6 +266,14 @@ end
 
 statePF = state
 SS1=  get_steady_state(AS07,   parameters = parameters , algorithm = :second_order)
+StatsPlots.plot((fill(zlblevel,size(data,2)).+SS1[2]),label = String(m.var[2])* " - ZLB")
+StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2])* " with Deterministic Simulation")
+StatsPlots.plot!((state_unc[2,2:end].+SS1[2]),label = String(m.var[2])* " Unconstrained")
+
+
+StatsPlots.plot!((statePF[1,2:end].+SS1[1]),label = String(m.var[1])* " with Deterministic Simulation")
+StatsPlots.plot!((state_unc[1,2:end].+SS1[1]),label = String(m.var[1])* " Unconstrained")
+
 
 StatsPlots.plot((statePF[1,2:end].+SS1[1]),label = String(m.var[1])* " with Deterministic Simulation")
 StatsPlots.plot!((statePF[2,2:end].+SS1[2]),label = String(m.var[2])* " with Deterministic Simulation")
@@ -387,9 +396,7 @@ StatsPlots.plot!((stateUNC[3,2:end].+SS1[3]),label = String(m.var[3])* " with Ex
 
 
 #simulated_data = get_irf(AS07,shocks = ϵ_wzlb, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
-ϵ = [zeros( size(indexin(fgshlist, m.timings.exo),1),size(data, 2) ) ; reshape(ϵ_draw, (m.timings.nExo-size(indexin(fgshlist, m.timings.exo),1)) , size(data, 2))]
 MacroModelling.plot_irf(AS07,shocks = ϵ_wzlb, periods = 0)
 MacroModelling.plot_irf(AS07,shocks = ϵ, periods = 0)
 
-MacroModelling.plot_irf(AS07,shocks = ϵ_wzlbep, periods = 0) # DOES NOT WORK 
-
+MacroModelling.plot_irf(AS07,shocks = ϵ_wzlbep, periods = 0)
