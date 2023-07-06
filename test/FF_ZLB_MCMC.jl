@@ -5,8 +5,6 @@ using HypothesisTests, Distributions
 import ChainRulesCore: @ignore_derivatives, ignore_derivatives
 import ForwardDiff as ℱ
 
-
-
 @model AS07 begin
 	c[0] ^ (-TAU) = r[0] * 1 / (1 + RA / 400) * c[1] ^ (-TAU) / p[1] / ((1 + GAMQ / 100) * z[1])
 
@@ -92,7 +90,7 @@ end
 # draw shocks
 Random.seed!(1)
 periods = 40
-shockdistR = Distributions.SkewNormal(0,1,6) #  Turing.Beta(10,1) #
+shockdistR = Distributions.SkewNormal(0,1,2) #  Turing.Beta(10,1) #
 shockdistother = Distributions.Normal(0,1)
 
 shocksSK = rand(shockdistR,1,periods) #  shocks = randn(1,periods)
@@ -100,7 +98,7 @@ shocks = rand(shockdistother,2,periods) #  shocks = randn(1,periods)
 shockstrue = [ zeros(8, periods); shocks[1,:]' ; -shocksSK; shocks[2,:]' ]
 
 #shockstrue[9:11,:] =  shockstrue[9:11,:] ./ Statistics.std(shockstrue[9:11,:],dims = 2)  # antithetic shocks
-#shockstrue =shockstrue .- Statistics.mean(shockstrue,dims=2) # antithetic shocks
+shockstrue =shockstrue .- Statistics.mean(shockstrue,dims=2) # antithetic shocks
 
 #shocks /= Statistics.std(shocks)  # antithetic shocks
 #shocks .-= Statistics.mean(shocks) # antithetic shocks
@@ -110,12 +108,162 @@ shockstrue = [ zeros(8, periods); shocks[1,:]' ; -shocksSK; shocks[2,:]' ]
         StatsPlots.density!(shocksSK')
         StatsPlots.density!(shockstrue[10,:])
 # get simulation
-simulated_data = get_irf(AS07,shocks = shockstrue, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
+# simulated_data = get_irf(AS07,shocks = shockstrue, periods = 0, levels = true) #[1:3,:,:] |>collect #([:YGR ],:,:) |>collect
 
+RA = 1
+
+PA = 3.2
+
+GAMQ = 0.55
+
+TAU = 2
+
+NU = 0.1
+
+KAPPA   = 0.33
+
+PHI = TAU*(1-NU)/NU/KAPPA/exp(PA/400)^2
+
+PSIP = 1.5
+
+PSIY = 0.125
+
+RHOR = 0.75
+
+RHOG = 0.95
+
+RHOZ = 0.9
+
+SIGR = 0.2
+
+SIGG = 0.6
+
+SIGZ = 0.3
+
+C_o_Y = 0.85
+
+OMEGA = 0
+
+XI = 1
+
+SIGFG = 0.1
+parameters = [RA, PA, GAMQ, TAU, NU, KAPPA, PSIP, PSIY, RHOR, RHOG, RHOZ, SIGR, SIGG, SIGZ, C_o_Y, OMEGA, XI, SIGFG]
+m = AS07
+solution = get_solution(m, parameters, algorithm = :first_order)
+
+ x0 = randn(m.timings.nPast_not_future_and_mixed) # Initial conditions # ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
+ 
+calculate_covariance_ = MacroModelling.calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(m.timings.past_not_future_and_mixed_idx) ) # subset_indices = collect(1:m.timings.nVars))
+
+long_run_covariance = calculate_covariance_(solution[2])
+
+initial_conditions = long_run_covariance * x0
+
+𝐒₁ = hcat(solution[2][:,1:m.timings.nPast_not_future_and_mixed], zeros(m.timings.nVars), solution[2][:,m.timings.nPast_not_future_and_mixed+1:end])
+
+ϵ = shockstrue
+
+state = zeros(typeof(initial_conditions[1]), m.timings.nVars, periods)
+
+aug_state = [initial_conditions
+             1 
+             ϵ[:,1]]
+
+state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+
+zlbvar = [:INT]
+zlbindex = sort(indexin(zlbvar, m.timings.var))
+zlblevel = 0
+mpsh = [:epsr]
+m = AS07
+fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
+
+
+
+for t in 2:periods
+    aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+                 1 
+                 ϵ[:,t]]
+    state[:,t] .=  𝐒₁ * aug_state         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+    
+ end
+
+ hit = zeros(periods,1)
+    for t = 1:periods
+        if only(state[zlbindex,t])  - zlblevel <-eps() # .- solution[1][zlbindex...] 
+            hit[t,1] = 1;
+        #println("ZLB HIT!!")
+        end
+    end
+
+
+ϵ_wzlb = ℱ.value.(ϵ)
+for t = 1:periods
+    if hit[t, 1] == 1
+
+        consthorizon = 0
+        for tt = 1:size(fgshlist, 1)+1
+            looper = minimum( [tt+t, only(periods)])
+            if hit[looper-1, 1] == hit[looper, 1]
+                 consthorizon = +1
+            end
+        end
+        for hmax = size(fgshlist, 1)+1:-1:1
+            if consthorizon == hmax
+                if (size(fgshlist, 1)+1+t > only(periods))
+                    ϵ_wzlb[:, t:only(periods)] = ℱ.value.(ϵ[:, t:only(periods)])
+                else
+
+                    zlb_ϵ = ℱ.value.(zeros(m.timings.nExo, hmax + 1))
+                    conditions = ℱ.value.(KeyedArray(-(state[zlbindex, t:t+hmax-1] .- (zlblevel)), Variables=zlbvar, Periods=collect(1:hmax)))
+                    shocks = ℱ.value.(KeyedArray(zeros(m.timings.nExo - hmax - 1, size(conditions, 2)), Variables=setdiff(m.exo, [fgshlist[1:hmax]; mpsh]), Periods=collect(1:hmax)))
+                    #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
+                    zlb_ϵ = get_conditional_forecast(m, conditions, shocks=shocks)[m.timings.nVars+1:end, 1:hmax+1] |> collect
+                    ϵ_wzlb[:, t:t+hmax] = ℱ.value.(ϵ[:, t:t+hmax] + zlb_ϵ)
+                end
+            end
+
+
+            if t == 1
+                state = zeros(typeof(initial_conditions[1]), m.timings.nVars, periods)
+                aug_state = [initial_conditions
+                    1
+                    ϵ_wzlb[:, t]]
+
+                state[:, 1] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+            else
+                aug_state = [state[m.timings.past_not_future_and_mixed_idx, t-1]
+                    1
+                    ϵ_wzlb[:, t]]
+                state[:, t] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+            end
+
+        end
+
+
+    end
+    hit = zeros(periods, 1)
+    for t = 1:periods
+        if only(state[zlbindex, t]) - zlblevel < -eps() # .- solution[1][zlbindex...] 
+            hit[t, 1] = 1
+            #println("ZLB HIT!!")
+        end
+    end
+end    
+
+observables = [:INT, :YGR , :INFL ]
+
+observables_index = sort(indexin(observables,AS07.timings.var))
+
+observables_index = sort(indexin(observables, m.timings.var))
+
+simulated_data =  state[vec(observables_index),:] .+ solution[1][observables_index]
 # plot simulation
-MacroModelling.plot_irf(AS07,shocks = shockstrue, periods = 0)
+StatsPlots.plot(simulated_data', label = ["INFL" "INT" "YGR"])
+
+#MacroModelling.plot_irf(AS07,shocks = shockstrue, periods = 0)
 #StatsPlots.plot(shocks')
-Ω = 10^(-5)# eps()
+Ω = 10^(-4)# eps()
 n_samples = 1000
 
 #=
@@ -394,9 +542,7 @@ observables_index = sort(indexin(observables, m.timings.var))
 
 loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(AS07, data, observables, Ω, zlbvar, zlblevel,fgshlist) # m, data, observables, Ω , zlbvar, zlblevel,fgshlist  # Filter free
 
-
 n_samples = 500
-
 samps_ff = Turing.sample(loglikelihood_scaling_ff, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 
 
