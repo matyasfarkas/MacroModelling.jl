@@ -40,7 +40,24 @@ import ForwardDiff as ℱ
 
     epsf7[0] = epsf8[-1] + epsf7x[x] 
 
-    epsf8[0] = epsf8x[x] 
+    epsf8[0] = epsf9[-1]  + epsf8x[x] 
+    
+    epsf9[0] = epsf10[-1]  + epsf9x[x] 
+
+    epsf10[0] = epsf11[-1]  + epsf10x[x] 
+
+    epsf11[0] = epsf12[-1]  + epsf11x[x] 
+
+    epsf12[0] = epsf13[-1]  + epsf12x[x] 
+
+    epsf13[0] = epsf14[-1]  + epsf13x[x] 
+
+    epsf14[0] = epsf15[-1]  + epsf14x[x] 
+
+    epsf15[0] = epsf16[-1]  + epsf15x[x] 
+
+    epsf16[0] = epsf16x[x] 
+
 
 end
 
@@ -95,7 +112,7 @@ shockdistother = Distributions.Normal(0,1)
 
 shocksSK = rand(shockdistR,1,periods) #  shocks = randn(1,periods)
 shocks = rand(shockdistother,2,periods) #  shocks = randn(1,periods)
-shockstrue = [ zeros(8, periods); shocks[1,:]' ; -shocksSK; shocks[2,:]' ]
+shockstrue = [ zeros(16, periods); shocks[1,:]' ; -shocksSK; shocks[2,:]' ]
 
 #shockstrue[9:11,:] =  shockstrue[9:11,:] ./ Statistics.std(shockstrue[9:11,:],dims = 2)  # antithetic shocks
 shockstrue =shockstrue .- Statistics.mean(shockstrue,dims=2) # antithetic shocks
@@ -151,8 +168,8 @@ parameters = [RA, PA, GAMQ, TAU, NU, KAPPA, PSIP, PSIY, RHOR, RHOG, RHOZ, SIGR, 
 m = AS07
 solution = get_solution(m, parameters, algorithm = :first_order)
 
- x0 = randn(m.timings.nPast_not_future_and_mixed) # Initial conditions # ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
- 
+ # x0 = randn(m.timings.nPast_not_future_and_mixed) # Initial conditions # ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
+ x0 = zeros(m.timings.nPast_not_future_and_mixed,1) # Initial conditions # ~ Turing.filldist(Turing.Normal(), m.timings.nPast_not_future_and_mixed) # Initial conditions 
 calculate_covariance_ = MacroModelling.calculate_covariance_AD(solution[2], T = m.timings, subset_indices = collect(m.timings.past_not_future_and_mixed_idx) ) # subset_indices = collect(1:m.timings.nVars))
 
 long_run_covariance = calculate_covariance_(solution[2])
@@ -160,7 +177,7 @@ long_run_covariance = calculate_covariance_(solution[2])
 initial_conditions = long_run_covariance * x0
 
 𝐒₁ = hcat(solution[2][:,1:m.timings.nPast_not_future_and_mixed], zeros(m.timings.nVars), solution[2][:,m.timings.nPast_not_future_and_mixed+1:end])
-
+shockstrue[end-2:end, 1] = zeros(1,3)
 ϵ = shockstrue
 
 state = zeros(typeof(initial_conditions[1]), m.timings.nVars, periods)
@@ -173,19 +190,42 @@ state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_s
 
 zlbvar = [:INT]
 zlbindex = sort(indexin(zlbvar, m.timings.var))
-zlblevel = -(RA + PA + GAMQ * 4)
+zlblevel = 3.5 #-(RA + PA + GAMQ * 4)
 mpsh = [:epsr]
 m = AS07
-fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
+fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x,:epsf8x ,:epsf9x, :epsf10x,:epsf11x,:epsf12x, :epsf13x, :epsf14x, :epsf15x, :epsf16x ]
+fgstatelist = [:epsf1, :epsf2, :epsf3, :epsf4, :epsf5, :epsf6, :epsf7,:epsf8 ,:epsf9, :epsf10,:epsf11,:epsf12, :epsf13, :epsf14, :epsf15, :epsf16 ]
+fgstateidx = sort(indexin(fgstatelist, m.timings.var))
 
-
+state[fgstateidx,1] = zeros(size(fgstatelist,1),1)
 
 for t in 2:periods
-    aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
-                 1 
-                 ϵ[:,t]]
-    state[:,t] .=  𝐒₁ * aug_state         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
-    
+    #aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
+    #            1 
+    #           ϵ[:,t]]
+    #state[:,t] .=  𝐒₁ * aug_state         #+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+    # Get unconditional FC
+    PLM= get_irf(m,shocks = [ϵ[:,1:t] zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],levels = true)
+    MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
+    hit = vec(collect(PLM(zlbvar,2:size(fgshlist, 1)+1,:Shock_matrix))).<zlblevel
+    spellt = findall(!iszero,hit)
+    zlb_ϵ = ℱ.value.(zeros(m.timings.nExo,1))
+    shocks = Matrix{Union{Nothing,Float64}}(nothing,m.timings.nExo,10)
+    shocks[end-3:end,:] .= 0
+    shocks[:,2:end] .= 0
+    conditions = ℱ.value.(-PLM(zlbvar,findall(!iszero,hit).+1,:Shock_matrix).+zlblevel)
+    #shocks = ℱ.value.(KeyedArray(shocks, Variables=setdiff(m.exo), Periods=[1:size(shocks,2)]))
+    #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
+    zlb_ϵ = get_conditional_forecast(m, conditions, shocks=shocks)[m.timings.nVars+1:end, 1] |> collect
+    ## TO IMPLEMENT: get_functions 518 - stack CC into a "Canonical form of future shock IRF/MA, where [I*CC;A*CC; ... ; A^T*CC] is mapping the errors to the conditions" 
+    ϵ_wzlb = ℱ.value.(ϵ)
+
+    ϵ_wzlb[:, t-1] = ℱ.value.(ϵ[:, t-1] + zlb_ϵ[:,1])
+
+    ϵ[:, t-1] = ϵ_wzlb[:, t-1] 
+    MacroModelling.plot_irf(m,shocks = [ϵ_wzlb[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
+    #MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1])
+    PLM_FG= get_irf(m,shocks = [ϵ_wzlb[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],levels = true)
 end
 
 hit = zeros(periods,1)
@@ -254,8 +294,6 @@ end
 observables = [:INT, :YGR , :INFL ]
 
 observables_index = sort(indexin(observables,AS07.timings.var))
-
-observables_index = sort(indexin(observables, m.timings.var))
 
 simulated_data =  state[vec(observables_index),:] .+ solution[1][observables_index]
 # plot simulation
@@ -534,10 +572,9 @@ observables_index = sort(indexin(observables,AS07.timings.var))
 data= collect(simulated_data[observables_index,:,1])
 
 zlbvar = [:INT]
-zlblevel = 0
 mpsh = [:epsr]
 m = AS07
-fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
+fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x,:epsf8x ,:epsf9x, :epsf10x,:epsf11x,:epsf12x, :epsf13x, :epsf14x, :epsf15x, :epsf16x ]
 observables_index = sort(indexin(observables, m.timings.var))
 
 
