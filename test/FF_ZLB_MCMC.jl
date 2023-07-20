@@ -50,7 +50,7 @@ end
 
 	PA = 3.2
 
-	GAMQ = 0.55
+	GAMQ =  0 #0.55
 
 	TAU = 2
 
@@ -89,7 +89,7 @@ end
 
 # draw shocks
 Random.seed!(1)
-periods = 40
+periods = 20
 shockdistR = Distributions.SkewNormal(0,1,2) #  Turing.Beta(10,1) #
 shockdistother = Distributions.Normal(0,1)
 
@@ -114,7 +114,7 @@ RA = 1
 
 PA = 3.2
 
-GAMQ = 0.55
+GAMQ = 0 #0.55
 
 TAU = 2
 
@@ -173,7 +173,7 @@ state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_s
 
 zlbvar = [:INT]
 zlbindex = sort(indexin(zlbvar, m.timings.var))
-zlblevel = 0
+zlblevel = -(RA + PA + GAMQ * 4)
 mpsh = [:epsr]
 m = AS07
 fgshlist = [:epsf1x, :epsf2x, :epsf3x, :epsf4x, :epsf5x, :epsf6x, :epsf7x, :epsf8x]
@@ -246,7 +246,7 @@ for t = 1:periods
     for t = 1:periods
         if only(state[zlbindex, t]) - zlblevel < -eps() # .- solution[1][zlbindex...] 
             hit[t, 1] = 1
-            #println("ZLB HIT!!")
+            println("ZLB HIT!!")
         end
     end
 end    
@@ -266,7 +266,7 @@ StatsPlots.plot(simulated_data', label = ["INFL" "INT" "YGR"])
 Ω = 10^(-4)# eps()
 n_samples = 1000
 
-#=
+
 Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     
     # RA,              1,             1e-5,        10,          gamma_pdf,     0.8,        0.5;
@@ -290,57 +290,58 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     # OMEGA,           0,             -10,         10,          normal_pdf,      0,        1;
     # XI,              1,             0,           2,           uniform_pdf,      ,         ,                    0,                   2;
 
-    RA ~  MacroModelling.Gamma(0.8,0.5,μσ = true)
-	PA ~  MacroModelling.Gamma(4.,2.,μσ = true)
-	GAMQ ~  MacroModelling.Normal(0.4,0.2)
-	TAU	~  MacroModelling.Gamma(2.,0.5,μσ = true)
-	NU 	~ MacroModelling.Beta( 0.1,0.05,μσ = true)
-    PSIP ~  MacroModelling.Gamma(1.5,0.25,μσ = true)
-    PSIY ~  MacroModelling.Gamma(0.5,0.25,μσ = true)
-	RHOR 	~ MacroModelling.Beta( 0.5,0.2,μσ = true)
-	RHOG 	~ MacroModelling.Beta( 0.8,0.1,μσ = true)
-	RHOZ 	~ MacroModelling.Beta( 0.66,0.15,μσ = true)
-    SIGR ~ MacroModelling.InverseGamma( 0.3,4., 10^(-8), 5., μσ = true)
-    SIGG ~ MacroModelling.InverseGamma( 0.3,4., 10^(-8), 5.,μσ = true)
-    SIGZ ~ MacroModelling.InverseGamma( 0.4,4., 10^(-8), 5.,μσ = true)
-    OMEGA ~  MacroModelling.Normal(0,1)
-    XI ~  Turing.Uniform(0,1)
+   
+    RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+	PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+	# GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
+	# TAU	~  MacroModelling.Gamma(2.,0.5,μσ = true)
+	# NU 	~ MacroModelling.Beta( 0.1,0.05,μσ = true)
+    # PSIP ~  MacroModelling.Gamma(1.5,0.25,μσ = true)
+    # PSIY ~  MacroModelling.Gamma(0.5,0.25,μσ = true)
+	# RHOR 	~ MacroModelling.Beta( 0.5,0.2,μσ = true)
+	# RHOG 	~ MacroModelling.Beta( 0.8,0.1,μσ = true)
+	# RHOZ 	~ MacroModelling.Beta( 0.66,0.15,μσ = true)
+    # SIGR ~ MacroModelling.InverseGamma( 0.3,4., 10^(-8), 5., μσ = true)
+    # SIGG ~ MacroModelling.InverseGamma( 0.3,4., 10^(-8), 5.,μσ = true)
+    # SIGZ ~ MacroModelling.InverseGamma( 0.4,4., 10^(-8), 5.,μσ = true)
+    # OMEGA ~  MacroModelling.Normal(0,1)
+    # XI ~  Turing.Uniform(0,1)
+
     # RA = 1
 	# PA = 3.2
-	# GAMQ = 0.55
-	# TAU = 2
-	# NU = 0.1
-	# C   = 0.33
-	PHI = TAU*(1-NU)/NU/KAPPA/exp(PA/400)^2
-	# PSIP = 1.5
-	# PSIY = 0.125
-	# RHOR = 0.75
-	# RHOG = 0.95
-	# RHOZ = 0.9
-	# SIGR = 0.2
-    # SIGG = 0.6
-	# SIGZ = 0.3
-	# C_o_Y = 0.85
-	# OMEGA = 0
-	# XI = 1
-    SIGFG = SIGR
+	GAMQ = 0
+    TAU = 2
+	NU = 0.1
+	KAPPA   = 0.33
+	PSIP = 1.5
+	PSIY = 0.125
+	RHOR = 0.75
+	RHOG = 0.95
+	RHOZ = 0.9
+	SIGR = 0.2
+	SIGG = 0.6
+	SIGZ = 0.3
+	C_o_Y = 0.85
+	OMEGA = 0
+	XI = 1
+    SIGFG = 0.1
+    PHI = TAU*(1-NU)/NU/KAPPA/exp(PA/400)^2
 
     observables = [:INT, :YGR , :INFL ]
     parameters = [RA, PA, GAMQ, TAU, NU, KAPPA, PSIP, PSIY, RHOR, RHOG, RHOZ, SIGR, SIGG, SIGZ, C_o_Y, OMEGA, XI, SIGFG]
 
-    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = parameters)
+    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data, observables; parameters = parameters)
 
 end
+data = KeyedArray(convert(Array{Float64,2},simulated_data); Variables=m.var[observables_index], Periods=range(1, step=1, length=periods)) #data= collect(simulated_data[observables_index,:,1])
 
-loglikelihood_scaling = loglikelihood_scaling_function(AS07, simulated_data(:,:,:Shock_matrix), [:INT, :YGR , :INFL ], Ω) # Kalman
-samps = Turing.sample(loglikelihood_scaling, Turing.NUTS(), n_samples, progress = true)
-#, init_params = sol
+loglikelihood_scaling = loglikelihood_scaling_function(AS07, data, observables, Ω) # Kalman
+samps = Turing.sample(loglikelihood_scaling, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 
 
 StatsPlots.plot(samps)
-mean(samps[["RA"]])
 
-=#
+
 
 
 ## FF 
@@ -370,7 +371,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
 
     RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
 	PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
-	GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
+	# GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
 	# TAU	~  MacroModelling.Gamma(2.,0.5,μσ = true)
 	# NU 	~ MacroModelling.Beta( 0.1,0.05,μσ = true)
     # PSIP ~  MacroModelling.Gamma(1.5,0.25,μσ = true)
@@ -386,7 +387,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
 
     # RA = 1
 	# PA = 3.2
-	# GAMQ = 0.55
+	GAMQ = 0 #0.55
 	TAU = 2
 	NU = 0.1
 	KAPPA   = 0.33
@@ -542,7 +543,7 @@ observables_index = sort(indexin(observables, m.timings.var))
 
 loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(AS07, data, observables, Ω, zlbvar, zlblevel,fgshlist) # m, data, observables, Ω , zlbvar, zlblevel,fgshlist  # Filter free
 
-n_samples = 500
+n_samples = 100
 samps_ff = Turing.sample(loglikelihood_scaling_ff, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 
 
