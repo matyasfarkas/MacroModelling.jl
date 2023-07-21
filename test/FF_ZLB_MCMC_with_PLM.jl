@@ -228,9 +228,11 @@ for t in 2:periods
     end
     # Select conditining variables
     cond_var_idx = findall(vec(conditions[:,:]) .!= nothing) # .-m.timings.nVars
-    fg1 = Comp[cond_var_idx.-m.timings.nVars,11:15] \ -vec(conditions)[cond_var_idx] 
-    solerr = Comp[cond_var_idx.-m.timings.nVars,11:15] *fg1+vec(conditions)[cond_var_idx]
-    ϵ[11:15,2] =-fg1
+    fg1 = Comp[cond_var_idx.-m.timings.nVars,8:15] \ -vec(conditions)[cond_var_idx] 
+    solerr = Comp[cond_var_idx.-m.timings.nVars,8:15] *fg1+vec(conditions)[cond_var_idx]
+    ϵ[8:15,2] =-fg1
+    ϵ[8:15,2] =zeros(8,1)
+
     MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
 
     PLM_cond= get_irf(m,shocks = [ϵ[:,1:t] zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],levels = true)
