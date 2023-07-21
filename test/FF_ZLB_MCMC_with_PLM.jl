@@ -213,7 +213,29 @@ for t in 2:periods
     shocks = Matrix{Union{Nothing,Float64}}(nothing,m.timings.nExo,10)
     shocks[end-3:end,:] .= 0
     shocks[:,2:end] .= 0
-    conditions = ℱ.value.(-PLM(zlbvar,findall(!iszero,hit).+1,:Shock_matrix).+zlblevel)
+    conditions = Matrix{Union{Nothing,Float64}}(undef,m.timings.nVars,m.timings.nExo)
+    conditions[zlbindex, 5:10] = collect(ℱ.value.(-PLM(zlbvar,findall(!iszero,hit).+1,:Shock_matrix).+zlblevel) )
+    #conditions[zlbindex, 6:10] =Matrix{Union{Nothing,Float64}}(undef,1,5)
+
+    #B = @views m.solution.perturbation.first_order.solution_matrix[1:m.timings.nPast_not_future_and_mixed,m.timings.nPast_not_future_and_mixed+1:end]
+
+    target = conditions[zlbindex,:]
+    A = @views solution[2][:,1:m.timings.nPast_not_future_and_mixed] * ℒ.diagm(ones(m.timings.nVars))[m.timings.past_not_future_and_mixed_idx,:]
+    # A = [:,1:m.timings.nPast_not_future_and_mixed]
+    Comp = @views 𝓂.solution.perturbation.first_order.solution_matrix[:,𝓂.timings.nPast_not_future_and_mixed+1:end]
+    for t =1:size(conditions,2)-1
+        Comp = [Comp; A*Comp[end-m.timings.nVars+1:end,:] ]
+    end
+    # Select conditining variables
+    cond_var_idx = findall(vec(conditions[:,:]) .!= nothing) # .-m.timings.nVars
+    fg1 = Comp[cond_var_idx.-m.timings.nVars,11:15] \ -vec(conditions)[cond_var_idx] 
+    solerr = Comp[cond_var_idx.-m.timings.nVars,11:15] *fg1+vec(conditions)[cond_var_idx]
+    ϵ[11:15,2] =-fg1
+    MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
+
+    PLM_cond= get_irf(m,shocks = [ϵ[:,1:t] zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],levels = true)
+    PLM_cond[2,5:10] += solerr
+
     #shocks = ℱ.value.(KeyedArray(shocks, Variables=setdiff(m.exo), Periods=[1:size(shocks,2)]))
     #MacroModelling.plot_conditional_forecast(m,conditions,shocks = shocks)
     zlb_ϵ = get_conditional_forecast(m, conditions, shocks=shocks)[m.timings.nVars+1:end, 1] |> collect
