@@ -307,9 +307,12 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     # XI,              1,             0,           2,           uniform_pdf,      ,         ,                    0,                   2;
 
    
-    RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
-	PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
-	# GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
+    RA ~  MacroModelling.Gamma(1.,0.2,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+	PA ~  MacroModelling.Gamma(3.2,1.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+
+    # RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+	# PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+    # GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
 	# TAU	~  MacroModelling.Gamma(2.,0.5,μσ = true)
 	# NU 	~ MacroModelling.Beta( 0.1,0.05,μσ = true)
     # PSIP ~  MacroModelling.Gamma(1.5,0.25,μσ = true)
@@ -385,8 +388,12 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     # OMEGA,           0,             -10,         10,          normal_pdf,      0,        1;
     # XI,              1,             0,           2,           uniform_pdf,      ,         ,                    0,                   2;
 
-    RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
-	PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+   
+    RA ~  MacroModelling.Gamma(1.,0.2,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+	PA ~  MacroModelling.Gamma(3.2,1.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+
+    # RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+	# PA ~  MacroModelling.Gamma(3.2,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
 	# GAMQ ~  MacroModelling.Normal(0.55,0.2)         #  MacroModelling.Normal(0.4,0.2)
 	# TAU	~  MacroModelling.Gamma(2.,0.5,μσ = true)
 	# NU 	~ MacroModelling.Beta( 0.1,0.05,μσ = true)
@@ -466,7 +473,8 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     
     state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
     ϵ_wzlb = ℱ.value.(ϵ)
-    for t in 2:periods
+
+    for t in 2:size(data,2)
         # Get unconditional FC
         PLM= ℱ.value.(get_irf(m,shocks = [ℱ.value.(ϵ_wzlb[:,1:t]) zeros(size(ϵ_wzlb,1), size(ϵ_wzlb,2)-t)], periods = 0, initial_state = ℱ.value.(state[:,1]+solution[1]),levels = true))
         #MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
