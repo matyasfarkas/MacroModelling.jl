@@ -465,47 +465,56 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
                  ϵ[:,1]]
     
     state[:,1] .=  𝐒₁ * aug_state#+ solution[3] * ℒ.kron(aug_state_unc, aug_state_unc) / 2 
+    ϵ_wzlb = ℱ.value.(ϵ)
+
+    # Get unconditional FC
+    PLM= ℱ.value.(get_irf(m,shocks = [ℱ.value.(ϵ_wzlb[:,1:t]) zeros(size(ϵ_wzlb,1), size(ϵ_wzlb,2)-t)], periods = 0, initial_state = ℱ.value.(state[:,1]+solution[1]),levels = true))
+    #MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
+    hit = vec(collect(PLM(zlbvar,2:size(fgshlist, 1)+1,:Shock_matrix))).<zlblevel
+    spellt = findall(!iszero,hit)
+    #shocks[end-3:end,:] .= 0
+    #shocks[:,2:end] .= 0
+    conditions = Matrix{Union{Nothing,Float64}}(undef,m.timings.nVars,m.timings.nExo)
+    conditions[zlbindex, spellt] = collect(ℱ.value.(-PLM(zlbvar,findall(!iszero,hit).+1,:Shock_matrix).+zlblevel) )
     
-        # Get unconditional FC
-        PLM= get_irf(m,shocks = [ϵ[:,1:t] zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],levels = true)
-        #MacroModelling.plot_irf(m,shocks = [ϵ[:,1:t]  zeros(size(shockstrue,1), size(shockstrue,2)-t)], periods = 0, initial_state = state[:,1]+solution[1],variables = zlbvar)
-        hit = vec(collect(PLM(zlbvar,2:size(fgshlist, 1)+1,:Shock_matrix))).<zlblevel
-        spellt = findall(!iszero,hit)
-        #shocks[end-3:end,:] .= 0
-        #shocks[:,2:end] .= 0
-        conditions = Matrix{Union{Nothing,Float64}}(undef,m.timings.nVars,m.timings.nExo)
-        conditions[zlbindex, spellt] = collect(ℱ.value.(-PLM(zlbvar,findall(!iszero,hit).+1,:Shock_matrix).+zlblevel) )
+    # timingtarget = findall(vec(target .!= nothing))
+    A = @views solution[2][:,1:m.timings.nPast_not_future_and_mixed] * ℒ.diagm(ones(m.timings.nVars))[m.timings.past_not_future_and_mixed_idx,:]
+    # A = [:,1:m.timings.nPast_not_future_and_mixed]
+    Comp =ℱ.value.(@views m.solution.perturbation.first_order.solution_matrix[:,m.timings.nPast_not_future_and_mixed+1:end])
+    for jj =1:size(conditions,2)-1
+        Comp = [Comp; A*Comp[end-m.timings.nVars+1:end,:] ]
+    end
+    ## IPOPT to solve for FG shocks
+    model = Model(Ipopt.Optimizer)
+    set_attribute(model, "max_cpu_time", 60.0)
+    set_attribute(model, "print_level", 0)
+    @variable(model, x[1:length(fgshlist)] .>= 0)  
+    @objective(model, Min, sum(abs2,x))
+
+    # println( Comp[ only(zlbindex) : m.timings.nVars : end, :] |> typeof)
+    # println( x |> typeof)
+
+    # println( ℱ.value.(ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),2]) |> typeof)
+    # println( ℱ.value.(solution[1][only(zlbindex)]) |> typeof)
+    # println( ℱ.value.(Comp[ only(zlbindex) : m.timings.nVars : end, :]) * [ ℱ.value.(x) ; ℱ.value.(ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),2])].+ ℱ.value.(solution[1][only(zlbindex)]))
+    
+    @constraint(model, ℱ.value.(Comp[ only(zlbindex) : m.timings.nVars : end, :]) * [x ; ℱ.value.(ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),2])].+ ℱ.value.(solution[1][only(zlbindex)]).>= ℱ.value.(zlblevel))
+    optimize!(model)
         
-        # timingtarget = findall(vec(target .!= nothing))
-        A = @views solution[2][:,1:m.timings.nPast_not_future_and_mixed] * ℒ.diagm(ones(m.timings.nVars))[m.timings.past_not_future_and_mixed_idx,:]
-        # A = [:,1:m.timings.nPast_not_future_and_mixed]
-        Comp = @views m.solution.perturbation.first_order.solution_matrix[:,m.timings.nPast_not_future_and_mixed+1:end]
-        for jj =1:size(conditions,2)-1
-            Comp = [Comp; A*Comp[end-m.timings.nVars+1:end,:] ]
-        end
-        ## IPOPT to solve for FG shocks
-        model = Model(Ipopt.Optimizer)
-        set_attribute(model, "max_cpu_time", 60.0)
-        set_attribute(model, "print_level", 0)
-        @variable(model, x[1:length(fgshlist)] .>= 0)  
-        @objective(model, Min, sum(abs2,x))
-        @constraint(model, Comp[ only(zlbindex) : m.timings.nVars : end, :] * [x ; ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),2]] .+ solution[1][only(zlbindex)].>= zlblevel)
-        optimize!(model)
-            
-        ϵ[:,t] = [ℱ.value.(JuMP.value.(x)) ; ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),t]]
-        if t == 1
-            state = zeros(typeof(initial_conditions[1]), m.timings.nVars, periods)
-            aug_state = [initial_conditions
-                1
-                ϵ[:, t]]
-        
-            state[:, 1] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
-        else
-            aug_state = [state[m.timings.past_not_future_and_mixed_idx, t-1]
-                1
-                ϵ[:, t]]
-            state[:, t] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
-        end
+    ϵ[:,t] = [ℱ.value.(JuMP.value.(x)) ; ϵ[indexin(setdiff( m.timings.exo,fgshlist), m.timings.exo),t]]
+    if t == 1
+        state = zeros(typeof(initial_conditions[1]), m.timings.nVars, periods)
+        aug_state = [initial_conditions
+            1
+            ϵ[:, t]]
+    
+        state[:, 1] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+    else
+        aug_state = [state[m.timings.past_not_future_and_mixed_idx, t-1]
+            1
+            ϵ[:, t]]
+        state[:, t] .= 𝐒₁ * aug_state #+ solution[3] * ℒ.kron(aug_state, aug_state) / 2 
+    end
 
      observables_index = sort(indexin(observables, m.timings.var))
 
