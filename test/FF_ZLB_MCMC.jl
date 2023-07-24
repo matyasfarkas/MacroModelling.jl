@@ -208,7 +208,12 @@ for t = 1:periods
                  consthorizon = +1
             end
         end
+        if consthorizon > size(fgshlist, 1)
+            println("ZLB spell too long...")
+        end
+
         for hmax = size(fgshlist, 1)+1:-1:1
+
             if consthorizon == hmax
                 if (size(fgshlist, 1)+1+t > only(periods))
                     ϵ_wzlb[:, t:only(periods)] = ℱ.value.(ϵ[:, t:only(periods)])
@@ -263,7 +268,7 @@ StatsPlots.plot(simulated_data', label = ["INFL" "INT" "YGR"])
 
 #MacroModelling.plot_irf(AS07,shocks = shockstrue, periods = 0)
 #StatsPlots.plot(shocks')
-Ω = 10^(-4)# eps()
+Ω = 10^(-3)# eps()
 n_samples = 1000
 
 
@@ -477,6 +482,10 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
                 if hit[looper-1, 1] == hit[looper, 1]
                      consthorizon = +1
                 end
+            end
+            if consthorizon > size(fgshlist, 1)
+                return Turing.@addlogprob! Inf
+                #println("ZLB spell too long...")
             end
             for hmax = size(fgshlist, 1)+1:-1:1
                 if consthorizon == hmax
