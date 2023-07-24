@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.25
 
 using Markdown
 using InteractiveUtils
@@ -35,9 +35,6 @@ md"# Policy applications I
 Let's try to translate the basic new keynesian textbook model from Gali Chapter 3 in it's nonlinear version. We can get the mod file [here](https://github.com/JohannesPfeifer/DSGE_mod/blob/master/Gali_2015/Gali_2015_chapter_3_nonlinear.mod)
 
 Once we downloaded the mod file we start by loading the package:"
-
-# ╔═╡ 181f91e3-a7ed-4d75-b796-50fbbf96b942
-
 
 # ╔═╡ fd5e064b-6221-47a9-8c8b-5c8b64d4bb7d
 show_pluto(x) = Text(sprint(show, "text/plain",x));
@@ -437,194 +434,6 @@ md"Let's compare the NSSS and it's derivatives:"
 
 # ╔═╡ 6c64099e-8855-40b5-8139-7ac5e0c4137a
 get_SS(RBC_calib) |> show_pluto
-
-# ╔═╡ 58c973ac-291b-401f-90b1-69eba41c104b
-@model SW07 begin
-    a[0] = calfa * rkf[0] + (1 - calfa) * (wf[0])
-
-    zcapf[0] = (1 / (czcap / (1 - czcap))) * rkf[0]
-
-    rkf[0] = wf[0] + labf[0] - kf[0]
-
-    kf[0] = kpf[-1] + zcapf[0]
-
-    invef[0] = (1 / (1 + cbetabar * cgamma)) * (invef[-1] + cbetabar * cgamma * invef[1] + (1 / (cgamma ^ 2 * csadjcost)) * pkf[0]) + qs[0]
-
-    pkf[0] =  - rrf[0] + (1 / ((1 - chabb / cgamma) / (csigma * (1 + chabb / cgamma)))) * b[0] + (crk / (crk + (1 - ctou))) * rkf[1] + ((1 - ctou) / (crk + (1 - ctou))) * pkf[1]
-
-    cf[0] = (chabb / cgamma) / (1 + chabb / cgamma) * cf[-1] + (1 / (1 + chabb / cgamma)) * cf[1] + ((csigma - 1) * cwhlc / (csigma * (1 + chabb / cgamma))) * (labf[0] - labf[1]) - (1 - chabb / cgamma) / (csigma * (1 + chabb / cgamma)) * (rrf[0]) + b[0]
-
-    yf[0] = ccy * cf[0] + ciy * invef[0] + g[0] + crkky * zcapf[0]
-
-    yf[0] = cfc * (calfa * kf[0] + (1 - calfa) * labf[0] + a[0])
-
-    wf[0] = csigl * labf[0]	 + (1 / (1 - chabb / cgamma)) * cf[0] - (chabb / cgamma) / (1 - chabb / cgamma) * cf[-1]
-
-    kpf[0] = (1 - cikbar) * kpf[-1] + (cikbar) * invef[0] + (cikbar) * (cgamma ^ 2 * csadjcost) * qs[0]
-
-    mc[0] = calfa * rk[0] + (1 - calfa) * (w[0]) - a[0]
-
-    zcap[0] = (1 / (czcap / (1 - czcap))) * rk[0]
-
-    rk[0] = w[0] + lab[0] - k[0]
-
-    k[0] = kp[-1] + zcap[0]
-
-    inve[0] = (1 / (1 + cbetabar * cgamma)) * (inve[-1] + cbetabar * cgamma * inve[1] + (1 / (cgamma ^ 2 * csadjcost)) * pk[0]) + qs[0]
-
-    pk[0] =  - r[0] + pinf[1] + (1 / ((1 - chabb / cgamma) / (csigma * (1 + chabb / cgamma)))) * b[0] + (crk / (crk + (1 - ctou))) * rk[1] + ((1 - ctou) / (crk + (1 - ctou))) * pk[1]
-
-    c[0] = (chabb / cgamma) / (1 + chabb / cgamma) * c[-1] + (1 / (1 + chabb / cgamma)) * c[1] + ((csigma - 1) * cwhlc / (csigma * (1 + chabb / cgamma))) * (lab[0] - lab[1]) - (1 - chabb / cgamma) / (csigma * (1 + chabb / cgamma)) * (r[0] - pinf[1]) + b[0]
-
-    y[0] = ccy * c[0] + ciy * inve[0] + g[0] + crkky * zcap[0]
-
-    y[0] = cfc * (calfa * k[0] + (1 - calfa) * lab[0] + a[0])
-
-    pinf[0] = (1 / (1 + cbetabar * cgamma * cindp)) * (cbetabar * cgamma * pinf[1] + cindp * pinf[-1] + ((1 - cprobp) * (1 - cbetabar * cgamma * cprobp) / cprobp) / ((cfc - 1) * curvp + 1) * (mc[0])) + spinf[0]
-
-    w[0] = (1 / (1 + cbetabar * cgamma)) * w[-1] + (cbetabar * cgamma / (1 + cbetabar * cgamma)) * w[1] + (cindw / (1 + cbetabar * cgamma)) * pinf[-1] - (1 + cbetabar * cgamma * cindw) / (1 + cbetabar * cgamma) * pinf[0] + (cbetabar * cgamma) / (1 + cbetabar * cgamma) * pinf[1] + (1 - cprobw) * (1 - cbetabar * cgamma * cprobw) / ((1 + cbetabar * cgamma) * cprobw) * (1 / ((clandaw - 1) * curvw + 1)) * (csigl * lab[0] + (1 / (1 - chabb / cgamma)) * c[0] - ((chabb / cgamma) / (1 - chabb / cgamma)) * c[-1] - w[0]) + sw[0]
-
-    r[0] = crpi * (1 - crr) * pinf[0] + cry * (1 - crr) * (y[0] - yf[0]) + crdy * (y[0] - yf[0] - y[-1] + yf[-1]) + crr * r[-1] + ms[0]
-
-    a[0] = crhoa * a[-1] + z_ea * ea[x]
-
-    b[0] = crhob * b[-1] + z_eb * eb[x]
-
-    g[0] = crhog * g[-1] + z_eg * eg[x] + cgy * z_ea * ea[x]
-
-    qs[0] = crhoqs * qs[-1] + z_eqs * eqs[x]
-
-    ms[0] = crhoms * ms[-1] + z_em * em[x]
-
-    spinf[0] = crhopinf * spinf[-1] + epinfma[0] - cmap * epinfma[-1]
-
-    epinfma[0] = z_epinf * epinf[x]
-
-    sw[0] = crhow * sw[-1] + ewma[0] - cmaw * ewma[-1]
-
-    ewma[0] = z_ew * ew[x]
-
-    kp[0] = (1 - cikbar) * kp[-1] + cikbar * inve[0] + cikbar * cgamma ^ 2 * csadjcost * qs[0]
-
-    dy[0] = y[0] - y[-1] + ctrend
-
-    dc[0] = c[0] - c[-1] + ctrend
-
-    dinve[0] = inve[0] - inve[-1] + ctrend
-
-    dw[0] = w[0] - w[-1] + ctrend
-
-    pinfobs[0] = (pinf[0]) + constepinf
-
-    robs[0] = (r[0]) + conster
-
-    labobs[0] = lab[0] + constelab
-
-end
-
-
-# ╔═╡ b4f4ce24-5162-41b9-a36c-09af8f7b041b
-@parameters SW07 begin  
-    ctou=.025
-    clandaw=1.5
-    cg=0.18
-    curvp=10
-    curvw=10
-    
-    calfa=.24
-    csigma=1.5
-    cfc=1.5
-    cgy=0.51
-    
-    csadjcost= 6.0144
-    chabb=    0.6361    
-    cprobw=   0.8087
-    csigl=    1.9423
-    cprobp=   0.6
-    cindw=    0.3243
-    cindp=    0.47
-    czcap=    0.2696
-    crpi=     1.488
-    crr=      0.8762
-    cry=      0.0593
-    crdy=     0.2347
-    
-    crhoa=    0.9977
-    crhob=    0.5799
-    crhog=    0.9957
-    crhols=   0.9928
-    crhoqs=   0.7165
-    crhoas=1 
-    crhoms=0
-    crhopinf=0
-    crhow=0
-    cmap = 0
-    cmaw  = 0
-    
-    clandap=cfc
-    cbetabar=cbeta*cgamma^(-csigma)
-    cr=cpie/(cbeta*cgamma^(-csigma))
-    crk=(cbeta^(-1))*(cgamma^csigma) - (1-ctou)
-    cw = (calfa^calfa*(1-calfa)^(1-calfa)/(clandap*crk^calfa))^(1/(1-calfa))
-    cikbar=(1-(1-ctou)/cgamma)
-    cik=(1-(1-ctou)/cgamma)*cgamma
-    clk=((1-calfa)/calfa)*(crk/cw)
-    cky=cfc*(clk)^(calfa-1)
-    ciy=cik*cky
-    ccy=1-cg-cik*cky
-    crkky=crk*cky
-    cwhlc=(1/clandaw)*(1-calfa)/calfa*crk*cky/ccy
-    cwly=1-crk*cky
-    
-    conster=(cr-1)*100
-    ctrend=(1.004-1)*100
-    constepinf=(1.005-1)*100
-
-    cpie=1+constepinf/100
-    cgamma=1+ctrend/100 
-
-    cbeta=1/(1+constebeta/100)
-    constebeta = 100 / .9995 - 100
-
-    constelab=0
-
-    z_ea = 0.4618
-    z_eb = 1.8513
-    z_eg = 0.6090
-    z_eqs = 0.6017
-    z_em = 0.2397
-    z_epinf = 0.1455
-    z_ew = 0.2089
-end
-
-# ╔═╡ 65d6da83-9474-4ad5-9deb-b1e35088fa51
-get_SS(SW07)
-
-# ╔═╡ ee54cb85-b7fe-4638-919b-9d14779c7502
-@bind crpi Slider(1.1:0.01:1.9)
-
-
-# ╔═╡ c284e40c-a57b-42e2-b62f-24791510c9cd
-@bind cry Slider(0.:0.01:0.1)
-
-
-# ╔═╡ 3a49e273-21e2-4a20-a641-d3545ef6f485
-@bind crr Slider(0.1:0.01:0.99)
-
-# ╔═╡ 9efd561e-af30-490d-9881-8916190c34dc
-@bind csigma Slider(0.1:0.01:12)
-
-# ╔═╡ 20832bb9-fbb5-461d-959b-338332112c44
-
-
-# ╔═╡ c2ef96aa-d73d-412f-8ff4-96a073dbf0b4
-plot_irf(SW07, parameters = [:crr => crr, :crpi => crpi, :cry => cry, :csigma => csigma],periods = 40)[1]
-
-# ╔═╡ 02cf8a41-058b-48d7-bfd8-1db552f8b487
-
-
-# ╔═╡ 2da6fbd1-0577-4add-b29a-4cf7687ebecf
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2526,7 +2335,6 @@ version = "1.4.1+0"
 # ╔═╡ Cell order:
 # ╟─f708dc72-0ad7-4457-b6b4-160ffbc3732a
 # ╠═f29545b0-d887-11ed-280a-21f2d79062f9
-# ╠═181f91e3-a7ed-4d75-b796-50fbbf96b942
 # ╟─fd5e064b-6221-47a9-8c8b-5c8b64d4bb7d
 # ╟─0b50d684-287a-4a86-96c1-261128fd8b43
 # ╠═29c0b1e6-e2af-4e8b-8084-4bb845f2a5be
@@ -2601,6 +2409,7 @@ version = "1.4.1+0"
 # ╠═ae0f22b2-58ad-4d63-985c-5c0ca631a315
 # ╠═470168b9-d7ab-4e84-abeb-d723197a3c5c
 # ╠═8beb671b-db7c-4645-ae5a-ab8db887b03e
+# ╠═d59a53ee-31a5-4cd4-ab98-71eb2e395a20
 # ╟─f3bbfd3b-a389-4aca-872a-e965184db66d
 # ╟─3922f343-1e96-41a4-b281-11c11fa906c5
 # ╟─0fbaa428-a5f2-4aa0-9aa1-d91505f7819c
@@ -2611,16 +2420,5 @@ version = "1.4.1+0"
 # ╟─e06765bc-53b9-429e-a000-d5914b538b9b
 # ╟─9ac5f1d2-0ba1-490f-b4a4-ee79f0c109ed
 # ╟─6c64099e-8855-40b5-8139-7ac5e0c4137a
-# ╠═58c973ac-291b-401f-90b1-69eba41c104b
-# ╠═b4f4ce24-5162-41b9-a36c-09af8f7b041b
-# ╠═65d6da83-9474-4ad5-9deb-b1e35088fa51
-# ╠═ee54cb85-b7fe-4638-919b-9d14779c7502
-# ╠═c284e40c-a57b-42e2-b62f-24791510c9cd
-# ╠═3a49e273-21e2-4a20-a641-d3545ef6f485
-# ╠═9efd561e-af30-490d-9881-8916190c34dc
-# ╠═20832bb9-fbb5-461d-959b-338332112c44
-# ╠═c2ef96aa-d73d-412f-8ff4-96a073dbf0b4
-# ╠═02cf8a41-058b-48d7-bfd8-1db552f8b487
-# ╠═2da6fbd1-0577-4add-b29a-4cf7687ebecf
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
