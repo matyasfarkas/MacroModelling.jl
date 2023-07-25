@@ -266,50 +266,59 @@ StatsPlots.plot(simulated_data', label = ["INFL" "INT" "YGR"])
 
 # Brand Mazelis (2019) 
 @model BM19 begin
-	
+
+	i[0] = p[1] + r[0]
+
+    i[0] = RHO * i[-1] + (1-RHO)* ( rstar[0] + pistar[0] + RHOPI *(pi[0]- pistar[0]) + RHOY * y[0] ) + SIGI/100*epsI[x]
+
+    ỹ[0] = y[0] - ystar[0]
+
+    r̃[0] = r[0] - rstar[0]
+
+    ỹ[0] = AY1 * ỹ[-1] + AY2 * ỹ[-2] + AR/2 * (r̃[-1]+ r̃[-2]) + SIGY/100* epsY[x]
+    
+    pi[0] = (1-BPI) + BPI/2 * (pi[-1] + pi[-2]) + BY * ỹ[-1] + SIGPI/100 * epsPI[x]
+    
+    ystar[0] = ystar[-1] + g[-1] + SIGYSTAR/100* epsYstar[x]
+
+    g[0] = g[-1] + SIGG/100* epsG[x]
+
+    r[0] = 4 * g[-1] + z[0]
+
+    z[0] = z[-1] + SIGZ/100 * epsZ[x]
+
+    ũ[0] = UY0 * ỹ[0]  + UY1 * ỹ[-1]  + UY2 * ỹ[-2]  + SIGU/100 * epsu[x]
+
+    u[0] = u[-1] + sigUSTAR/100 * epsustar[x]
+
+    UOBS[0] = ũ[0] + u[0]
 
 end
 
 
-@parameters AS07 begin
-	RA = 1
+@parameters BM19 begin
+    RHO =  0.69
+    RHOPI = 0.1
+    RHOY = 0.85
+    
+    AY1 = 1.15
+    AY2 = -0.18
+    AR  = -0.25
 
-	PA = 3.2
+    BPI = 0.72
+    BY = 0.13
 
-	GAMQ =  0 #0.55
+    UY0 = -0.25
+    UY1 = 0
+    UY2 = 0
 
-	TAU = 2
-
-	NU = 0.1
-
-	KAPPA   = 0.33
-
-	PHI = TAU*(1-NU)/NU/KAPPA/exp(PA/400)^2
-
-	PSIP = 1.5
-
-	PSIY = 0.125
-
-	RHOR = 0.75
-
-	RHOG = 0.95
-
-	RHOZ = 0.9
-
-	SIGR = 0.2
-
-	SIGG = 0.6
-
-	SIGZ = 0.3
-
-	C_o_Y = 0.85
-
-	OMEGA = 0
-
-	XI = 1
-
-    SIGFG = 0.1
-
+    SIGU = 10
+    SIGY = 53
+    SIGPI = 79
+    SIGI  = 82
+    SIGG = 7
+    SIGZ = 52
+    
+    SIGYSTAR = 56
 end
-
 
