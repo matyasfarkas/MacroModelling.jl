@@ -98,17 +98,25 @@ observables_index = sort(indexin(observables,m.timings.var))
 # define loglikelihood model - KF
 Turing.@model function loglikelihood_scaling_function(m, data, observables, Ω)
     
-    RHO ~ Turing.Uniform(0.0, 1.) #0.69
+   # RHO ~ Turing.Uniform(0.0, 1.) #0.69
     #RHOPI ~ Turing.Uniform(0.0, 4.) #0.1
-    RHOPI =0.1 #0.1
-    RHOY ~ Turing.Uniform(0.0, 2.) #0.85
+    #RHOY ~ Turing.Uniform(0.0, 2.) #0.85
     
-    AY1 ~ Turing.Uniform(0.0, 2.) # 1.15
-    AY2 ~ Turing.Uniform(-1., 0.) # -0.18
-    AR  ~ Turing.Uniform(-0.5, 0.) # -0.25
+    #AY1 ~ Turing.Uniform(0.0, 2.) # 1.15
+    #AY2 ~ Turing.Uniform(-1., 0.) # -0.18
+    #AR  ~ Turing.Uniform(-0.5, 0.) # -0.25
 
     #BPI ~ Turing.Uniform(-0.,1) # 0.72
     #BY  ~ Turing.Uniform(-0., 1)
+    
+    # RHO =  0.69
+    RHOPI = 0.1
+    RHOY = 0.85
+    
+    AY1 = 1.15
+    AY2 = -0.18
+    AR  = -0.25
+
 
     BPI = 0.72
     BY = 0.13
@@ -180,3 +188,17 @@ end
 loglikelihood_scaling = loglikelihood_scaling_function(m, simulated_data(observables,:,:Shock_matrix), observables, Ω) # Kalman
 samps = Turing.sample(loglikelihood_scaling, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 
+plot_model_estimates(m, simulated_data(observables,:,:Shock_matrix))
+
+estimated_data = get_estimated_variables(m, simulated_data(observables,:,:Shock_matrix))
+simulated_data
+
+StatsPlots.plot(simulated_data(:rstar,:,:Shock_matrix))
+StatsPlots.plot!(estimated_data(:rstar,:))
+
+mean((simulated_data(:rstar,:,:Shock_matrix)))
+mean((estimated_data(:rstar,:)))
+
+
+using JLD2
+@save "FF_NG_BMrstar.jld"
