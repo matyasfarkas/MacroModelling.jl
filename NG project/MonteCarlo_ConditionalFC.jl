@@ -66,8 +66,8 @@ shockdist = Distributions.Normal(0,1) #  Turing.Beta(10,1) #
 j = 0
 simnumb = 100
 mgrid =21
-mmin = -2
-mmax =2
+mmin = -0.1
+mmax =0.1
 mE4= zeros(simnumb*mgrid)
 df =    DataFrame(m= zeros(simnumb*mgrid), Em4=ones(simnumb*mgrid)*-99999) 
 
@@ -88,10 +88,4 @@ for Ri in LinRange(mmin, mmax, mgrid)
 
 end
 
-@df df violin((:m), :Em4, linewidth=1, side=:right,  label="Expected policy rate in 4 periods")
-
-
-
-import RDatasets
-singers = RDatasets.dataset("lattice", "singer")
-@df df violin(string.(:m), :Em4, linewidth=0)
+@df df violin(string.(:m), :Em4, linewidth=1, side=:right,  label="Expected policy rate in 4 periods")
