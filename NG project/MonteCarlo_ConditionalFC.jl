@@ -89,3 +89,10 @@ for Ri in LinRange(mmin, mmax, mgrid)
 end
 
 @df df violin(string.(:m), :Em4, linewidth=1, side=:right,  label="Expected policy rate in 4 periods")
+df1 = combine(groupby(df, :m), [:Em4] .=> skewness)
+using Plots
+df2=Matrix(df1)
+bar(df2[:,1],df2[:,2],label="Simulated Skewness")
+title!("Simulated Skewness of Expected Policy Rate")
+ylabel!("Level of policy rate (dev. from SS)")
+xlabel!("Skewness")
