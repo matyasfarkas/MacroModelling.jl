@@ -60,14 +60,14 @@ parameters= [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]
 
 using Random,AxisKeys , Distributions, StatsPlots
 
-Random.seed!(1)
+Random.seed!(1) 
 periods = 4
 shockdist = Distributions.Normal(0,1) #  Turing.Beta(10,1) #
 j = 0
-simnumb = 100
-mgrid =21
-mmin = -0.1
-mmax =0.1
+simnumb = 10000
+mgrid =41
+mmin = -0.5
+mmax =0.5
 mE4= zeros(simnumb*mgrid)
 df =    DataFrame(m= zeros(simnumb*mgrid), Em4=ones(simnumb*mgrid)*-99999) 
 
@@ -94,5 +94,16 @@ using Plots
 df2=Matrix(df1)
 bar(df2[:,1],df2[:,2],label="Simulated Skewness")
 title!("Simulated Skewness of Expected Policy Rate")
-ylabel!("Level of policy rate (dev. from SS)")
-xlabel!("Skewness")
+xlabel!("Level of policy rate (dev. from SS)")
+ylabel!("Skewness")
+
+using JLD2
+CSV.write("FS2000_3rd_order_MCMC_10K.csv", df)
+
+
+
+
+CSV.write("FS2000_3rd_order_MCMC_10K_skewness.csv", df1)
+
+@save "FS2000_3rd_order_MCMC_10K.jld"
+
