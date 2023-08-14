@@ -184,9 +184,9 @@ Plots.plot(samps[["α"]]; colordim=:parameter, legend=true)
 
 symbol_to_int(s) = parse(Int, string(s)[9:end-1])
 ϵ_chain = sort(samps[:, [Symbol("ϵ_draw[$a]") for a in 1:20], 1], lt = (x,y) -> symbol_to_int(x) < symbol_to_int(y))
-tmp = Turing.describe(ϵ_chain)
-ϵ_mean = tmp[1][:, 2]
-ϵ_std = tmp[1][:, 3]
-Plots.plot(ϵ_mean[1:end], ribbon=1.96 * ϵ_std[1:end], label="Posterior mean", title = "First-Order Joint: Estimated Latents")
-Plots.plot!(noise', label="True values")
+    tmp = Turing.describe(ϵ_chain)
+    ϵ_mean = tmp[1][:, 2]
+    ϵ_std = tmp[1][:, 3]
+    Plots.plot(ϵ_mean[1:end], ribbon=1.96 * ϵ_std[1:end], label="Posterior mean", title = "First-Order Joint: Estimated Latents")
+    Plots.plot!(noise', label="True values")
 
