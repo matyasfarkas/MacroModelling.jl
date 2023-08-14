@@ -270,3 +270,7 @@ filtered_shocksSW = get_estimated_shocks(SW03, subdata)
 
 StatsPlots.plot(Distributions.Normal(0,1), fill=(0, .5,:blue), label= "Theoretical - Standard Normal")
         StatsPlots.density!(filtered_shocksSW[4,:], label = "Empirical - Filtered shocks distribution",title = title = "Monetary policy shock distributions - SW03")
+using HypothesisTests, Distributions
+
+HypothesisTests.ExactOneSampleKSTest(filtered_shocksSW[4,:],Distributions.Normal(0,1))
+

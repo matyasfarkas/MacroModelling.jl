@@ -549,7 +549,17 @@ loglikelihood_scaling_ff = loglikelihood_scaling_function_ff(AS07, data, observa
 n_samples = 100
 samps_ff = Turing.sample(loglikelihood_scaling_ff, Turing.NUTS(), n_samples, progress = true)#, init_params = sol
 
-
-
-
 StatsPlots.plot(samps_ff)
+
+
+ff_estimated_parameters = Turing.describe(samps_ff)[1].nt.parameters
+ff_estimated_means = Turing.describe(samps_ff)[1].nt.mean
+ff_estimated_std = Turing.describe(samps_ff)[1].nt.std
+
+symbol_to_int(s) = parse(Int, string(s)[9:end-1])
+ϵ_chain = sort(samps_ff[:, [Symbol("ϵ_draw[$a]") for a in 1:60], 1], lt = (x,y) -> symbol_to_int(x) < symbol_to_int(y))
+tmp = Turing.describe(ϵ_chain)
+ϵ_mean = tmp[1][:, 2]
+ϵ_std = tmp[1][:, 3]
+StatsPlots.plot(ϵ_mean[21:40], ribbon=1.96 * ϵ_std[21:40], label="Posterior mean", title = "First-Order Joint: Estimated Latents")
+StatsPlots.plot!(collect(ϵ[19,1:20]), label="True values")
