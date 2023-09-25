@@ -10,7 +10,7 @@ include("models/FS2000.jl")
 FS2000 = m
 
 # load data
-dat = CSV.read("data/FS2000_data.csv", DataFrame)
+dat = CSV.read("C:/Users/fm007/Documents/GitHub/MacroModelling.jl/test/data/FS2000_data.csv", DataFrame)
 data = KeyedArray(Array(dat)',Variable = Symbol.("log_".*names(dat)),Time = 1:size(dat)[1])
 data = log.(data)
 
@@ -22,15 +22,15 @@ data = data(observables,:)
 
 
 Turing.@model function FS2000_loglikelihood_function(data, m, observables)
-    alp     ~ Beta(0.356, 0.02, μσ = true)
-    bet     ~ Beta(0.993, 0.002, μσ = true)
-    gam     ~ Normal(0.0085, 0.003)
-    mst     ~ Normal(1.0002, 0.007)
-    rho     ~ Beta(0.129, 0.223, μσ = true)
-    psi     ~ Beta(0.65, 0.05, μσ = true)
-    del     ~ Beta(0.01, 0.005, μσ = true)
-    z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
-    z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    alp     ~ MacroModelling.Beta(0.356, 0.02, μσ = true)
+    bet     ~ MacroModelling.Beta(0.993, 0.002, μσ = true)
+    gam     ~ MacroModelling.Normal(0.0085, 0.003)
+    mst     ~ MacroModelling.Normal(1.0002, 0.007)
+    rho     ~ MacroModelling.Beta(0.129, 0.223, μσ = true)
+    psi     ~ MacroModelling.Beta(0.65, 0.05, μσ = true)
+    del     ~ MacroModelling.Beta(0.01, 0.005, μσ = true)
+    z_e_a   ~ MacroModelling.InverseGamma(0.035449, Inf, μσ = true)
+    z_e_m   ~ MacroModelling.InverseGamma(0.008862, Inf, μσ = true)
     # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
     Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
 end
@@ -39,7 +39,7 @@ FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables)
 
 
 
-n_samples = 1000
+n_samples = 10
 
 # using Zygote
 # Turing.setadbackend(:zygote)

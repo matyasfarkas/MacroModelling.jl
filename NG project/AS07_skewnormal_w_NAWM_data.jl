@@ -599,8 +599,6 @@ end
 StatsPlots.plot(RWDF)
 
 
-
-
 @model AS07_FG begin
 	c[0] ^ (-TAU) = r[0] * 1 / (1 + (RA+RN[1]) / 400) * c[1] ^ (-TAU) / p[1] / ((1 + GAMQ / 100) * z[1])
 

@@ -614,16 +614,9 @@ get_SS(SW07)
 # ╔═╡ 9efd561e-af30-490d-9881-8916190c34dc
 @bind csigma Slider(0.1:0.01:12)
 
-# ╔═╡ 20832bb9-fbb5-461d-959b-338332112c44
-
 
 # ╔═╡ c2ef96aa-d73d-412f-8ff4-96a073dbf0b4
 plot_irf(SW07, parameters = [:crr => crr, :crpi => crpi, :cry => cry, :csigma => csigma],periods = 40)[1]
-
-# ╔═╡ 02cf8a41-058b-48d7-bfd8-1db552f8b487
-
-
-# ╔═╡ 2da6fbd1-0577-4add-b29a-4cf7687ebecf
 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
