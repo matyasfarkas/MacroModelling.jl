@@ -190,7 +190,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
       end
   
       # In sample shock distribution  Horseshoe prior, source: https://discourse.julialang.org/t/regularized-horseshoe-prior/71599/2
-      τ ~ truncated(Cauchy(0, 1); lower=0)
+      τ ~ truncated(Cauchy(0, 1/m.timings.nExo); lower=0)
       η ~ truncated(Cauchy(0, 1); lower=0)
       λ ~ Turing.filldist(Cauchy(0, 1), m.timings.nExo)
       DF ~ MvNormal(ℒ.Diagonal(((η * τ) .* λ).^2)) # Coefficients
@@ -223,7 +223,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
 
      for t in 2:size(data, 2)
         # For every t draw anothe tightnes sof the horseshoe prior. 
-         τ ~ truncated(Cauchy(0, 1); lower=0)
+         τ ~ truncated(Cauchy(0, 1/m.timings.nExo); lower=0)
          η ~ truncated(Cauchy(0, 1); lower=0)
          λ ~ Turing.filldist(Cauchy(0, 1), m.timings.nExo)
          DF_out[:,t] ~   MvNormal(0.999.*DF_out[:, t-1],scale.*(((η * τ) .* λ).^2))
@@ -264,7 +264,6 @@ tm_ticks = round.(dates, Quarter(16)) |> unique;
 ff_estimated_parameters_indices_shk1 = indexin([Symbol("DF_out[:,$a][1]") for a in 2:size(data,2)], ff_estimated_parameters )
 ff_estimated_parameters_indices_shk2 = indexin([Symbol("DF_out[:,$a][2]") for a in 2:size(data,2)], ff_estimated_parameters )
 ff_estimated_parameters_indices_shk3 = indexin([Symbol("DF_out[:,$a][3]") for a in 2:size(data,2)], ff_estimated_parameters )
-ff_estimated_parameters_indices_shk4 = indexin([Symbol("DF_out[:,$a][4]") for a in 2:size(data,2)], ff_estimated_parameters )
 
                 
 # StatsPlots.plot(samps_ff)
@@ -273,11 +272,10 @@ StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk1],
 
 p1=StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk1], ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices_shk1],label= "Estimated time-varying AD skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
 p2=StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk2], ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices_shk2],label= "Estimated time-varying MP skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
-p3=StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk3], ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices_shk3],label= "Estimated time-varying r* skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
-p4=StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk4], ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices_shk4],label= "Estimated time-varying AS skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
+p3=StatsPlots.plot(dates, ff_estimated_means[ff_estimated_parameters_indices_shk3], ribbon = 1.96 * ff_estimated_std[ff_estimated_parameters_indices_shk3],label= "Estimated time-varying AS skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
 
 
-StatsPlots.plot(p1, p2, p3,p4, layout=(2,2), legend=false)
+StatsPlots.plot(p1, p2, p3, layout=(2,2), legend=false)
 
 using JLD2
 
