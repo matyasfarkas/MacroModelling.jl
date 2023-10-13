@@ -131,10 +131,13 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     #  OMEGA ~  MacroModelling.Normal(0.,0.2)
      
  
-    #RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
-    RA  =  1.5
-    PA ~  MacroModelling.Gamma(2.,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
-    GAMQ =0.33
+    # RA ~  MacroModelling.Gamma(1.,0.5,μσ = true)  #  MacroModelling.Gamma(0.8,0.5,μσ = true)
+    # PA ~  MacroModelling.Gamma(2.,2.,μσ = true)    #  MacroModelling.Gamma(4.,2.,μσ = true)
+
+    RA  =  0.365840857301635
+    PA = 3.17736935569925
+    GAMQ =0.33321091429635
+
     #GAMQ ~  MacroModelling.Normal(0.33,0.2)         #  MacroModelling.Normal(0.55,0.2) MacroModelling.Normal(0.4,0.2)
     TAU	~  MacroModelling.Gamma(2.,0.2,μσ = true)
     NU 	~ MacroModelling.Beta(0.1,0.05,μσ = true)
@@ -152,12 +155,14 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
     # C_o_Y	~ MacroModelling.Beta(0.85,0.1,μσ = true)
  
     # scale ~ MacroModelling.Gamma(1.,0.2,μσ = true)
-    scale = 0.001
+    scale = 0.0001
     # SIGFG ~  MacroModelling.InverseGamma( 0.1,4., 10^(-8), 5., μσ = true)
     # SIGRN ~  MacroModelling.InverseGamma( 0.001,1., 10^(-8), 1., μσ = true)
     
     #RHORN = 0.
     # RHORN ~ MacroModelling.Beta( 0.9,0.1,μσ = true)
+    RHOskew ~ MacroModelling.Beta( 0.9,0.1,μσ = true)
+
     # RA = 1
     # PA = 3.2
     # GAMQ = 0
@@ -226,7 +231,7 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
          τ ~ truncated(Cauchy(0, 1/m.timings.nExo); lower=0)
          η ~ truncated(Cauchy(0, 1); lower=0)
          λ ~ Turing.filldist(Cauchy(0, 1), m.timings.nExo)
-         DF_out[:,t] ~   MvNormal(0.999.*DF_out[:, t-1],scale.*(((η * τ) .* λ).^2))
+         DF_out[:,t] ~   MvNormal(RHOskew .* DF_out[:, t-1],scale.*(((η * τ) .* λ).^2))
         for shk in 1:m.timings.nExo
         # skew_distribution[shk,t] =  Turing.SkewNormal(0,1,DF_out[shk,t])
         
