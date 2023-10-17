@@ -200,8 +200,6 @@ tm_ticks = round.(dates, Quarter(16)) |> unique;
 
 StatsPlots.plot(dates, parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN),ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
 using JLD2
-
-
 save("KF_HMC_US_FF.jld") 
 
 
@@ -371,7 +369,7 @@ Turing.@model function loglikelihood_scaling_function_ff_TWSK(m, data, observabl
      Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(Ω * ℒ.I(size(data,1))), state_deviations[:,t]) for t in 1:size(data, 2)])
  end
 loglikelihood_scaling_fftwsk = loglikelihood_scaling_function_ff_TWSK(AS07, data, observables,Ω) # Kalman
-n_samples =50
+n_samples =100
 samps_fftwsk = Turing.sample(loglikelihood_scaling_fftwsk,Turing.NUTS(),n_samples, progress = true)
 
 ff_estimated_parameters_twsk = Turing.describe(samps_fftwsk)[1].nt.parameters
@@ -386,3 +384,5 @@ StatsPlots.plot(ff_estimated_means_twsk[ff_estimated_parameters_indices_twsk],
             
               
 StatsPlots.plot(dates, ff_estimated_means_twsk[ff_estimated_parameters_indices_twsk], ribbon = 1.96 * ff_estimated_std_twsk[ff_estimated_parameters_indices_twsk],label= "Estimated time-varying AD skewness",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
+using JLD2
+@save("C:/Users/fm007/Documents/GitHub/MacroModelling.jl/NG project/US/KF_HMC_US_FF.jld") 

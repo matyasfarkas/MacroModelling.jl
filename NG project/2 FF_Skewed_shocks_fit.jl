@@ -441,7 +441,7 @@ Turing.@model function loglikelihood_scaling_function_ff_TWSK(m, data, observabl
      Turing.@addlogprob! sum([Turing.logpdf(Turing.MvNormal(Ω * ℒ.I(size(data,1))), state_deviations[:,t]) for t in 1:size(data, 2)])
  end
 loglikelihood_scaling_fftwsk = loglikelihood_scaling_function_ff_TWSK(AS07, data, observables,Ω) # Kalman
-n_samples =1000
+n_samples =500
 samps_fftwsk = Turing.sample(loglikelihood_scaling_fftwsk,Turing.NUTS(),n_samples, progress = true)
 
 ff_estimated_parameters_twsk = Turing.describe(samps_fftwsk)[1].nt.parameters
