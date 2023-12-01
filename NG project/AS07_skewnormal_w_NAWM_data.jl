@@ -328,9 +328,9 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
      DF_out[1] ~  MacroModelling.Normal(DF,eps()) 
  
      ϵ_skewdraw[1] ~ skew_distribution
-         # ϵ_skewdraw[1] = rand(skew_distribution,1,1)
-     ϵ[:,1] = [ϵ_skewdraw[1]; ϵ[2:end,1]]
- 
+     
+     # ϵ[:,1] = [ϵ_skewdraw[1]; ϵ[2:end,1]] # DEMAND SHOCKS ARE SKEWED
+     ϵ[:,1] = [ ϵ[2:end,1]; ϵ_skewdraw[1];] # SUPPLY SHOCKS ARE SKEWED
      #  aug_state = [initial_conditions
      #             1 
      #             ϵ[:,1]]
@@ -343,7 +343,8 @@ Turing.@model function loglikelihood_scaling_function_ff(m, data, observables, �
          skew_distribution =  Turing.SkewNormal(0,1,DF_out[t])
          ϵ_skewdraw[t] ~ skew_distribution
             #  ϵ_skewdraw[1] = rand(skew_distribution,1,1)
-         ϵ[:,t] = [ϵ_skewdraw[t]; ϵ[2:end,t]]
+            #          ϵ[:,t] = [ϵ_skewdraw[t]; ϵ[2:end,t]]# DEMAND SHOCKS ARE SKEWED
+            ϵ[:,t] = [ ϵ[2:end,t]; ϵ_skewdraw[t];]# SUPPLY SHOCKS ARE SKEWED
          aug_state = [state[m.timings.past_not_future_and_mixed_idx,t-1]
                      1 
                      ϵ[:,t]]

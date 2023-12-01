@@ -208,6 +208,9 @@ for i in 1:size(KF_shocks,1)
 skewness_KF_Rstar[i] = StatsBase.skewness(KF_shocks[i,:])
 end
 
+using JLD2
+@save("AS07_TVRstar_KF.jld") 
+
 using Plots
 
 p1=StatsPlots.plot(Distributions.Normal(0,1), fill=(0, .5,:blue), label ="Standard Normal distibution")
