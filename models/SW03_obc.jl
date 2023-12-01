@@ -1,4 +1,4 @@
-@model m begin
+@model SW03_obc begin
     -q[0] + beta * ((1 - tau) * q[1] + epsilon_b[1] * (r_k[1] * z[1] - psi^-1 * r_k[ss] * (-1 + exp(psi * (-1 + z[1])))) * (C[1] - h * C[0])^(-sigma_c))
     
     -q_f[0] + beta * ((1 - tau) * q_f[1] + epsilon_b[1] * (r_k_f[1] * z_f[1] - psi^-1 * r_k_f[ss] * (-1 + exp(psi * (-1 + z_f[1])))) * (C_f[1] - h * C_f[0])^(-sigma_c))
@@ -107,20 +107,16 @@
     # Perceived inflation objective
     std_eta_pi * eta_pi[x] - log(pi_obj[0]) + rho_pi_bar * log(pi_obj[-1]) + log(calibr_pi_obj) * (1 - rho_pi_bar)
 
-    # Taylor rule
-    -calibr_pi + std_eta_R * eta_R[x] - log(R[ss]^-1 * R[0]) + r_Delta_pi * (-log(pi[ss]^-1 * pi[-1]) + log(pi[ss]^-1 * pi[0])) + r_Delta_y * (-log(Y[ss]^-1 * Y[-1]) + log(Y[ss]^-1 * Y[0]) + log(Y_f[ss]^-1 * Y_f[-1]) - log(Y_f[ss]^-1 * Y_f[0])) + rho * log(R[ss]^-1 * R[-1]) + (1 - rho) * (log(pi_obj[0]) + r_pi * (-log(pi_obj[0]) + log(pi[ss]^-1 * pi[-1])) + r_Y * (log(Y[ss]^-1 * Y[0]) - log(Y_f[ss]^-1 * Y_f[0])))
+    # Taylor rule with effective lower bound
+    log(R[0]) = max(R̄ , r_Delta_pi * (-log(pi[ss]^-1 * pi[-1]) + log(pi[ss]^-1 * pi[0])) + r_Delta_y * (-log(Y[ss]^-1 * Y[-1]) + log(Y[ss]^-1 * Y[0]) + log(Y_f[ss]^-1 * Y_f[-1]) - log(Y_f[ss]^-1 * Y_f[0])) + rho * log(R[ss]^-1 * R[-1]) + (1 - rho) * (log(pi_obj[0]) + r_pi * (-log(pi_obj[0]) + log(pi[ss]^-1 * pi[-1])) + r_Y * (log(Y[ss]^-1 * Y[0]) - log(Y_f[ss]^-1 * Y_f[0]))) - calibr_pi + std_eta_R * eta_R[x] - log(R[ss]^-1))
 
 end
 
-<<<<<<< HEAD
-@parameters m begin  
-    lambda_p = .368
-    G_bar = .362
-=======
-@parameters SW03 begin  
+@parameters SW03_obc begin  
+    R̄ = 0.0  # effective lower bound
+
     lambda_p = 0.368
     G_bar    = 0.362
->>>>>>> e619aaec65a28c7a90a27a598bf86a89931ec806
     lambda_w = 0.5
     Phi      = 0.819
 
@@ -152,17 +148,6 @@ end
     rho_G       = 0.949
     rho_pi_bar  = 0.924
 
-<<<<<<< HEAD
-    std_eta_b = 0.336
-    std_eta_L = 3.52
-    std_eta_I = 0.085
-    std_eta_a = 0.598
-    std_eta_w = 0.6853261
-    std_eta_p = 0.7896512
-    std_eta_G = 0.325
-    std_eta_R = 0.081
-    std_eta_pi = 0.017
-=======
     std_scaling_factor = 10
 
     std_eta_b   = σ_eta_b  / std_scaling_factor
@@ -184,7 +169,6 @@ end
     σ_eta_G   =  0.325
     σ_eta_R   =  0.081
     σ_eta_pi  =  0.017
->>>>>>> e619aaec65a28c7a90a27a598bf86a89931ec806
 
     calibr_pi_obj | 1 = pi_obj[ss]
     calibr_pi | pi[ss] = pi_obj[ss]

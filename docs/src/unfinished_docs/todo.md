@@ -2,17 +2,55 @@
 
 ## High priority
 
+- [ ] add technical details about SS solver, obc solver, and other algorithms
+- [ ] fix translate dynare mod file from file written using write to dynare file (see test models)
+- [ ] rm obc vars from get_SS
+- [ ] fix SS solver (failed for backus in guide)
+- [ ] functions to reverse state_update (input: previous shock and current state, output previous state), find shocks corresponding to bringing one state to the next
+- [ ] cover nested case: min(50,a+b+max(c,10))
+- [ ] nonlinear estimation using unscented kalman filter / inversion filter (minimization problem: find shocks to match states with data)
+- [ ] nonlinear conditional forecasts for higher order and obc
 - [ ] add balanced growth path handling
+- [ ] feedback: write out RBC equations, provide option for external SS guess, sell the sampler better (ESS vs dynare), more details on algorithm (SS solver)
+- [ ] higher order solutions: some kron matrix mults are later compressed. write custom compressed kron mult; check if sometimes dense mult is faster? (e.g. GNSS2010 seems dense at higher order)
+- [ ] recheck function examples and docs (include output description)
+- [ ] riccati with analytical derivatives (much faster if sparse) instead of implicit diff
+- [ ] add user facing option to choose sylvester solver
+- [ ] autocorr and covariance with derivatives. return 3d array
+- [ ] Docs: document outputs and associated functions to work with function
+- [ ] use ID for sparse output sylvester solvers (filed issue)
+- [ ] make higher order usable with zygote (currently only analytical pushforward, no implicitdiff)
+- [ ] add pydsge and econpizza to overview
+- [ ] use other quadratic iteration for diffable first order solve (useful because schur can error in estimation)
+- [ ] add for loop parser in @parameters
+- [ ] include option to provide pruned states for irfs
+- [ ] compressed higher order derivatives and sparsity of jacobian
+- [ ] implement more multi country models
+- [ ] speed benchmarking (focus on ImplicitDiff part)
+- [ ] write docs for (non-linear) solution algorithms
+- [ ] have initial_state accept SS and SSS as arguments
+- [ ] for cond forecasting and kalman, get rid of observables input and use axis key of data input
+- [ ] for cond forecasting allow less shocks than conditions with a warning. should be svd then
+- [ ] have parser accept rss | (r[ss] - 1) * 400 = rss
+- [ ] when doing calibration with optimiser have better return values when he doesnt find a solution (probably NaN)
+- [ ] sampler returned negative std. investigate and come up with solution ensuring sampler can continue
+- [ ] automatically adjust plots for different legend widhts and heights
+- [ ] include weakdeps: https://pkgdocs.julialang.org/dev/creating-packages/#Weak-dependencies
+- [ ] have get_std take variables as an input
+- [ ] more informative errors when something goes wrong when writing a model
+- [ ] initial state accept keyed array
+- [ ] bring solution error into an object of the model so we dont have to pass it on as output
+- [ ] check that there is an error if he cant find SS
+- [ ] plot_model_estimates with unconditional forecast at the end
 - [ ] check if you can do analytic derivatives for higher order derivatives
-- [ ] kick out unsused parameters from m.parameters
+- [ ] kick out unused parameters from m.parameters
 - [ ] higher order solution derivs with Zygote
 - [ ] use cache for gradient calc in estimation (see DifferentiableStateSpaceModels)
-- [ ] use krylov instead of linearsolve and speed up sparse matrix calcs in implicit diff of higher order funcs
+- [ ] speed up sparse matrix calcs in implicit diff of higher order funcs
 - [ ] improve docs: timing in first sentence seems off; have something more general in first sentence; why is the syntax user friendly? give an example; make the former and the latter a footnote
 - [ ] streamline estimation part (dont do string matching... but rely on precomputed indices...)
 - [ ] change docs to reflect that the output of irfs include aux vars and also the model info Base.show includes aux vars
 - [ ] write functions to debug (fix_SS.jl...)
-- [ ] parser model into per equation functions instead of single big functions
 - [ ] model compression (speed up 2nd moment calc (derivatives) for large models; gradient loglikelihood is very slow due to large matmuls) -> model setup as maximisation problem (gEcon) -> HANK models
 - [ ] implement global solution methods
 - [ ] add more models
@@ -21,6 +59,8 @@
 
 - [ ] use @assert for errors and @test_throws
 - [ ] print SS dependencies (get parameters (in function of parameters) into the dependencies), show SS solver
+- [ ] use strings instead of symbols internally
+- [ ] write how-to for calibration equations
 - [ ] make the nonnegativity trick optional or use nanmath?
 - [ ] use packages for kalman filter
 - [ ] clean up different parameter types
@@ -29,7 +69,55 @@
 - [ ] figure out combinations for inputs (parameters and variables in different formats for get_irf for example)
 - [ ] Find any SS by optimising over both SS guesses and parameter inputs
 - [ ] weed out SS solver and saved objects
-  
+
+- [x] check if higher order effects might distort results for autocorr (problem with order deffinition) - doesnt seem to be the case; full_covar yields same result
+- [x] implement occasionally binding constraints with shocks
+- [x] add QUEST3 tests
+- [x] add obc tests
+- [x] highlight NUTS sampler compatibility
+- [x] differentiate more vs diffstatespace
+- [x] reorder other toolboxes according to popularity
+- [x] add JOSS article (see Makie.jl)
+- [x] write to mod file for unicode characters. have them take what you would type: \alpha\bar
+- [x] write dynare model using function converting unicode to tab completion
+- [x] write parameter equations to dynare (take ordering on board)
+- [x] pruning of 3rd order takes pruned 2nd order input
+- [x] implement moment matching for pruned models
+- [x] test pruning and add literature
+- [x] use more implicit diff for the other functions as well
+- [x] handle sparsity in sylvester solver better (hand over indices and nzvals instead of vec)
+- [x] redo naming in moments calc and make whole process faster (precalc wrangling matrices)
+- [x] write method of moments how to
+- [x] check tols - all set to eps() except for dependencies tol (1e-12)
+- [x] set to 0 SS values < 1e-12 - doesnt work with Zygote
+- [x] sylvester with analytical derivatives (much faster if sparse) instead of implicit diff - yes but there are still way too large matrices being realised. implicitdiff is better here
+- [x] autocorr to statistics output and in general for higher order pruned sols
+- [x] fix product moments and test for cases with more than 2 shocks
+- [x] write tests for variables argument in get_moment and for higher order moments
+- [x] handle KeyedArrays with strings as dimension names as input
+- [x] add mean in output funcs for higher order 
+- [x] recheck results for third order cov
+- [x] have a look again at get_statistics function
+- [x] consolidate sylvester solvers (diff)
+- [x] put outside of loop the ignore derviatives for derivatives
+- [x] write function to smart select variables to calc cov for
+- [x] write get function for variables, parameters, equations with proper parsing so people can understand what happens when invoking for loops
+- [x] have for loop where the items are multiplied or divided or whatever, defined by operator | + or * only
+- [x] write documentation for string inputs
+- [x] write documentation for programmatic model writing
+- [x] input indices not as symbol
+- [x] make sure plots and printed output also uses strings instead of symbols if adequate
+- [x] have keyedarray with strings as axis type if necessary as output
+- [x] write test for keyedarray with strings as primary axis
+- [x] test string input
+- [x] have all functions accept strings and write tests for it
+- [x] parser model into per equation functions instead of single big functions
+- [x] use krylov instead of linearsolve
+- [x] implement for loops in model macro (e.g. to setup multi country models)
+- [x] fix ss of pruned solution in plotsolution. seems detached
+- [x] try solve first order with JuMP - doesnt work because JuMP cannot handle matrix constraints/objectives 
+- [x] get solution higher order with multidimensional array (states, 1 and 2 partial derivatives variables names as dimensions in 2order case)
+- [x] add pruning
 - [x] add other outputs from estimation (smoothed, filter states and shocks)
 - [x] shorten plot_irf (take inspiration from model estimate)
 - [x] fix solution plot
@@ -96,7 +184,6 @@
 - [ ] rewrite first order with riccati equation MatrixEquations.jl
 - [ ] exploit variable incidence and compression for higher order derivatives
 - [ ] for estimation use CUDA with st order: linear time iteration starting from last 1st order solution and then LinearSolveCUDA solvers for higher orders. this should bring benefits for large models and HANK models
-- [ ] test on highly [nonlinear model](https://www.sciencedirect.com/science/article/pii/S0165188917300970)
 - [ ] pull request in StatsFuns to have norminv... accept type numbers and add translation from matlab: norminv to StatsFuns norminvcdf
 - [ ] more informative errors when declaring equations/ calibration
 - [ ] unit equation errors
@@ -106,6 +193,7 @@
 - [ ] print legend for algorithm in last subplot of plot only
 - [ ] select variables for moments
 
+- [x] test on highly [nonlinear model](https://www.sciencedirect.com/science/article/pii/S0165188917300970) # caldara et al is actually epstein zin wiht stochastic vol
 - [x] conditional forecasting
 - [x] find way to recover from failed SS solution which is written to init guess
 - [x] redo ugly solution for selecting parameters to differentiate for

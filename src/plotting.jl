@@ -29,7 +29,7 @@ In case `shock_decomposition = true`, then the plot shows the variables, shocks,
 
 # Arguments
 - $MODEL
-- `data` [Type: `KeyedArray`]: data matrix with variables in rows and time in columns
+- $DATA
 # Keyword Arguments
 - $PARAMETERS
 - $VARIABLES
@@ -37,11 +37,12 @@ In case `shock_decomposition = true`, then the plot shows the variables, shocks,
 - `data_in_levels` [Default: `true`, Type: `Bool`]: indicator whether the data is provided in levels. If `true` the input to the data argument will have the non stochastic steady state substracted.
 - `shock_decomposition` [Default: `false`, Type: `Bool`]: whether to show the contribution of the shocks to the deviations from NSSS for each variable. If `false`, the plot shows the values of the selected variables, data, and shocks
 - `smooth` [Default: `true`, Type: `Bool`]: whether to return smoothed (`true`) or filtered (`false`) values for the variables, shocks, and decomposition.
-- `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
-- `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
-- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
-- `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
 - `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
+- `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
+- `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
+- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
+- `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
+- `transparency` [Default: `0.6`, Type: `Float64`]: transparency of bars
 - $VERBOSE
 
 # Examples
@@ -73,14 +74,14 @@ end
 
 simulation = simulate(RBC_CME)
 
-plot_model_estimates(RBC_CME, simulation([:k],:,:simulate), data_in_levels = false)
+plot_model_estimates(RBC_CME, simulation([:k],:,:simulate))
 ```
 """
 function plot_model_estimates(𝓂::ℳ,
-    data::AbstractArray{Float64};
+    data::KeyedArray{Float64};
     parameters = nothing,
-    variables::Symbol_input = :all_including_auxilliary, 
-    shocks::Symbol_input = :all, 
+    variables::Union{Symbol_input,String_input} = :all_excluding_obc, 
+    shocks::Union{Symbol_input,String_input} = :all, 
     data_in_levels::Bool = true,
     shock_decomposition::Bool = false,
     smooth::Bool = true,
@@ -102,13 +103,23 @@ function plot_model_estimates(𝓂::ℳ,
                     tickfontsize = 8,
                     framestyle = :box)
 
-    write_parameters_input!(𝓂, parameters, verbose = verbose)
+    # write_parameters_input!(𝓂, parameters, verbose = verbose)
 
-    solve!(𝓂, verbose = verbose, dynamics = true)
+    solve!(𝓂, parameters = parameters, verbose = verbose, dynamics = true)
 
-    reference_steady_state, solution_error = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose) : (copy(𝓂.solution.non_stochastic_steady_state), eps())
+    reference_steady_state, (solution_error, iters) = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose, false, 𝓂.solver_parameters) : (copy(𝓂.solution.non_stochastic_steady_state), (eps(), 0))
 
-    obs_idx     = parse_variables_input_to_index(collect(axiskeys(data)[1]), 𝓂.timings)
+    data = data(sort(axiskeys(data,1)))
+    
+    obs_axis = collect(axiskeys(data,1))
+
+    obs_symbols = obs_axis isa String_input ? obs_axis .|> Meta.parse .|> replace_indices : obs_axis
+
+    variables = variables isa String_input ? variables .|> Meta.parse .|> replace_indices : variables
+
+    shocks = shocks isa String_input ? shocks .|> Meta.parse .|> replace_indices : shocks
+
+    obs_idx     = parse_variables_input_to_index(obs_symbols, 𝓂.timings)
     var_idx     = parse_variables_input_to_index(variables, 𝓂.timings) 
     shock_idx   = parse_shocks_input_to_index(shocks,𝓂.timings)
 
@@ -118,7 +129,7 @@ function plot_model_estimates(𝓂::ℳ,
         data_in_deviations = data
     end
 
-    filtered_and_smoothed = filter_and_smooth(𝓂, data_in_deviations, sort(axiskeys(data)[1]); verbose = verbose)
+    filtered_and_smoothed = filter_and_smooth(𝓂, data_in_deviations, obs_symbols; verbose = verbose)
 
     variables_to_plot  = filtered_and_smoothed[smooth ? 1 : 5]
     shocks_to_plot     = filtered_and_smoothed[smooth ? 3 : 7]
@@ -140,7 +151,7 @@ function plot_model_estimates(𝓂::ℳ,
             push!(pp,begin
                     StatsPlots.plot()
                     StatsPlots.plot!(shocks_to_plot[shock_idx[i - length(var_idx)],:],
-                        title = string(𝓂.timings.exo[shock_idx[i - length(var_idx)]]) * "₍ₓ₎", 
+                        title = replace_indices_in_symbol(𝓂.timings.exo[shock_idx[i - length(var_idx)]]) * "₍ₓ₎", 
                         ylabel = shock_decomposition ? "Absolute Δ" : "Level",label = "", 
                         color = shock_decomposition ? estimate_color : :auto)
                     StatsPlots.hline!([0],
@@ -153,7 +164,7 @@ function plot_model_estimates(𝓂::ℳ,
             if shock_decomposition SS = zero(SS) end
 
             can_dual_axis = gr_back &&  all((variables_to_plot[var_idx[i],:] .+ SS) .> eps(Float32)) && (SS > eps(Float32)) && !shock_decomposition
-            
+
             push!(pp,begin
                     StatsPlots.plot()
                     if shock_decomposition
@@ -164,12 +175,12 @@ function plot_model_estimates(𝓂::ℳ,
                             alpha = transparency)
                     end
                     StatsPlots.plot!(variables_to_plot[var_idx[i],:] .+ SS,
-                        title = string(𝓂.timings.var[var_idx[i]]), 
+                        title = replace_indices_in_symbol(𝓂.timings.var[var_idx[i]]), 
                         ylabel = shock_decomposition ? "Absolute Δ" : "Level",label = "", 
                         color = shock_decomposition ? estimate_color : :auto)
                     if var_idx[i] ∈ obs_idx 
                         StatsPlots.plot!(data_in_deviations[indexin([var_idx[i]],obs_idx),:]' .+ SS,
-                            title = string(𝓂.timings.var[var_idx[i]]),
+                            title = replace_indices_in_symbol(𝓂.timings.var[var_idx[i]]),
                             ylabel = shock_decomposition ? "Absolute Δ" : "Level", 
                             label = "", 
                             color = shock_decomposition ? data_color : :auto) 
@@ -204,7 +215,7 @@ function plot_model_estimates(𝓂::ℳ,
                                         StatsPlots.plot(framestyle = :none)
                                         if shock_decomposition
                                             StatsPlots.bar!(fill(0,1,length(shock_idx)+1), 
-                                                                    label = reshape(vcat("Initial value",string.(𝓂.exo[shock_idx])),1,length(shock_idx)+1), 
+                                                                    label = reshape(vcat("Initial value",string.(replace_indices_in_symbol.(𝓂.exo[shock_idx]))),1,length(shock_idx)+1), 
                                                                     linewidth = 0,
                                                                     alpha = transparency,
                                                                     lw = 0,
@@ -245,7 +256,7 @@ function plot_model_estimates(𝓂::ℳ,
                                     StatsPlots.plot(framestyle = :none)
                                     if shock_decomposition
                                         StatsPlots.bar!(fill(0,1,length(shock_idx)+1), 
-                                                                label = reshape(vcat("Initial value",string.(𝓂.exo[shock_idx])),1,length(shock_idx)+1), 
+                                                                label = reshape(vcat("Initial value",string.(replace_indices_in_symbol.(𝓂.exo[shock_idx]))),1,length(shock_idx)+1), 
                                                                 linewidth = 0,
                                                                 alpha = transparency,
                                                                 lw = 0,
@@ -301,16 +312,16 @@ The left axis shows the level, and the right the deviation from the reference st
 # Arguments
 - $MODEL
 # Keyword Arguments
-- `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
-- `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
-- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
-- `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
-- `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
 - $PERIODS
-- $ALGORITHM
-- $PARAMETERS
-- $VARIABLES
 - $SHOCKS
+- $VARIABLES
+- $PARAMETERS
+- `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
+- `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
+- `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
+- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
+- `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
+- $ALGORITHM
 - $NEGATIVE_SHOCK
 - $GENERALISED_IRF
 - $INITIAL_STATE
@@ -340,8 +351,8 @@ plot_irf(RBC)
 """
 function plot_irf(𝓂::ℳ;
     periods::Int = 40, 
-    shocks::Union{Symbol_input,Matrix{Float64},KeyedArray{Float64}} = :all, 
-    variables::Symbol_input = :all,
+    shocks::Union{Symbol_input,String_input,Matrix{Float64},KeyedArray{Float64}} = :all_excluding_obc, 
+    variables::Union{Symbol_input,String_input} = :all_excluding_auxilliary_and_obc,
     parameters = nothing,
     show_plots::Bool = true,
     save_plots::Bool = false,
@@ -352,6 +363,7 @@ function plot_irf(𝓂::ℳ;
     negative_shock::Bool = false,
     generalised_irf::Bool = false,
     initial_state::Vector{Float64} = [0.0],
+    ignore_obc::Bool = false,
     verbose::Bool = false)
 
     gr_back = StatsPlots.backend() == StatsPlots.Plots.GRBackend()
@@ -364,13 +376,9 @@ function plot_irf(𝓂::ℳ;
                     tickfontsize = 8,
                     framestyle = :box)
 
-    write_parameters_input!(𝓂,parameters, verbose = verbose)
+    solve!(𝓂, parameters = parameters, verbose = verbose, dynamics = true, algorithm = algorithm)
 
-    solve!(𝓂, verbose = verbose, dynamics = true, algorithm = algorithm)
-
-    state_update = parse_algorithm_to_state_update(algorithm, 𝓂)
-
-    NSSS, solution_error = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose) : (𝓂.solution.non_stochastic_steady_state, eps())
+    NSSS, (solution_error, iters) = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose, false, 𝓂.solver_parameters) : (𝓂.solution.non_stochastic_steady_state, (eps(), 0))
 
     full_SS = sort(union(𝓂.var,𝓂.aux,𝓂.exo_present))
     full_SS[indexin(𝓂.aux,full_SS)] = map(x -> Symbol(replace(string(x), r"ᴸ⁽⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+⁾" => "")),  𝓂.aux)
@@ -381,19 +389,33 @@ function plot_irf(𝓂::ℳ;
 
     if algorithm == :second_order
         SSS_delta = reference_steady_state - 𝓂.solution.perturbation.second_order.stochastic_steady_state
+    elseif algorithm == :pruned_second_order
+        SSS_delta = reference_steady_state - 𝓂.solution.perturbation.pruned_second_order.stochastic_steady_state
     elseif algorithm == :third_order
         SSS_delta = reference_steady_state - 𝓂.solution.perturbation.third_order.stochastic_steady_state
+    elseif algorithm == :pruned_third_order
+        SSS_delta = reference_steady_state - 𝓂.solution.perturbation.pruned_third_order.stochastic_steady_state
     else
         SSS_delta = zeros(length(reference_steady_state))
     end
 
     if algorithm == :second_order
         reference_steady_state = 𝓂.solution.perturbation.second_order.stochastic_steady_state
+    elseif algorithm == :pruned_second_order
+        reference_steady_state = 𝓂.solution.perturbation.pruned_second_order.stochastic_steady_state
     elseif algorithm == :third_order
         reference_steady_state = 𝓂.solution.perturbation.third_order.stochastic_steady_state
+    elseif algorithm == :pruned_third_order
+        reference_steady_state = 𝓂.solution.perturbation.pruned_third_order.stochastic_steady_state
     end
 
+    unspecified_initial_state = initial_state == [0.0]
+
     initial_state = initial_state == [0.0] ? zeros(𝓂.timings.nVars) - SSS_delta : initial_state[indexin(full_SS, sort(union(𝓂.var,𝓂.exo_present)))] - reference_steady_state
+    
+    shocks = shocks isa KeyedArray ? axiskeys(shocks,1) isa Vector{String} ? rekey(shocks, 1 => axiskeys(shocks,1) .|> Meta.parse .|> replace_indices) : shocks : shocks
+
+    shocks = shocks isa String_input ? shocks .|> Meta.parse .|> replace_indices : shocks
     
     shocks = 𝓂.timings.nExo == 0 ? :none : shocks
 
@@ -407,12 +429,163 @@ function plot_irf(𝓂::ℳ;
         shock_idx = parse_shocks_input_to_index(shocks,𝓂.timings)
     end
 
+    variables = variables isa String_input ? variables .|> Meta.parse .|> replace_indices : variables
+
     var_idx = parse_variables_input_to_index(variables, 𝓂.timings)
 
-    if generalised_irf
-        Y = girf(state_update, SSS_delta, zeros(𝓂.timings.nVars), 𝓂.timings; periods = periods, shocks = shocks, variables = variables, negative_shock = negative_shock)#, warmup_periods::Int = 100, draws::Int = 50, iterations_to_steady_state::Int = 500)
+    if ignore_obc
+        occasionally_binding_constraints = false
     else
-        Y = irf(state_update, initial_state, zeros(𝓂.timings.nVars), 𝓂.timings; periods = periods, shocks = shocks, variables = variables, negative_shock = negative_shock) .+ SSS_delta[var_idx]
+        occasionally_binding_constraints = length(𝓂.obc_violation_equations) > 0
+    end
+
+    if occasionally_binding_constraints #&& 
+        @assert algorithm ∉ [:pruned_second_order, :second_order, :pruned_third_order, :third_order] "Occasionally binding constraints only compatible with first order perturbation solutions."
+
+        solve!(𝓂, parameters = :activeᵒᵇᶜshocks => 1, verbose = false, dynamics = true, algorithm = algorithm)
+    end
+    
+    state_update, pruning = parse_algorithm_to_state_update(algorithm, 𝓂)
+
+    if generalised_irf
+        Y = girf(state_update, 
+                    SSS_delta, 
+                    zeros(𝓂.timings.nVars), 
+                    pruning, 
+                    unspecified_initial_state,
+                    𝓂.timings; 
+                    algorithm = algorithm,
+                    periods = periods, 
+                    shocks = shocks, 
+                    variables = variables, 
+                    negative_shock = negative_shock)#, warmup_periods::Int = 100, draws::Int = 50, iterations_to_steady_state::Int = 500)
+    else
+        if occasionally_binding_constraints
+            function obc_state_update(present_states::Vector{R}, present_shocks::Vector{R}, state_update::Function, algorithm::Symbol, model::JuMP.Model, x::Vector{JuMP.VariableRef}) where R <: Float64
+                # this function takes the previous state and shocks, updates it and calculates the shocks enforcing the constraint for the current period
+                unconditional_forecast_horizon = 𝓂.max_obc_horizon
+
+                reference_steady_state = 𝓂.solution.non_stochastic_steady_state
+
+                obc_shock_idx = contains.(string.(𝓂.timings.exo),"ᵒᵇᶜ")
+
+                periods_per_shock = 𝓂.max_obc_horizon + 1
+                
+                num_shocks = sum(obc_shock_idx) ÷ periods_per_shock
+
+                constraints_violated = any(JuMP.value.(𝓂.obc_violation_function(zeros(num_shocks*periods_per_shock), present_states, state_update, reference_steady_state, 𝓂, algorithm, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks))) .> eps(Float32))
+                
+                if constraints_violated
+                    # Now loop through obc_shock_bounds to set the bounds on these variables.
+                    # maxmin_indicators = 𝓂.obc_violation_function(x, present_states, past_shocks, state_update, reference_steady_state, 𝓂, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks))[2]
+                    # for (idx, v) in enumerate(maxmin_indicators)
+                    #     idxs = (idx - 1) * periods_per_shock + 1:idx * periods_per_shock
+                    #     if v
+                    # #         if 𝓂.obc_violation_function(x, present_states, past_shocks, state_update, reference_steady_state, 𝓂, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks))[2][idx]
+                    #         JuMP.set_upper_bound.(x[idxs], 0)
+                    # #             JuMP.set_lower_bound.(x[idxs], 0)
+                    #     else
+                    # #             JuMP.set_upper_bound.(x[idxs], 0)
+                    #         JuMP.set_lower_bound.(x[idxs], 0)
+                    #     end
+                    # #     # else
+                    # #     #     if 𝓂.obc_violation_function(x, present_states, past_shocks, state_update, reference_steady_state, 𝓂, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks))[2][idx]
+                    # #     #         JuMP.set_lower_bound.(x[idxs], 0)
+                    # #     #     else
+                    # #     #         JuMP.set_upper_bound.(x[idxs], 0)
+                    # #     #     end
+                    # #     # end
+                    # end
+
+                    JuMP.@constraint(model, con, 𝓂.obc_violation_function(x, present_states, state_update, reference_steady_state, 𝓂, algorithm, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks)) .<= 0)
+
+                    JuMP.optimize!(model)
+                    
+                    solved = JuMP.termination_status(model) ∈ [JuMP.OPTIMAL,JuMP.LOCALLY_SOLVED]
+
+                    if !solved
+                        for opt in [:LD_SLSQP, :LD_MMA, :LN_COBYLA]
+                            # @info "Using $opt solver."
+
+                            JuMP.set_optimizer(model, NLopt.Optimizer)
+
+                            JuMP.set_attribute(model, "algorithm", opt)
+
+                            JuMP.optimize!(model)
+
+                            solved = JuMP.termination_status(model) ∈ [JuMP.OPTIMAL,JuMP.LOCALLY_SOLVED] && !(any(JuMP.value.(𝓂.obc_violation_function(JuMP.value.(x), present_states, state_update, reference_steady_state, 𝓂, algorithm, unconditional_forecast_horizon, JuMP.AffExpr.(present_shocks))) .> eps(Float32)))
+
+                            if solved break end
+                        end
+                    end
+                    
+                    present_shocks[contains.(string.(𝓂.timings.exo),"ᵒᵇᶜ")] .= JuMP.value.(x)
+
+                    JuMP.delete(model, con)
+
+                    JuMP.unregister(model, :con)
+
+                    JuMP.set_optimizer(model, MadNLP.Optimizer)
+
+                    # JuMP.set_attribute(model, "tol", 1e-12)
+                else
+                    solved = true
+                end
+
+                present_states = state_update(present_states,JuMP.value.(present_shocks))
+
+                return present_states, present_shocks, solved, model, x
+            end
+
+            model = JuMP.Model()
+
+            JuMP.set_optimizer(model, MadNLP.Optimizer)
+
+            # JuMP.set_attribute(model, "tol", 1e-12)
+
+            JuMP.set_silent(model)
+
+            obc_shock_idx = contains.(string.(𝓂.timings.exo),"ᵒᵇᶜ")
+
+            periods_per_shock = 𝓂.max_obc_horizon + 1
+
+            num_shocks = sum(obc_shock_idx) ÷ periods_per_shock
+
+            JuMP.@variable(model, x[1:num_shocks*periods_per_shock])
+
+            JuMP.@objective(model, Min, x' * ℒ.I * x)
+
+            Y =  irf(state_update,
+                    obc_state_update,
+                    model,
+                    x,
+                    initial_state, 
+                    zeros(𝓂.timings.nVars), 
+                    pruning,
+                    unspecified_initial_state,
+                    𝓂.timings; 
+                    algorithm = algorithm,
+                    periods = periods, 
+                    shocks = shocks, 
+                    variables = variables, 
+                    negative_shock = negative_shock) .+ SSS_delta[var_idx]
+        else
+            Y = irf(state_update, 
+                    initial_state, 
+                    zeros(𝓂.timings.nVars), 
+                    pruning,
+                    unspecified_initial_state,
+                    𝓂.timings; 
+                    algorithm = algorithm,
+                    periods = periods, 
+                    shocks = shocks, 
+                    variables = variables, 
+                    negative_shock = negative_shock) .+ SSS_delta[var_idx]
+        end
+    end
+
+    if occasionally_binding_constraints #&& algorithm ∈ [:pruned_second_order, :second_order, :pruned_third_order, :third_order]
+        solve!(𝓂, parameters = :activeᵒᵇᶜshocks => 0, verbose = false, dynamics = true, algorithm = algorithm)
     end
 
     if shocks isa KeyedArray{Float64} || shocks isa Matrix{Float64}  
@@ -427,7 +600,7 @@ function plot_irf(𝓂::ℳ;
     if shocks == :simulate
         shock_dir = "Shocks"
     end
-    if !(shocks isa Symbol_input)
+    if !(shocks isa Union{Symbol_input,String_input})
         shock_dir = ""
     end
 
@@ -452,16 +625,20 @@ function plot_irf(𝓂::ℳ;
             if !(all(isapprox.(Y[i,:,shock],0,atol = eps(Float32))))
                 push!(pp,begin
                                 StatsPlots.plot(Y[i,:,shock] .+ SS,
-                                                title = string(𝓂.timings.var[var_idx[i]]),
+                                                title = replace_indices_in_symbol(𝓂.timings.var[var_idx[i]]),
                                                 ylabel = "Level",
                                                 label = "")
+
                                 if can_dual_axis
                                     StatsPlots.plot!(StatsPlots.twinx(), 
                                                         100*((Y[i,:,shock] .+ SS) ./ SS .- 1), 
                                                         ylabel = LaTeXStrings.L"\% \Delta", 
                                                         label = "") 
                                 end
-                                StatsPlots.hline!(gr_back ? [SS 0] : [SS], color = :black, label = "")                               
+
+                                StatsPlots.hline!(can_dual_axis ? [SS 0] : [SS], 
+                                                    color = :black, 
+                                                    label = "")                               
                 end)
 
                 if !(plot_count % plots_per_page == 0)
@@ -475,9 +652,9 @@ function plot_irf(𝓂::ℳ;
                     elseif shocks == :none
                         shock_string = ""
                         shock_name = "no_shock"
-                    elseif shocks isa Symbol_input
-                        shock_string = ": " * string(𝓂.timings.exo[shock_idx[shock]])
-                        shock_name = string(𝓂.timings.exo[shock_idx[shock]])
+                    elseif shocks isa Union{Symbol_input,String_input}
+                        shock_string = ": " * replace_indices_in_symbol(𝓂.timings.exo[shock_idx[shock]])
+                        shock_name = replace_indices_in_symbol(𝓂.timings.exo[shock_idx[shock]])
                     else
                         shock_string = "Series of shocks"
                         shock_name = "shock_matrix"
@@ -509,15 +686,15 @@ function plot_irf(𝓂::ℳ;
             elseif shocks == :none
                 shock_string = ""
                 shock_name = "no_shock"
-            elseif shocks isa Symbol_input
-                shock_string = ": " * string(𝓂.timings.exo[shock_idx[shock]])
-                shock_name = string(𝓂.timings.exo[shock_idx[shock]])
+            elseif shocks isa Union{Symbol_input,String_input}
+                shock_string = ": " * replace_indices_in_symbol(𝓂.timings.exo[shock_idx[shock]])
+                shock_name = replace_indices_in_symbol(𝓂.timings.exo[shock_idx[shock]])
             else
                 shock_string = "Series of shocks"
                 shock_name = "shock_matrix"
             end
 
-            p = StatsPlots.plot(pp...,plot_title = "Model: "*𝓂.model_name*"        " * shock_dir *  shock_string*"  ("*string(pane)*"/"*string(Int(ceil(n_subplots/plots_per_page)))*")")
+            p = StatsPlots.plot(pp...,plot_title = "Model: "*𝓂.model_name*"        " * shock_dir *  shock_string * "  (" * string(pane) * "/" * string(Int(ceil(n_subplots/plots_per_page)))*")")
 
             push!(return_plots,p)
 
@@ -537,6 +714,13 @@ end
 
 
 
+# """
+# See [`plot_irf`](@ref)
+# """
+# plot(𝓂::ℳ; kwargs...) = plot_irf(𝓂; kwargs...)
+
+# plot(args...;kwargs...) = StatsPlots.plot(args...;kwargs...) #fallback
+
 """
 See [`plot_irf`](@ref)
 """
@@ -553,6 +737,11 @@ plot_irfs = plot_irf
 Wrapper for [`plot_irf`](@ref) with `shocks = :simulate` and `periods = 100`.
 """
 plot_simulations(args...; kwargs...) =  plot_irf(args...; kwargs..., shocks = :simulate, periods = 100)
+
+"""
+Wrapper for [`plot_irf`](@ref) with `shocks = :simulate` and `periods = 100`.
+"""
+plot_simulation(args...; kwargs...) =  plot_irf(args...; kwargs..., shocks = :simulate, periods = 100)
 
 
 """
@@ -578,8 +767,8 @@ The vertical axis shows the share of the shocks variance contribution, and horiz
 - $PARAMETERS
 - `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
 - `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
-- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
 - `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
+- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
 - `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
 - $VERBOSE
 
@@ -614,7 +803,7 @@ plot_conditional_variance_decomposition(RBC_CME)
 """
 function plot_conditional_variance_decomposition(𝓂::ℳ;
     periods::Int = 40, 
-    variables::Symbol_input = :all,
+    variables::Union{Symbol_input,String_input} = :all,
     parameters = nothing,
     show_plots::Bool = true,
     save_plots::Bool = false,
@@ -638,7 +827,13 @@ function plot_conditional_variance_decomposition(𝓂::ℳ;
                                                     parameters = parameters,
                                                     verbose = verbose)
 
+    variables = variables isa String_input ? variables .|> Meta.parse .|> replace_indices : variables
+
     var_idx = parse_variables_input_to_index(variables, 𝓂.timings)
+
+    fevds = fevds isa KeyedArray ? axiskeys(fevds,1) isa Vector{String} ? rekey(fevds, 1 => axiskeys(fevds,1) .|> Meta.parse .|> replace_indices) : fevds : fevds
+
+    fevds = fevds isa KeyedArray ? axiskeys(fevds,2) isa Vector{String} ? rekey(fevds, 2 => axiskeys(fevds,2) .|> Meta.parse .|> replace_indices) : fevds : fevds
 
     vars_to_plot = intersect(axiskeys(fevds)[1],𝓂.timings.var[var_idx])
     
@@ -651,11 +846,10 @@ function plot_conditional_variance_decomposition(𝓂::ℳ;
     return_plots = []
 
     for k in vars_to_plot
-
         if gr_back
-            push!(pp,StatsPlots.groupedbar(fevds(k,:,:)', title = string(k), bar_position = :stack, legend = :none))
+            push!(pp,StatsPlots.groupedbar(fevds(k,:,:)', title = replace_indices_in_symbol(k), bar_position = :stack, legend = :none))
         else
-            push!(pp,StatsPlots.groupedbar(fevds(k,:,:)', title = string(k), bar_position = :stack, label = reshape(string.(shocks_to_plot),1,length(shocks_to_plot))))
+            push!(pp,StatsPlots.groupedbar(fevds(k,:,:)', title = replace_indices_in_symbol(k), bar_position = :stack, label = reshape(string.(replace_indices_in_symbol.(shocks_to_plot)),1,length(shocks_to_plot))))
         end
 
         if !(plot_count % plots_per_page == 0)
@@ -666,7 +860,7 @@ function plot_conditional_variance_decomposition(𝓂::ℳ;
             ppp = StatsPlots.plot(pp...)
 
             p = StatsPlots.plot(ppp,StatsPlots.bar(fill(0,1,length(shocks_to_plot)), 
-                                        label = reshape(string.(shocks_to_plot),1,length(shocks_to_plot)), 
+                                        label = reshape(string.(replace_indices_in_symbol.(shocks_to_plot)),1,length(shocks_to_plot)), 
                                         linewidth = 0 , 
                                         framestyle = :none, 
                                         legend = :inside, 
@@ -693,7 +887,7 @@ function plot_conditional_variance_decomposition(𝓂::ℳ;
         ppp = StatsPlots.plot(pp...)
 
         p = StatsPlots.plot(ppp,StatsPlots.bar(fill(0,1,length(shocks_to_plot)), 
-                                    label = reshape(string.(shocks_to_plot),1,length(shocks_to_plot)), 
+                                    label = reshape(string.(replace_indices_in_symbol.(shocks_to_plot)),1,length(shocks_to_plot)), 
                                     linewidth = 0 , 
                                     framestyle = :none, 
                                     legend = :inside, 
@@ -737,19 +931,21 @@ Plot the solution of the model (mapping of past states to present variables) aro
 
 The (non) stochastic steady state is plotted along with the mapping from the chosen past state to one present variable per plot. All other (non-chosen) states remain in the (non) stochastic steady state.
 
+In the case of pruned solutions there as many (latent) state vectors as the perturbation order. The first and third order baseline state vectors are the non stochastic steady state and the second order baseline state vector is the stochastic steady state. Deviations for the chosen state are only added to the first order baseline state. The plot shows the mapping from `σ` standard deviations (first order) added to the first order non stochastic steady state and the present variables. Note that there is no unique mapping from the "pruned" states and the "actual" reported state. Hence, the plots shown are just one realisation of inifite possible mappings.
+
 # Arguments
 - $MODEL
 - `state` [Type: `Symbol`]: state variable to be shown on x-axis.
 # Keyword Arguments
 - $VARIABLES
-- `algorithm` [Default: `:first_order`, Type: Union{Symbol,Vector{Symbol}}]: solution algorithm for which to show the IRFs. Can be more than one: `[:second_order,:third_order]`"
+- `algorithm` [Default: `:first_order`, Type: Union{Symbol,Vector{Symbol}}]: solution algorithm for which to show the IRFs. Can be more than one, e.g.: `[:second_order,:pruned_third_order]`"
 - `σ` [Default: `2`, Type: `Union{Int64,Float64}`]: defines the range of the state variable around the (non) stochastic steady state in standard deviations. E.g. a value of 2 means that the state variable is plotted for values of the (non) stochastic steady state in standard deviations +/- 2 standard deviations.
 - $PARAMETERS
 - `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
 - `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
-- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
 - `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
-- `plots_per_page` [Default: `4`, Type: `Int`]: how many plots to show per page
+- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
+- `plots_per_page` [Default: `6`, Type: `Int`]: how many plots to show per page
 - $VERBOSE
 
 # Examples
@@ -783,7 +979,7 @@ plot_solution(RBC_CME, :k)
 """
 function plot_solution(𝓂::ℳ,
     state::Symbol;
-    variables::Symbol_input = :all,
+    variables::Union{Symbol_input,String_input} = :all,
     algorithm::Union{Symbol,Vector{Symbol}} = :first_order,
     σ::Union{Int64,Float64} = 2,
     parameters = nothing,
@@ -804,41 +1000,47 @@ function plot_solution(𝓂::ℳ,
 
     @assert state ∈ 𝓂.timings.past_not_future_and_mixed "Invalid state. Choose one from:"*repr(𝓂.timings.past_not_future_and_mixed)
 
-    @assert length(setdiff(algorithm isa Symbol ? [algorithm] : algorithm, [:third_order, :second_order, :first_order])) == 0 "Invalid algorithm. Choose any combination of: :third_order, :second_order, :first_order"
+    @assert length(setdiff(algorithm isa Symbol ? [algorithm] : algorithm, [:third_order, :pruned_third_order, :second_order, :pruned_second_order, :first_order])) == 0 "Invalid algorithm. Choose any combination of: :third_order, :pruned_third_order, :second_order, :pruned_second_order, :first_order"
 
     if algorithm isa Symbol
-        max_algorithm = algorithm
-        min_algorithm = algorithm
+        solve!(𝓂, verbose = verbose, algorithm = algorithm, dynamics = true, parameters = parameters)
         algorithm = [algorithm]
     else
-        if :third_order ∈ algorithm 
-            max_algorithm = :third_order 
-        elseif :second_order ∈ algorithm 
-            max_algorithm = :second_order 
+        if :third_order ∈ algorithm && :pruned_third_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :third_order, dynamics = true, parameters = parameters)
+            solve!(𝓂, verbose = verbose, algorithm = :pruned_third_order, dynamics = true, parameters = parameters)
+        elseif :third_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :third_order, dynamics = true, parameters = parameters)
+        elseif :pruned_third_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :pruned_third_order, dynamics = true, parameters = parameters)
+        elseif :second_order ∈ algorithm && :pruned_second_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :second_order, dynamics = true, parameters = parameters)
+            solve!(𝓂, verbose = verbose, algorithm = :pruned_second_order, dynamics = true, parameters = parameters)
+        elseif :second_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :second_order, dynamics = true, parameters = parameters)
+        elseif :pruned_second_order ∈ algorithm
+            solve!(𝓂, verbose = verbose, algorithm = :pruned_second_order, dynamics = true, parameters = parameters)
         else 
-            max_algorithm = :first_order 
-        end
-
-        if :first_order ∈ algorithm 
-            min_algorithm = :first_order 
-        elseif :second_order ∈ algorithm 
-            min_algorithm = :second_order 
-        else 
-            min_algorithm = :third_order 
+            solve!(𝓂, verbose = verbose, algorithm = :first_order, dynamics = true, parameters = parameters)
         end
     end
-
-    solve!(𝓂, verbose = verbose, algorithm = max_algorithm, dynamics = true, parameters = parameters)
 
     SS_and_std = get_moments(𝓂, 
                             derivatives = false,
                             parameters = parameters,
+                            variables = :all,
                             verbose = verbose)
 
+    SS_and_std[1] = SS_and_std[1] isa KeyedArray ? axiskeys(SS_and_std[1],1) isa Vector{String} ? rekey(SS_and_std[1], 1 => axiskeys(SS_and_std[1],1).|> x->Symbol.(replace.(x, "{" => "◖", "}" => "◗"))) : SS_and_std[1] : SS_and_std[1]
+    
+    SS_and_std[2] = SS_and_std[2] isa KeyedArray ? axiskeys(SS_and_std[2],1) isa Vector{String} ? rekey(SS_and_std[2], 1 => axiskeys(SS_and_std[2],1).|> x->Symbol.(replace.(x, "{" => "◖", "}" => "◗"))) : SS_and_std[2] : SS_and_std[2]
 
     full_NSSS = sort(union(𝓂.var,𝓂.aux,𝓂.exo_present))
     full_NSSS[indexin(𝓂.aux,full_NSSS)] = map(x -> Symbol(replace(string(x), r"ᴸ⁽⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+⁾" => "")),  𝓂.aux)
+
     full_SS = [s ∈ 𝓂.exo_present ? 0 : SS_and_std[1](s) for s in full_NSSS]
+
+    variables = variables isa String_input ? variables .|> Meta.parse .|> replace_indices : variables
 
     var_idx = parse_variables_input_to_index(variables, 𝓂.timings)
 
@@ -856,6 +1058,7 @@ function plot_solution(𝓂::ℳ,
 
     
     legend_plot = StatsPlots.plot(framestyle = :none) 
+
     if :first_order ∈ algorithm          
         StatsPlots.plot!(fill(0,1,1), 
         framestyle = :none, 
@@ -868,11 +1071,23 @@ function plot_solution(𝓂::ℳ,
         legend = :inside, 
         label = "2nd order perturbation")
     end
+    if :pruned_second_order ∈ algorithm    
+        StatsPlots.plot!(fill(0,1,1), 
+        framestyle = :none, 
+        legend = :inside, 
+        label = "Pruned 2nd order perturbation")
+    end
     if :third_order ∈ algorithm    
         StatsPlots.plot!(fill(0,1,1), 
         framestyle = :none, 
         legend = :inside, 
         label = "3rd order perturbation")
+    end
+    if :pruned_third_order ∈ algorithm    
+        StatsPlots.plot!(fill(0,1,1), 
+        framestyle = :none, 
+        legend = :inside, 
+        label = "Pruned 3rd order perturbation")
     end
 
     if :first_order ∈ algorithm   
@@ -882,17 +1097,38 @@ function plot_solution(𝓂::ℳ,
         label = "Non Stochastic Steady State")
     end
     if :second_order ∈ algorithm    
+        SSS2 = 𝓂.solution.perturbation.second_order.stochastic_steady_state
+
         StatsPlots.scatter!(fill(0,1,1), 
         framestyle = :none, 
         legend = :inside, 
         label = "Stochastic Steady State (2nd order)")
     end
+    if :pruned_second_order ∈ algorithm    
+        SSS2p = 𝓂.solution.perturbation.pruned_second_order.stochastic_steady_state
+
+        StatsPlots.scatter!(fill(0,1,1), 
+        framestyle = :none, 
+        legend = :inside, 
+        label = "Stochastic Steady State (Pruned 2nd order)")
+    end
     if :third_order ∈ algorithm    
+        SSS3 = 𝓂.solution.perturbation.third_order.stochastic_steady_state
+
         StatsPlots.scatter!(fill(0,1,1), 
         framestyle = :none, 
         legend = :inside, 
         label = "Stochastic Steady State (3rd order)")
     end
+    if :pruned_third_order ∈ algorithm    
+        SSS3p = 𝓂.solution.perturbation.pruned_third_order.stochastic_steady_state
+
+        StatsPlots.scatter!(fill(0,1,1), 
+        framestyle = :none, 
+        legend = :inside, 
+        label = "Stochastic Steady State (Pruned 3rd order)")
+    end
+
     StatsPlots.scatter!(fill(0,1,1), 
     label = "", 
     marker = :rect,
@@ -904,12 +1140,24 @@ function plot_solution(𝓂::ℳ,
     framestyle = :none, 
     legend = :inside)
 
+    variable_first_list = []
+    variable_second_list = []
+    variable_pruned_second_list = []
+    variable_third_list = []
+    variable_pruned_third_list = []
+    has_impact_list = []
 
     for k in vars_to_plot
-
         kk = Symbol(replace(string(k), r"ᴸ⁽⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+⁾" => ""))
 
         has_impact = false
+
+        variable_first = []
+        variable_second = []
+        variable_pruned_second = []
+        variable_third = []
+        variable_pruned_third = []
+
         if :first_order ∈ algorithm
             variable_first = [𝓂.solution.perturbation.first_order.state_update(state_selector * x, zeros(𝓂.timings.nExo))[indexin([k],𝓂.timings.var)][1] for x in state_range]
 
@@ -919,18 +1167,22 @@ function plot_solution(𝓂::ℳ,
         end
 
         if :second_order ∈ algorithm
-            SSS2 = 𝓂.solution.perturbation.second_order.stochastic_steady_state
-
             variable_second = [𝓂.solution.perturbation.second_order.state_update(SSS2 - full_SS .+ state_selector * x, zeros(𝓂.timings.nExo))[indexin([k],𝓂.timings.var)][1] for x in state_range]
 
             variable_second = [(abs(x) > eps() ? x : 0.0) + SS_and_std[1](kk) for x in variable_second]
 
             has_impact = has_impact || sum(abs2,variable_second .- sum(variable_second)/length(variable_second))/(length(variable_second)-1) > eps()
         end
+        
+        if :pruned_second_order ∈ algorithm
+            variable_pruned_second = [𝓂.solution.perturbation.pruned_second_order.state_update([state_selector * x, SSS2p - full_SS], zeros(𝓂.timings.nExo))[indexin([k],𝓂.timings.var)][1] for x in state_range]
+
+            variable_pruned_second = [(abs(x) > eps() ? x : 0.0) + SS_and_std[1](kk) for x in variable_pruned_second]
+
+            has_impact = has_impact || sum(abs2,variable_pruned_second .- sum(variable_pruned_second)/length(variable_pruned_second))/(length(variable_pruned_second)-1) > eps()
+        end
 
         if :third_order ∈ algorithm
-            SSS3 = 𝓂.solution.perturbation.third_order.stochastic_steady_state
-
             variable_third = [𝓂.solution.perturbation.third_order.state_update(SSS3 - full_SS .+ state_selector * x, zeros(𝓂.timings.nExo))[indexin([k],𝓂.timings.var)][1] for x in state_range]
 
             variable_third = [(abs(x) > eps() ? x : 0.0) + SS_and_std[1](kk) for x in variable_third]
@@ -938,29 +1190,66 @@ function plot_solution(𝓂::ℳ,
             has_impact = has_impact || sum(abs2,variable_third .- sum(variable_third)/length(variable_third))/(length(variable_third)-1) > eps()
         end
 
-        if !has_impact continue end
+        if :pruned_third_order ∈ algorithm
+            variable_pruned_third = [𝓂.solution.perturbation.pruned_third_order.state_update([state_selector * x, SSS3p - full_SS, zero(state_selector) * x], zeros(𝓂.timings.nExo))[indexin([k],𝓂.timings.var)][1] for x in state_range]
+
+            variable_pruned_third = [(abs(x) > eps() ? x : 0.0) + SS_and_std[1](kk) for x in variable_pruned_third]
+
+            has_impact = has_impact || sum(abs2,variable_pruned_third .- sum(variable_pruned_third)/length(variable_pruned_third))/(length(variable_pruned_third)-1) > eps()
+        end
+
+        push!(variable_first_list,  variable_first)
+        push!(variable_second_list, variable_second)
+        push!(variable_pruned_second_list, variable_pruned_second)
+        push!(variable_third_list,  variable_third)
+        push!(variable_pruned_third_list,  variable_pruned_third)
+        push!(has_impact_list,      has_impact)
+
+        if !has_impact
+            n_subplots -= 1
+        end
+    end
+
+    for (i,k) in enumerate(vars_to_plot)
+        kk = Symbol(replace(string(k), r"ᴸ⁽⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+⁾" => ""))
+
+        if !has_impact_list[i] continue end
 
         push!(pp,begin
                         Pl = StatsPlots.plot() 
                         if :first_order ∈ algorithm
                                 StatsPlots.plot!(state_range .+ SS_and_std[1](state), 
-                                variable_first, 
-                                ylabel = string(k)*"₍₀₎", 
-                                xlabel = string(state)*"₍₋₁₎", 
+                                variable_first_list[i], 
+                                ylabel = replace_indices_in_symbol(k)*"₍₀₎", 
+                                xlabel = replace_indices_in_symbol(state)*"₍₋₁₎", 
                                 label = "")
                         end
                         if :second_order ∈ algorithm
                                 StatsPlots.plot!(state_range .+ SSS2[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1], 
-                                variable_second, 
-                                ylabel = string(k)*"₍₀₎", 
-                                xlabel = string(state)*"₍₋₁₎", 
+                                variable_second_list[i], 
+                                ylabel = replace_indices_in_symbol(k)*"₍₀₎", 
+                                xlabel = replace_indices_in_symbol(state)*"₍₋₁₎", 
+                                label = "")
+                        end
+                        if :pruned_second_order ∈ algorithm
+                                StatsPlots.plot!(state_range .+ SSS2p[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1], 
+                                variable_pruned_second_list[i], 
+                                ylabel = replace_indices_in_symbol(k)*"₍₀₎", 
+                                xlabel = replace_indices_in_symbol(state)*"₍₋₁₎", 
                                 label = "")
                         end
                         if :third_order ∈ algorithm
                                 StatsPlots.plot!(state_range .+ SSS3[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1], 
-                                variable_third, 
-                                ylabel = string(k)*"₍₀₎", 
-                                xlabel = string(state)*"₍₋₁₎", 
+                                variable_third_list[i], 
+                                ylabel = replace_indices_in_symbol(k)*"₍₀₎", 
+                                xlabel = replace_indices_in_symbol(state)*"₍₋₁₎", 
+                                label = "")
+                        end
+                        if :pruned_third_order ∈ algorithm
+                                StatsPlots.plot!(state_range .+ SSS3p[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1], 
+                                variable_pruned_third_list[i], 
+                                ylabel = replace_indices_in_symbol(k)*"₍₀₎", 
+                                xlabel = replace_indices_in_symbol(state)*"₍₋₁₎", 
                                 label = "")
                         end
 
@@ -972,8 +1261,16 @@ function plot_solution(𝓂::ℳ,
                             StatsPlots.scatter!([SSS2[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], [SSS2[indexin([k],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], 
                             label = "")
                         end
+                        if :pruned_second_order ∈ algorithm
+                            StatsPlots.scatter!([SSS2p[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], [SSS2p[indexin([k],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], 
+                            label = "")
+                        end
                         if :third_order ∈ algorithm
                             StatsPlots.scatter!([SSS3[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], [SSS3[indexin([k],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], 
+                            label = "")
+                        end
+                        if :pruned_third_order ∈ algorithm
+                            StatsPlots.scatter!([SSS3p[indexin([state],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], [SSS3p[indexin([k],sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)))][1]], 
                             label = "")
                         end
 
@@ -989,7 +1286,7 @@ function plot_solution(𝓂::ℳ,
             
             p = StatsPlots.plot(ppp,
                             legend_plot, 
-                            layout = StatsPlots.grid(2, 1, heights=[0.8, 0.2]),
+                            layout = StatsPlots.grid(2, 1, heights = length(algorithm) > 3 ? [0.65, 0.35] : [0.8, 0.2]),
                             plot_title = "Model: "*𝓂.model_name*"  ("*string(pane)*"/"*string(Int(ceil(n_subplots/plots_per_page)))*")"
             )
 
@@ -1013,7 +1310,7 @@ function plot_solution(𝓂::ℳ,
             
         p = StatsPlots.plot(ppp,
                         legend_plot, 
-                        layout = StatsPlots.grid(2, 1, heights=[0.8, 0.2]),
+                        layout = StatsPlots.grid(2, 1, heights = length(algorithm) > 3 ? [0.65, 0.35] : [0.8, 0.2]),
                         plot_title = "Model: "*𝓂.model_name*"  ("*string(pane)*"/"*string(Int(ceil(n_subplots/plots_per_page)))*")"
         )
 
@@ -1045,14 +1342,16 @@ Limited to the first order perturbation solution of the model.
 - $CONDITIONS
 # Keyword Arguments
 - $SHOCK_CONDITIONS
+- $INITIAL_STATE
 - `periods` [Default: `40`, Type: `Int`]: the total number of periods is the sum of the argument provided here and the maximum of periods of the shocks or conditions argument.
+- $PARAMETERS
 - $VARIABLES
-`conditions_in_levels` [Default: `false`, Type: `Bool`]: indicator whether the conditions are provided in levels. If `true` the input to the conditions argument will have the non stochastic steady state substracted.
+`conditions_in_levels` [Default: `true`, Type: `Bool`]: indicator whether the conditions are provided in levels. If `true` the input to the conditions argument will have the non stochastic steady state substracted.
 - $LEVELS
 - `show_plots` [Default: `true`, Type: `Bool`]: show plots. Separate plots per shocks and varibles depending on number of variables and `plots_per_page`.
 - `save_plots` [Default: `false`, Type: `Bool`]: switch to save plots using path and extension from `save_plots_path` and `save_plots_format`. Separate files per shocks and variables depending on number of variables and `plots_per_page`
-- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
 - `save_plots_format` [Default: `:pdf`, Type: `Symbol`]: output format of saved plots. See [input formats compatible with GR](https://docs.juliaplots.org/latest/output/#Supported-output-file-formats) for valid formats.
+- `save_plots_path` [Default: `pwd()`, Type: `String`]: path where to save plots
 - `plots_per_page` [Default: `9`, Type: `Int`]: how many plots to show per page
 - $VERBOSE
 
@@ -1091,7 +1390,7 @@ conditions[2,2] = .02
 shocks = Matrix{Union{Nothing,Float64}}(undef,2,1)
 shocks[1,1] = .05
 
-plot_conditional_forecast(RBC_CME, conditions, shocks = shocks)
+plot_conditional_forecast(RBC_CME, conditions, shocks = shocks, conditions_in_levels = false)
 
 # The same can be achieved with the other input formats:
 # conditions = Matrix{Union{Nothing,Float64}}(undef,7,2)
@@ -1114,10 +1413,11 @@ plot_conditional_forecast(RBC_CME, conditions, shocks = shocks)
 function plot_conditional_forecast(𝓂::ℳ,
     conditions::Union{Matrix{Union{Nothing,Float64}}, SparseMatrixCSC{Float64}, KeyedArray{Union{Nothing,Float64}}, KeyedArray{Float64}};
     shocks::Union{Matrix{Union{Nothing,Float64}}, SparseMatrixCSC{Float64}, KeyedArray{Union{Nothing,Float64}}, KeyedArray{Float64}, Nothing} = nothing, 
+    initial_state::Vector{Float64} = [0.0],
     periods::Int = 40, 
     parameters = nothing,
-    variables::Symbol_input = :all_including_auxilliary, 
-    conditions_in_levels::Bool = false,
+    variables::Union{Symbol_input,String_input} = :all_excluding_obc, 
+    conditions_in_levels::Bool = true,
     levels::Bool = false,
     show_plots::Bool = true,
     save_plots::Bool = false,
@@ -1136,9 +1436,14 @@ function plot_conditional_forecast(𝓂::ℳ,
                     tickfontsize = 8,
                     framestyle = :box)
 
+    conditions = conditions isa KeyedArray ? axiskeys(conditions,1) isa Vector{String} ? rekey(conditions, 1 => axiskeys(conditions,1) .|> Meta.parse .|> replace_indices) : conditions : conditions
+
+    shocks = shocks isa KeyedArray ? axiskeys(shocks,1) isa Vector{String} ? rekey(shocks, 1 => axiskeys(shocks,1) .|> Meta.parse .|> replace_indices) : shocks : shocks
+
     Y = get_conditional_forecast(𝓂,
                                 conditions,
                                 shocks = shocks, 
+                                initial_state = initial_state,
                                 periods = periods, 
                                 parameters = parameters,
                                 variables = variables, 
@@ -1150,9 +1455,11 @@ function plot_conditional_forecast(𝓂::ℳ,
 
     full_SS = vcat(sort(union(𝓂.var,𝓂.aux,𝓂.exo_present)),map(x->Symbol(string(x) * "₍ₓ₎"),𝓂.timings.exo))
 
-    NSSS, solution_error = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose) : (𝓂.solution.non_stochastic_steady_state, eps())
+    NSSS, (solution_error, iters) = 𝓂.solution.outdated_NSSS ? 𝓂.SS_solve_func(𝓂.parameter_values, 𝓂, verbose, false, 𝓂.solver_parameters) : (𝓂.solution.non_stochastic_steady_state, (eps(), 0))
     
     var_names = axiskeys(Y,1)   
+
+    var_names = var_names isa Vector{String} ? var_names .|> replace_indices : var_names
 
     var_idx = indexin(var_names,full_SS)
 
@@ -1218,7 +1525,7 @@ function plot_conditional_forecast(𝓂::ℳ,
     return_plots = []
 
     for i in 1:length(var_idx)
-        if all(isapprox.(Y[i,:], 0, atol = eps(Float32)))
+        if all(isapprox.(Y[i,:], 0, atol = eps(Float32))) && !(any(vcat(conditions,shocks)[var_idx[i],:] .!= nothing))
             n_subplots -= 1
         end
     end
@@ -1226,75 +1533,45 @@ function plot_conditional_forecast(𝓂::ℳ,
     for i in 1:length(var_idx)
         SS = reference_steady_state[i]
         if !(all(isapprox.(Y[i,:],0,atol = eps(Float32)))) || length(findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)) > 0
-            if !(plot_count % plots_per_page == 0)
-                plot_count += 1
-                if all((Y[i,:] .+ SS) .> eps(Float32)) & (SS > eps(Float32))
-                    cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
-                    if length(cond_idx) > 0
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS,title = string(full_SS[var_idx[i]]),ylabel = "Level",label = "")
-                                    if gr_back StatsPlots.plot!(StatsPlots.twinx(),1:periods, 100*((Y[i,:] .+ SS) ./ SS .- 1), ylabel = LaTeXStrings.L"\% \Delta", label = "") end
-                                    StatsPlots.hline!(gr_back ? [SS 0] : [SS], color = :black, label = "") 
-                                    StatsPlots.scatter!(cond_idx,vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)                             
-                        end)
-                    else
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS,title = string(full_SS[var_idx[i]]),ylabel = "Level",label = "")
-                                    if gr_back StatsPlots.plot!(StatsPlots.twinx(),1:periods, 100*((Y[i,:] .+ SS) ./ SS .- 1), ylabel = LaTeXStrings.L"\% \Delta", label = "") end
-                                    StatsPlots.hline!(gr_back ? [SS 0] : [SS], color = :black, label = "")                         
-                        end)
-                    end
-                else
-                    cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
-                    if length(cond_idx) > 0
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = string(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
-                                    StatsPlots.hline!([SS], color = :black, label = "")
-                                    StatsPlots.scatter!(cond_idx,vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)   
-                        end)
-                    else
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = string(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
-                                    StatsPlots.hline!([SS], color = :black, label = "")
-                        end)
-                    end
+        
+            if all((Y[i,:] .+ SS) .> eps(Float32)) & (SS > eps(Float32))
+                cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
 
-                end
-            else
-
-                plot_count = 1
-                if all((Y[i,:] .+ SS) .> eps(Float32)) & (SS > eps(Float32))
-                    cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
-                    if length(cond_idx) > 0
+                if length(cond_idx) > 0
                     push!(pp,begin
-                                StatsPlots.plot(1:periods, Y[i,:] .+ SS,title = string(full_SS[var_idx[i]]),ylabel = "Level",label = "")
+                                StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = replace_indices_in_symbol(full_SS[var_idx[i]]), ylabel = "Level", label = "")
                                 if gr_back StatsPlots.plot!(StatsPlots.twinx(),1:periods, 100*((Y[i,:] .+ SS) ./ SS .- 1), ylabel = LaTeXStrings.L"\% \Delta", label = "") end
                                 StatsPlots.hline!(gr_back ? [SS 0] : [SS],color = :black,label = "")   
-                                StatsPlots.scatter!(cond_idx,vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)                            
+                                StatsPlots.scatter!(cond_idx, conditions_in_levels ? vcat(conditions,shocks)[var_idx[i],cond_idx] : vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)                            
                     end)
                 else
                     push!(pp,begin
-                                StatsPlots.plot(1:periods, Y[i,:] .+ SS,title = string(full_SS[var_idx[i]]),ylabel = "Level",label = "")
+                                StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = replace_indices_in_symbol(full_SS[var_idx[i]]), ylabel = "Level", label = "")
                                 if gr_back StatsPlots.plot!(StatsPlots.twinx(),1:periods, 100*((Y[i,:] .+ SS) ./ SS .- 1), ylabel = LaTeXStrings.L"\% \Delta", label = "") end
                                 StatsPlots.hline!(gr_back ? [SS 0] : [SS],color = :black,label = "")                              
                     end)
                 end
-                else
-                    cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
-                    if length(cond_idx) > 0
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = string(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
-                                    StatsPlots.hline!([SS], color = :black, label = "")
-                                    StatsPlots.scatter!(cond_idx,vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)  
-                        end)
-                    else 
-                        push!(pp,begin
-                                    StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = string(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
-                                    StatsPlots.hline!([SS], color = :black, label = "")
-                        end)
-                    end
-
+            else
+                cond_idx = findall(vcat(conditions,shocks)[var_idx[i],:] .!= nothing)
+                if length(cond_idx) > 0
+                    push!(pp,begin
+                                StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = replace_indices_in_symbol(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
+                                StatsPlots.hline!([SS], color = :black, label = "")
+                                StatsPlots.scatter!(cond_idx, conditions_in_levels ? vcat(conditions,shocks)[var_idx[i],cond_idx] : vcat(conditions,shocks)[var_idx[i],cond_idx] .+ SS, label = "",marker = :star8, markercolor = :black)  
+                    end)
+                else 
+                    push!(pp,begin
+                                StatsPlots.plot(1:periods, Y[i,:] .+ SS, title = replace_indices_in_symbol(full_SS[var_idx[i]]), label = "", ylabel = "Level")#, rightmargin = 17mm)#,label = reshape(String.(𝓂.timings.solution.algorithm),1,:)
+                                StatsPlots.hline!([SS], color = :black, label = "")
+                    end)
                 end
+
+            end
+
+            if !(plot_count % plots_per_page == 0)
+                plot_count += 1
+            else
+                plot_count = 1
 
                 shock_string = "Conditional forecast"
 
@@ -1322,7 +1599,7 @@ function plot_conditional_forecast(𝓂::ℳ,
                                             legend = :inside)
                                         end, 
                                             layout = StatsPlots.grid(2, 1, heights=[0.99, 0.01]),
-                                            plot_title = "Model: "*𝓂.model_name*"        " * shock_string *"  ("*string(pane)*"/"*string(Int(ceil(n_subplots/plots_per_page)))*")")
+                                            plot_title = "Model: "*𝓂.model_name*"        " * shock_string * "  ("*string(pane) * "/" * string(Int(ceil(n_subplots/plots_per_page)))*")")
                 
                 push!(return_plots,p)
 
@@ -1367,7 +1644,7 @@ function plot_conditional_forecast(𝓂::ℳ,
                                 legend = :inside)
                                 end, 
                                     layout = StatsPlots.grid(2, 1, heights=[0.99, 0.01]),
-                                    plot_title = "Model: "*𝓂.model_name*"        " * shock_string *"  ("*string(pane)*"/"*string(Int(ceil(n_subplots/plots_per_page)))*")")
+                                    plot_title = "Model: "*𝓂.model_name*"        " * shock_string * "  (" * string(pane) * "/" * string(Int(ceil(n_subplots/plots_per_page)))*")")
         
         push!(return_plots,p)
 
