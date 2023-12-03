@@ -1,6 +1,16 @@
+### A Pluto.jl notebook ###
+# v0.19.32
 
-#using MacroModelling
+using Markdown
+using InteractiveUtils
 
+# ╔═╡ d93e2dfc-a0be-4dba-8526-b6bd0301a49a
+#import Pkg; Pkg.add("MacroModelling")
+
+# ╔═╡ 3e1ebba0-9229-11ee-230d-251f23eaf3f4
+using MacroModelling, 
+
+# ╔═╡ 26613261-5fd5-46f4-993d-3442f9f0a6d1
 @model QUEST3_2009_OBC begin
 	interest[0] = ((1 + E_INOM[0]) ^ 4 - interestq_exog ^ 4) / interestq_exog ^ 4
 
@@ -78,7 +88,7 @@
 
 	E_BWRY[0] = E_TBYN[0] + (1 + E_INOM[0] - E_PHI[1] - E_GY[0] - GPOP0) * E_BWRY[-1]
 
-	# exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) # 	- E_TAXYN[0]
+	exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) # 	- E_TAXYN[0]
 
 	E_GG[0] - GY0 = GSLAG * (E_GG[-1] - GY0) + GFLAG * GVECM * (E_LGSN[-1] - log(GSN)) + (E_LYGAP[0] - E_LYGAP[-1]) * GFLAG * G1E + GFLAG * GEXOFLAG * E_ZEPS_G[0] + (1 - GFLAG) * (E_ZEPS_G[0] - E_ZEPS_G[-1])
 
@@ -90,7 +100,7 @@
 
 	# E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
 
-	E_LBGYN[0] = max(BGTAR , log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0])))
+	E_LBGYN[0] = max(BGTAR , - BGADJ1/BGADJ2 * (exp(E_LBGYN[-1]) - BGTAR) + exp(E_LBGYN[-1]))
 
 	E_TW[0] = TW0 * (1 + E_LYGAP[0] * TW1 * TWFLAG)
 
@@ -164,7 +174,7 @@
 
 	E_GL[0] = E_LL[0] - E_LL[-1]
 
-	E_GTAX[0]  =  E_GY[0] + E_PHI[0]  #log(E_TAXYN[0]/E_TAXYN[-1])
+	E_GTAX[0] - E_GY[0] - E_PHI[0] = 0 #log(E_TAXYN[0]/E_TAXYN[-1])
 
 	E_GTFPUCAP[0] = (1 - ALPHAE) * E_GUCAP[0] + ALPHAE * E_GTFP[0]
 
@@ -184,7 +194,7 @@
 
 	E_GSN[0] = exp(E_LGSN[0])
 
-	#E_LTRYN[0] = log(E_TRYN[0])
+	E_LTRYN[0] = log(E_TRYN[0])
 
 	E_PHIC[0] - E_PHI[0] = E_LPCP[0] - E_LPCP[-1]
 
@@ -220,6 +230,8 @@
 
 end
 
+
+# ╔═╡ cdf1bbca-26f0-4987-823a-5fa951181143
 
 @parameters QUEST3_2009_OBC begin
 	STD_EPS_INOMW = 0.0023
@@ -491,9 +503,12 @@ end
 end
 
 
-get_solution(QUEST3_2009_OBC)
+# ╔═╡ bfc386c1-c979-4e85-baee-ed07c1d7d82e
 
-λ = 0.05
-# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
-Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
 
+# ╔═╡ Cell order:
+# ╠═d93e2dfc-a0be-4dba-8526-b6bd0301a49a
+# ╠═3e1ebba0-9229-11ee-230d-251f23eaf3f4
+# ╠═26613261-5fd5-46f4-993d-3442f9f0a6d1
+# ╠═cdf1bbca-26f0-4987-823a-5fa951181143
+# ╠═bfc386c1-c979-4e85-baee-ed07c1d7d82e
