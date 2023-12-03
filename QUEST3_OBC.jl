@@ -4,13 +4,38 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ d93e2dfc-a0be-4dba-8526-b6bd0301a49a
-#import Pkg; Pkg.add("MacroModelling")
+import Pkg; Pkg.add("MacroModelling")
+
+# ╔═╡ d30d80a9-d9af-4e77-a869-870d1dc068e3
+# ╠═╡ disabled = true
+#=╠═╡
+Pkg.add("StatsPlots")
+  ╠═╡ =#
+
+# ╔═╡ 3c798be9-6451-4352-a7be-0fa20d447ace
+# ╠═╡ disabled = true
+#=╠═╡
+Pkg.add("PlutoUI")
+  ╠═╡ =#
 
 # ╔═╡ 3e1ebba0-9229-11ee-230d-251f23eaf3f4
-using MacroModelling, 
+using MacroModelling
 
-# ╔═╡ 26613261-5fd5-46f4-993d-3442f9f0a6d1
+# ╔═╡ 7c4505fa-bd54-41bd-a6cf-974506e38cd7
+using PlutoUI
+
+# ╔═╡ 293b6395-c176-4cbb-acb2-c241a4ac1049
 @model QUEST3_2009_OBC begin
 	interest[0] = ((1 + E_INOM[0]) ^ 4 - interestq_exog ^ 4) / interestq_exog ^ 4
 
@@ -88,7 +113,7 @@ using MacroModelling,
 
 	E_BWRY[0] = E_TBYN[0] + (1 + E_INOM[0] - E_PHI[1] - E_GY[0] - GPOP0) * E_BWRY[-1]
 
-	exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) # 	- E_TAXYN[0]
+	# exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) # 	- E_TAXYN[0]
 
 	E_GG[0] - GY0 = GSLAG * (E_GG[-1] - GY0) + GFLAG * GVECM * (E_LGSN[-1] - log(GSN)) + (E_LYGAP[0] - E_LYGAP[-1]) * GFLAG * G1E + GFLAG * GEXOFLAG * E_ZEPS_G[0] + (1 - GFLAG) * (E_ZEPS_G[0] - E_ZEPS_G[-1])
 
@@ -100,7 +125,7 @@ using MacroModelling,
 
 	# E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
 
-	E_LBGYN[0] = max(BGTAR , - BGADJ1/BGADJ2 * (exp(E_LBGYN[-1]) - BGTAR) + exp(E_LBGYN[-1]))
+	E_LBGYN[0] = max(BGTAR , log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0])))
 
 	E_TW[0] = TW0 * (1 + E_LYGAP[0] * TW1 * TWFLAG)
 
@@ -174,7 +199,7 @@ using MacroModelling,
 
 	E_GL[0] = E_LL[0] - E_LL[-1]
 
-	E_GTAX[0] - E_GY[0] - E_PHI[0] = 0 #log(E_TAXYN[0]/E_TAXYN[-1])
+	E_GTAX[0]  =  E_GY[0] + E_PHI[0]  #log(E_TAXYN[0]/E_TAXYN[-1])
 
 	E_GTFPUCAP[0] = (1 - ALPHAE) * E_GUCAP[0] + ALPHAE * E_GTFP[0]
 
@@ -194,7 +219,7 @@ using MacroModelling,
 
 	E_GSN[0] = exp(E_LGSN[0])
 
-	E_LTRYN[0] = log(E_TRYN[0])
+	#E_LTRYN[0] = log(E_TRYN[0])
 
 	E_PHIC[0] - E_PHI[0] = E_LPCP[0] - E_LPCP[-1]
 
@@ -230,9 +255,7 @@ using MacroModelling,
 
 end
 
-
-# ╔═╡ cdf1bbca-26f0-4987-823a-5fa951181143
-
+# ╔═╡ 18756038-fc73-4792-b741-75f391b7cbad
 @parameters QUEST3_2009_OBC begin
 	STD_EPS_INOMW = 0.0023
 
@@ -502,13 +525,56 @@ end
 
 end
 
-
 # ╔═╡ bfc386c1-c979-4e85-baee-ed07c1d7d82e
+get_solution(QUEST3_2009_OBC)
+
+# ╔═╡ 5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
+λ = 0.05
+
+# ╔═╡ 9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
+Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
+
+# ╔═╡ 872378f6-d023-44bf-8c19-79e7cf8a8cf3
+import StatsPlots
+
+# ╔═╡ bd6673f0-5bd5-449e-8d2c-94b7a26116e1
+@bind L_BGTAR Slider(0:0.01:1.5,default=0.87546873735)
+
+# ╔═╡ f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
+@bind TINFE Slider(1.5:0.01:2.5,default=1.9590)
+
+# ╔═╡ ef733094-1fc1-4f7f-ba66-0cc862c71045
+@bind TYE1 Slider(0:0.01:0.9,default=0.4274)
+
+# ╔═╡ dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
+@bind TYE2 Slider(0:0.01:0.1,default=0.0783)
+
+# ╔═╡ fbead48d-0979-4d39-9116-cc8b1559d09b
+#plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40)[1]
+
+# ╔═╡ 418fc798-09c6-45fd-a8f7-9b02c5d04d45
+(only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:outputgap])).^2)/Loss
+
+# ╔═╡ c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
 
 
 # ╔═╡ Cell order:
 # ╠═d93e2dfc-a0be-4dba-8526-b6bd0301a49a
 # ╠═3e1ebba0-9229-11ee-230d-251f23eaf3f4
-# ╠═26613261-5fd5-46f4-993d-3442f9f0a6d1
-# ╠═cdf1bbca-26f0-4987-823a-5fa951181143
+# ╠═293b6395-c176-4cbb-acb2-c241a4ac1049
+# ╠═18756038-fc73-4792-b741-75f391b7cbad
 # ╠═bfc386c1-c979-4e85-baee-ed07c1d7d82e
+# ╠═5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
+# ╠═9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+# ╠═d30d80a9-d9af-4e77-a869-870d1dc068e3
+# ╠═3c798be9-6451-4352-a7be-0fa20d447ace
+# ╠═7c4505fa-bd54-41bd-a6cf-974506e38cd7
+# ╠═872378f6-d023-44bf-8c19-79e7cf8a8cf3
+# ╠═bd6673f0-5bd5-449e-8d2c-94b7a26116e1
+# ╠═f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
+# ╠═ef733094-1fc1-4f7f-ba66-0cc862c71045
+# ╠═dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
+# ╠═fbead48d-0979-4d39-9116-cc8b1559d09b
+# ╠═418fc798-09c6-45fd-a8f7-9b02c5d04d45
+# ╠═c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
