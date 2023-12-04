@@ -24,7 +24,7 @@
 
 	E_LUCYN[0] - E_LUCYN[-1] = E_GUC[0] + SIGC * (E_GY[0] - GY0 - E_PHIC[0] + E_PHI[0])
 
-	exp(E_LCLCSN[0]) * (1 + TVAT) = (1 - E_TW[0] - SSC) * E_WS[0] + E_WS[0] * E_TRW[0] #- E_TAXYN[0]
+	exp(E_LCLCSN[0]) * (1 + TVAT) = (1 - E_TW[0] - SSC) * E_WS[0] + E_WS[0] * E_TRW[0] - E_TAXYN[0]
 
 	E_WS[0] = exp(E_LL[0] - E_LYWR[0])
 
@@ -88,15 +88,15 @@
 
 	E_TRW[0] = TRSN + TRFLAG * TR1E * (1 - exp(E_LL[0]) - (1 - L0)) + E_ZEPS_TR[0]
 
-	# E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
+	E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
 
-	E_LBGYN[0] = max(BGTAR , log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0])))
+	E_LBGYN[0] = max(BGTAR , log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0])- E_TAXYN[0]))
 
 	E_TW[0] = TW0 * (1 + E_LYGAP[0] * TW1 * TWFLAG)
 
 	E_TRYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0])
 
-	E_TRTAXYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) #- E_TAXYN[0]
+	E_TRTAXYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_TAXYN[0]
 
 	E_WSW[0] = (1 - E_TW[0] - SSC) * E_WS[0]
 
@@ -164,7 +164,7 @@
 
 	E_GL[0] = E_LL[0] - E_LL[-1]
 
-	E_GTAX[0]  =  E_GY[0] + E_PHI[0]  #log(E_TAXYN[0]/E_TAXYN[-1])
+	E_GTAX[0]  - E_GY[0] - E_PHI[0] =   log(E_TAXYN[0]/E_TAXYN[-1])
 
 	E_GTFPUCAP[0] = (1 - ALPHAE) * E_GUCAP[0] + ALPHAE * E_GTFP[0]
 

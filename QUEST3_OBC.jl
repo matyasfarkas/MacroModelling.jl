@@ -35,9 +35,27 @@ using MacroModelling
 # ╔═╡ 7c4505fa-bd54-41bd-a6cf-974506e38cd7
 using PlutoUI
 
+# ╔═╡ a08b270a-8f2f-4537-a1d1-0ba4c379fa4c
+struct MySlider 
+    range::AbstractRange
+    default::Number
+end
+
+# ╔═╡ 28c517fb-e5f0-49ae-a98e-0bfc6f6311ec
+function Base.show(io::IO, ::MIME"text/html", slider::MySlider)
+    print(io, """
+		<input type="range" 
+		min="$(first(slider.range))" 
+		step="$(step(slider.range))"
+		max="$(last(slider.range))" 
+		default="$(slider.default)"
+		oninput="this.nextElementSibling.value=this.value">
+		<output>$(slider.default)</output>""")
+end
+
 # ╔═╡ 293b6395-c176-4cbb-acb2-c241a4ac1049
 @model QUEST3_2009_OBC begin
-	interest[0] = ((1 + E_INOM[0]) ^ 4 - interestq_exog ^ 4) / interestq_exog ^ 4
+		interest[0] = ((1 + E_INOM[0]) ^ 4 - interestq_exog ^ 4) / interestq_exog ^ 4
 
 	inflation[0] = 0.25 * (inflationq[0] + inflationq[-1] + inflationq[-2] + inflationq[-3])
 
@@ -59,7 +77,7 @@ using PlutoUI
 
 	E_LUCYN[0] - E_LUCYN[-1] = E_GUC[0] + SIGC * (E_GY[0] - GY0 - E_PHIC[0] + E_PHI[0])
 
-	exp(E_LCLCSN[0]) * (1 + TVAT) = (1 - E_TW[0] - SSC) * E_WS[0] + E_WS[0] * E_TRW[0] #- E_TAXYN[0]
+	exp(E_LCLCSN[0]) * (1 + TVAT) = (1 - E_TW[0] - SSC) * E_WS[0] + E_WS[0] * E_TRW[0] - E_TAXYN[0]
 
 	E_WS[0] = exp(E_LL[0] - E_LYWR[0])
 
@@ -113,7 +131,7 @@ using PlutoUI
 
 	E_BWRY[0] = E_TBYN[0] + (1 + E_INOM[0] - E_PHI[1] - E_GY[0] - GPOP0) * E_BWRY[-1]
 
-	# exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) # 	- E_TAXYN[0]
+	# exp(E_LBGYN[0]) = exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0]
 
 	E_GG[0] - GY0 = GSLAG * (E_GG[-1] - GY0) + GFLAG * GVECM * (E_LGSN[-1] - log(GSN)) + (E_LYGAP[0] - E_LYGAP[-1]) * GFLAG * G1E + GFLAG * GEXOFLAG * E_ZEPS_G[0] + (1 - GFLAG) * (E_ZEPS_G[0] - E_ZEPS_G[-1])
 
@@ -123,15 +141,15 @@ using PlutoUI
 
 	E_TRW[0] = TRSN + TRFLAG * TR1E * (1 - exp(E_LL[0]) - (1 - L0)) + E_ZEPS_TR[0]
 
-	# E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
+	E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
 
-	E_LBGYN[0] = max(BGTAR , log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0])))
+	E_LBGYN[0] = max(BGTAR ,log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0]))
 
 	E_TW[0] = TW0 * (1 + E_LYGAP[0] * TW1 * TWFLAG)
 
 	E_TRYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0])
 
-	E_TRTAXYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) #- E_TAXYN[0]
+	E_TRTAXYN[0] = E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_TAXYN[0]
 
 	E_WSW[0] = (1 - E_TW[0] - SSC) * E_WS[0]
 
@@ -199,7 +217,7 @@ using PlutoUI
 
 	E_GL[0] = E_LL[0] - E_LL[-1]
 
-	E_GTAX[0]  =  E_GY[0] + E_PHI[0]  #log(E_TAXYN[0]/E_TAXYN[-1])
+	E_GTAX[0] - E_GY[0] - E_PHI[0] = log(E_TAXYN[0]/E_TAXYN[-1])
 
 	E_GTFPUCAP[0] = (1 - ALPHAE) * E_GUCAP[0] + ALPHAE * E_GTFP[0]
 
@@ -219,7 +237,7 @@ using PlutoUI
 
 	E_GSN[0] = exp(E_LGSN[0])
 
-	#E_LTRYN[0] = log(E_TRYN[0])
+	E_LTRYN[0] = log(E_TRYN[0])
 
 	E_PHIC[0] - E_PHI[0] = E_LPCP[0] - E_LPCP[-1]
 
@@ -252,8 +270,8 @@ using PlutoUI
 	E_LGY[0] = E_LGSN[0] - E_LPCP[0]
 
 	E_LWS[0] = E_LL[0] - E_LYWR[0]
-
 end
+
 
 # ╔═╡ 18756038-fc73-4792-b741-75f391b7cbad
 @parameters QUEST3_2009_OBC begin
@@ -529,52 +547,64 @@ end
 get_solution(QUEST3_2009_OBC)
 
 # ╔═╡ 5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
-λ = 0.05
+md"Ad-hoc loss function's output gap weight: $(λ = 0.05)"
 
-# ╔═╡ 9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
-# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
-Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
-
-# ╔═╡ 872378f6-d023-44bf-8c19-79e7cf8a8cf3
-import StatsPlots
+# ╔═╡ 7cef7c28-7326-4de3-8426-42ee97be3c15
+import StatsPlots, Statistics
 
 # ╔═╡ bd6673f0-5bd5-449e-8d2c-94b7a26116e1
-@bind L_BGTAR Slider(0:0.01:1.5,default=0.87546873735)
+md"Debt-to-GDP constraint: $(@bind L_BGTAR MySlider(0.0:0.01:1.5,0.87546873735))"
 
 # ╔═╡ f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
-@bind TINFE Slider(1.5:0.01:2.5,default=1.9590)
+md"TR inflation coefficient: $(@bind TINFE MySlider(1.5:0.01:2.5,1.9590))"
 
 # ╔═╡ ef733094-1fc1-4f7f-ba66-0cc862c71045
-@bind TYE1 Slider(0:0.01:0.9,default=0.4274)
+md"TR output gap coefficient: $(@bind TYE1 MySlider(0.0:0.01:0.9,0.4274))"
 
 # ╔═╡ dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
-@bind TYE2 Slider(0:0.01:0.1,default=0.0783)
+md"TR output gap difference coefficient: $(@bind TYE2 MySlider(0.0:0.01:0.1,0.0783))"
+#@bind TYE2 MySlider(0.0:0.1,default=0.0783,step=0.01)
+
+# ╔═╡ 9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+sims0 = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true)
+# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
+#Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
+
+# ╔═╡ 0ff9a358-0493-4ac2-927f-97aa593ed9bc
+ Loss = Statistics.std(sims0(:inflation,:,:))^2 +λ * Statistics.std(sims0(:outputgap,:,:))^2
 
 # ╔═╡ fbead48d-0979-4d39-9116-cc8b1559d09b
+sims = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true)
+
 #plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40)[1]
 
 # ╔═╡ 418fc798-09c6-45fd-a8f7-9b02c5d04d45
-(only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:outputgap])).^2)/Loss
+Loss_new = Statistics.std(sims(:inflation,:,:))^2 +λ * Statistics.std(sims(:outputgap,:,:))^2
+
+#(only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:outputgap])).^2)/Loss
 
 # ╔═╡ c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
-
+md"Ratio of welfare losses: $(Loss_percent =round(Loss_new/Loss*100)) %"
 
 # ╔═╡ Cell order:
+# ╠═a08b270a-8f2f-4537-a1d1-0ba4c379fa4c
+# ╠═28c517fb-e5f0-49ae-a98e-0bfc6f6311ec
 # ╠═d93e2dfc-a0be-4dba-8526-b6bd0301a49a
 # ╠═3e1ebba0-9229-11ee-230d-251f23eaf3f4
 # ╠═293b6395-c176-4cbb-acb2-c241a4ac1049
 # ╠═18756038-fc73-4792-b741-75f391b7cbad
-# ╠═bfc386c1-c979-4e85-baee-ed07c1d7d82e
-# ╠═5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
-# ╠═9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+# ╟─bfc386c1-c979-4e85-baee-ed07c1d7d82e
+# ╟─5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
+# ╠═7cef7c28-7326-4de3-8426-42ee97be3c15
+# ╟─9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+# ╟─0ff9a358-0493-4ac2-927f-97aa593ed9bc
 # ╠═d30d80a9-d9af-4e77-a869-870d1dc068e3
 # ╠═3c798be9-6451-4352-a7be-0fa20d447ace
-# ╠═7c4505fa-bd54-41bd-a6cf-974506e38cd7
-# ╠═872378f6-d023-44bf-8c19-79e7cf8a8cf3
-# ╠═bd6673f0-5bd5-449e-8d2c-94b7a26116e1
-# ╠═f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
-# ╠═ef733094-1fc1-4f7f-ba66-0cc862c71045
-# ╠═dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
+# ╟─7c4505fa-bd54-41bd-a6cf-974506e38cd7
+# ╟─bd6673f0-5bd5-449e-8d2c-94b7a26116e1
+# ╟─f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
+# ╟─ef733094-1fc1-4f7f-ba66-0cc862c71045
+# ╟─dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
 # ╠═fbead48d-0979-4d39-9116-cc8b1559d09b
-# ╠═418fc798-09c6-45fd-a8f7-9b02c5d04d45
+# ╟─418fc798-09c6-45fd-a8f7-9b02c5d04d45
 # ╠═c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
