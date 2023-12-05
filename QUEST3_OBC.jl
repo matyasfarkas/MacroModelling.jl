@@ -17,18 +17,6 @@ end
 # ╔═╡ d93e2dfc-a0be-4dba-8526-b6bd0301a49a
 import Pkg; Pkg.add("MacroModelling")
 
-# ╔═╡ d30d80a9-d9af-4e77-a869-870d1dc068e3
-# ╠═╡ disabled = true
-#=╠═╡
-Pkg.add("StatsPlots")
-  ╠═╡ =#
-
-# ╔═╡ 3c798be9-6451-4352-a7be-0fa20d447ace
-# ╠═╡ disabled = true
-#=╠═╡
-Pkg.add("PlutoUI")
-  ╠═╡ =#
-
 # ╔═╡ 3e1ebba0-9229-11ee-230d-251f23eaf3f4
 using MacroModelling
 
@@ -127,7 +115,7 @@ end
 
 	exp(E_LEXYN[0]) = exp(E_LPXP[0]) * (1 - SE) * exp(RHOPWPX * (E_LER[-1] * SE * ALPHAX - E_LPXP[-1]) + (1 - RHOPWPX) * (E_LER[0] * SE * ALPHAX - E_LPXP[0])) ^ SIGEXE * exp(E_LYWY[0]) ^ ALPHAX
 
-	E_INOM[0] = E_INOMW[0] + E_GE[1] - RPREME * E_BWRY[0] + E_ZEPS_RPREME[0]
+	E_INOM[0] = E_INOMW[0] + E_GE[1] - RPREME * E_BWRY[0] + RPREME*(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0]-exp(E_LBGYN[0]) ) + E_ZEPS_RPREME[0]
 
 	E_BWRY[0] = E_TBYN[0] + (1 + E_INOM[0] - E_PHI[1] - E_GY[0] - GPOP0) * E_BWRY[-1]
 
@@ -143,7 +131,10 @@ end
 
 	E_TAXYN[0] - E_TAXYN[-1] = BGADJ1 * (exp(E_LBGYN[-1]) - BGTAR) + BGADJ2 * (exp(E_LBGYN[0]) - exp(E_LBGYN[-1]))
 
-	E_LBGYN[0] = max(BGTAR ,log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0]))
+exp(E_LBGYN[0]) = min(BGTAR_BAR, exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0])
+
+	
+	#E_LBGYN[0] = max(BGTAR ,log(exp(E_LIGSN[0]) + exp(E_LGSN[0]) + (1 + E_R[0] - E_GY[0] - GPOP0) * exp(E_LBGYN[-1]) + E_TRW[0] * exp(E_LL[0] - E_LYWR[0]) - E_WS[0] * (E_TW[0] + SSC) - TP * (1 - E_WS[0]) - TVAT * exp(E_LCSN[0]) - E_TAXYN[0]))
 
 	E_TW[0] = TW0 * (1 + E_LYGAP[0] * TW1 * TWFLAG)
 
@@ -423,6 +414,8 @@ end
 
 	BGTAR = 2.4
 
+	BGTAR_BAR = 3.
+	
 	DELTAE = 0.025
 
 	DELTAGE = 0.0125
@@ -552,8 +545,28 @@ md"Ad-hoc loss function's output gap weight: $(λ = 0.05)"
 # ╔═╡ 7cef7c28-7326-4de3-8426-42ee97be3c15
 import StatsPlots, Statistics
 
+# ╔═╡ 9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+sims0 = get_irf(QUEST3_2009_OBC, periods = 100, shocks = :simulate, levels = true)
+# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
+#Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
+
+# ╔═╡ 0ff9a358-0493-4ac2-927f-97aa593ed9bc
+ Loss = Statistics.std(sims0(:inflation,:,:))^2 +λ * Statistics.std(sims0(:outputgap,:,:))^2
+
+# ╔═╡ d30d80a9-d9af-4e77-a869-870d1dc068e3
+# ╠═╡ disabled = true
+#=╠═╡
+Pkg.add("StatsPlots")
+  ╠═╡ =#
+
+# ╔═╡ 3c798be9-6451-4352-a7be-0fa20d447ace
+# ╠═╡ disabled = true
+#=╠═╡
+Pkg.add("PlutoUI")
+  ╠═╡ =#
+
 # ╔═╡ bd6673f0-5bd5-449e-8d2c-94b7a26116e1
-md"Debt-to-GDP constraint: $(@bind L_BGTAR MySlider(0.0:0.01:1.5,0.87546873735))"
+md"Debt-to-GDP constraint: $(@bind L_BGTAR MySlider(0.9:0.01:1.5,0.9))"
 
 # ╔═╡ f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
 md"TR inflation coefficient: $(@bind TINFE MySlider(1.5:0.01:2.5,1.9590))"
@@ -565,26 +578,68 @@ md"TR output gap coefficient: $(@bind TYE1 MySlider(0.0:0.01:0.9,0.4274))"
 md"TR output gap difference coefficient: $(@bind TYE2 MySlider(0.0:0.01:0.1,0.0783))"
 #@bind TYE2 MySlider(0.0:0.1,default=0.0783,step=0.01)
 
-# ╔═╡ 9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
-sims0 = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true)
-# get_std(QUEST3_2009_OBC)([:inflation,:outputgap])
-#Loss = only(get_std(QUEST3_2009_OBC)([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC)([:outputgap])).^2
-
-# ╔═╡ 0ff9a358-0493-4ac2-927f-97aa593ed9bc
- Loss = Statistics.std(sims0(:inflation,:,:))^2 +λ * Statistics.std(sims0(:outputgap,:,:))^2
-
 # ╔═╡ fbead48d-0979-4d39-9116-cc8b1559d09b
-sims = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true)
+sims = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true)
 
-#plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40)[1]
+
 
 # ╔═╡ 418fc798-09c6-45fd-a8f7-9b02c5d04d45
 Loss_new = Statistics.std(sims(:inflation,:,:))^2 +λ * Statistics.std(sims(:outputgap,:,:))^2
 
 #(only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:inflation])).^2+ λ*only(get_std(QUEST3_2009_OBC,parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2])([:outputgap])).^2)/Loss
 
+# ╔═╡ 61bb53bf-8289-42ec-92c5-e0c6147196a1
+
+
 # ╔═╡ c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
 md"Ratio of welfare losses: $(Loss_percent =round(Loss_new/Loss*100)) %"
+
+# ╔═╡ 92ef2ac9-788c-40a5-894f-2e0b4bc133a2
+IRFpltos = plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40,variables = [:interest,:E_LBGYN, :outputgap,:E_TAXYN])
+
+
+# ╔═╡ ae5f368f-0c4d-4f61-adad-acc723879005
+IRFpltos[1]
+
+# ╔═╡ e5f04e3e-60d8-4f6d-ad4a-01b8e916c1f8
+# ╠═╡ disabled = true
+#=╠═╡
+IRFplot_const = plot_irf(QUEST3_2009_OBC, parameters = [:BGTAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40,variables = [:interest,:E_LBGYN, :outputgap,:E_TAXYN],shock =:E_EPS_C )
+
+  ╠═╡ =#
+
+# ╔═╡ b94675ea-1d5d-4747-89d7-f69407ea8b5a
+IRFplot_noconst = plot_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETAM =>10*0.0202, :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETAM, ignore_obc=true)
+
+# ╔═╡ 91a44114-c68b-4a3d-a6fb-00e565a12048
+IRFplot_noconst[1]
+
+# ╔═╡ a9a7f004-bddd-4a2e-80c3-785fddc6890d
+irf_noconst = get_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETAM =>10*0.0202 , :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETAM, ignore_obc=true)
+
+# ╔═╡ ec545731-a679-40f5-a586-01058b80a1a7
+irf_noconst(:inflation,:,:)
+
+# ╔═╡ ffe56f08-3ea2-452b-ab51-6e9ac32b9148
+
+
+# ╔═╡ 0a4cdf52-44de-4163-963e-957dd0137c7a
+IRFplot_wconst  = plot_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETAM =>10*0.0202 , :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETAM, ignore_obc=false)
+
+# ╔═╡ 8908256f-b513-45b2-b42d-5d7b64230e8b
+IRFplot_wconst[1]
+
+# ╔═╡ 0fac2e37-59dd-4ed6-aa50-098b0b1485ac
+irf_const = get_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETAM =>10*0.0202, :RPREME => 0.1 ],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETAM, ignore_obc=false)
+
+# ╔═╡ e0e76b0f-1cdc-4ec9-9725-6242ff1d0f30
+irf_const(:inflation,:,:)
+
+# ╔═╡ c2abf6e0-efe8-4014-a5ae-c06a3ee43f4a
+StatsPlots.plot(irf_const(:outputgap,:,:)- irf_noconst(:outputgap,:,:))
+
+# ╔═╡ a701692d-ca3e-4c84-89bf-83906a486b46
+StatsPlots.plot(irf_const(:inflation,:,:)- irf_noconst(:inflation,:,:))
 
 # ╔═╡ Cell order:
 # ╠═a08b270a-8f2f-4537-a1d1-0ba4c379fa4c
@@ -595,16 +650,31 @@ md"Ratio of welfare losses: $(Loss_percent =round(Loss_new/Loss*100)) %"
 # ╠═18756038-fc73-4792-b741-75f391b7cbad
 # ╟─bfc386c1-c979-4e85-baee-ed07c1d7d82e
 # ╟─5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
-# ╠═7cef7c28-7326-4de3-8426-42ee97be3c15
-# ╟─9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
-# ╟─0ff9a358-0493-4ac2-927f-97aa593ed9bc
+# ╟─7cef7c28-7326-4de3-8426-42ee97be3c15
+# ╠═9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
+# ╠═0ff9a358-0493-4ac2-927f-97aa593ed9bc
 # ╠═d30d80a9-d9af-4e77-a869-870d1dc068e3
 # ╠═3c798be9-6451-4352-a7be-0fa20d447ace
 # ╟─7c4505fa-bd54-41bd-a6cf-974506e38cd7
-# ╟─bd6673f0-5bd5-449e-8d2c-94b7a26116e1
-# ╟─f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
-# ╟─ef733094-1fc1-4f7f-ba66-0cc862c71045
-# ╟─dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
+# ╠═bd6673f0-5bd5-449e-8d2c-94b7a26116e1
+# ╠═f0c34d7a-cdec-47b2-9ae0-1b0b3016053d
+# ╠═ef733094-1fc1-4f7f-ba66-0cc862c71045
+# ╠═dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
 # ╠═fbead48d-0979-4d39-9116-cc8b1559d09b
 # ╟─418fc798-09c6-45fd-a8f7-9b02c5d04d45
+# ╠═61bb53bf-8289-42ec-92c5-e0c6147196a1
 # ╠═c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
+# ╠═92ef2ac9-788c-40a5-894f-2e0b4bc133a2
+# ╠═ae5f368f-0c4d-4f61-adad-acc723879005
+# ╠═e5f04e3e-60d8-4f6d-ad4a-01b8e916c1f8
+# ╠═b94675ea-1d5d-4747-89d7-f69407ea8b5a
+# ╠═91a44114-c68b-4a3d-a6fb-00e565a12048
+# ╠═a9a7f004-bddd-4a2e-80c3-785fddc6890d
+# ╠═ec545731-a679-40f5-a586-01058b80a1a7
+# ╠═ffe56f08-3ea2-452b-ab51-6e9ac32b9148
+# ╠═0a4cdf52-44de-4163-963e-957dd0137c7a
+# ╠═8908256f-b513-45b2-b42d-5d7b64230e8b
+# ╠═0fac2e37-59dd-4ed6-aa50-098b0b1485ac
+# ╠═e0e76b0f-1cdc-4ec9-9725-6242ff1d0f30
+# ╠═c2abf6e0-efe8-4014-a5ae-c06a3ee43f4a
+# ╠═a701692d-ca3e-4c84-89bf-83906a486b46
