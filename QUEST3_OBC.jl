@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.32
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -16,6 +16,15 @@ end
 
 # ╔═╡ d93e2dfc-a0be-4dba-8526-b6bd0301a49a
 import Pkg; Pkg.add("MacroModelling")
+
+# ╔═╡ c3c33fd7-77a0-4dc4-aa2c-0d3bb095d391
+Pkg.add("StatsPlots")
+
+# ╔═╡ c10ed7d5-8654-44e9-9b10-dc32d1cdc816
+Pkg.add("PlutoUI")
+
+# ╔═╡ bd1d863e-8a5c-4478-9bdf-78cfd1ec9707
+Pkg.add("PlutoUI")
 
 # ╔═╡ 3e1ebba0-9229-11ee-230d-251f23eaf3f4
 using MacroModelling
@@ -649,10 +658,13 @@ StatsPlots.plot(irf_const(:inflation,:,:)- irf_noconst(:inflation,:,:))
 # ╠═293b6395-c176-4cbb-acb2-c241a4ac1049
 # ╠═18756038-fc73-4792-b741-75f391b7cbad
 # ╟─bfc386c1-c979-4e85-baee-ed07c1d7d82e
-# ╟─5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
+# ╠═5d91a8b7-b80b-4d34-bf94-fc2bbc505b33
+# ╠═c3c33fd7-77a0-4dc4-aa2c-0d3bb095d391
+# ╠═c10ed7d5-8654-44e9-9b10-dc32d1cdc816
 # ╟─7cef7c28-7326-4de3-8426-42ee97be3c15
 # ╠═9d423158-0b3b-4eb4-9ae1-d2e9ca91a614
 # ╠═0ff9a358-0493-4ac2-927f-97aa593ed9bc
+# ╠═bd1d863e-8a5c-4478-9bdf-78cfd1ec9707
 # ╠═d30d80a9-d9af-4e77-a869-870d1dc068e3
 # ╠═3c798be9-6451-4352-a7be-0fa20d447ace
 # ╟─7c4505fa-bd54-41bd-a6cf-974506e38cd7
@@ -661,7 +673,7 @@ StatsPlots.plot(irf_const(:inflation,:,:)- irf_noconst(:inflation,:,:))
 # ╠═ef733094-1fc1-4f7f-ba66-0cc862c71045
 # ╠═dd261cf8-5c13-4dfc-bbab-d0e0ef68c1a2
 # ╠═fbead48d-0979-4d39-9116-cc8b1559d09b
-# ╟─418fc798-09c6-45fd-a8f7-9b02c5d04d45
+# ╠═418fc798-09c6-45fd-a8f7-9b02c5d04d45
 # ╠═61bb53bf-8289-42ec-92c5-e0c6147196a1
 # ╠═c6eb3e8b-67b4-4375-8aef-bcd6cc277e1c
 # ╠═92ef2ac9-788c-40a5-894f-2e0b4bc133a2
