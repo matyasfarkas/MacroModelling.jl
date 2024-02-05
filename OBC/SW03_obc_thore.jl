@@ -182,18 +182,60 @@ get_shocks(SW03_obc)
 prds = 100
 shcks = randn(9,prds)
 shocks = KeyedArray(shcks, Shocks = Symbol.(get_shocks(SW03_obc)[1:9]), periods = 1:prds)
-
-plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds)
-
-
-plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
-
-
-
+# FIRST ORDER WO OBC
+plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds,ignore_obc=true)
+# SECOND ORDER WO PBC
+#plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds,algorithm = :pruned_second_order,ignore_obc=true)
+# FIRST ORDER W OBC
 plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, save_plots = true)
-
-
+# SECOND ORDER W OBC
 plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order, save_plots = true)
 
 
+# PLOT POLICY FUNCTION
 plot_solution(SW03_obc, :W, σ = 6, algorithm = [:first_order, :pruned_second_order], save_plots = true)
+
+
+## Constructing the state-dependent IRFs
+m = SW03_obc
+pishockgrid = zeros(10)
+pishockgrid = 0.1:1:10
+Y_IRF= zeros(size(pishockgrid,1),prds*2)
+pishockloc = findall(x->x== :eta_pi, vec(m.timings.exo))
+fgshockloc = findall(x->x== :ϵᵒᵇᶜ⁺ꜝ¹ꜝ⁽¹⁾, vec(m.timings.exo))
+
+i = 0
+for scaling in  0.1:1:10
+    i  = i+1
+    shocks =  zeros(m.timings.nExo,prds)
+    shockIC = zeros(m.timings.nExo,prds)
+    shocks[fgshockloc,1:20].= 10;
+    shocks[pishockloc,1:20].=-scaling *1;
+    shockIC[pishockloc,1:20].=-scaling *1;
+
+    Y_IRF[i,:] = get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:Y,:,:Shock_matrix)'  - get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:Y,:,:Shock_matrix)'
+end
+surface(Y_IRF,colormap = :darkterrain)
+
+shocksIC = shocks
+shockIC[fgshockloc,1:20].=1000;
+plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
+plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)
+
+
+gshockgrid = 0.1:0.1:100
+Y_GIRF= zeros(size(gshockgrid,1:20),prds*2)
+gshockloc = findall(x->x== :eta_G, vec(m.timings.exo))
+fgshockloc = findall(x->x== :ϵᵒᵇᶜ⁺ꜝ¹ꜝ⁽¹⁾, vec(m.timings.exo))
+
+i = 0
+for scaling in 0.1:0.1:100
+    i  = i+1
+    shocks =  zeros(m.timings.nExo,prds)
+    shockIC = zeros(m.timings.nExo,prds)
+    shocks[fgshockloc,1].=1;
+    shocks[gshockloc,1].=scaling *1 ;
+    shockIC[gshockloc,1].=scaling *1;
+    Y_GIRF[i,:] = get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:Y,:,:Shock_matrix)' - get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:Y,:,:Shock_matrix)'
+end
+surface(Y_GIRF)
