@@ -1,6 +1,6 @@
 using MacroModelling, StatsPlots, Random
 
-@model SW03_obc max_obc_horizon = 2 begin
+@model SW03_obc max_obc_horizon = 1 begin
     -q[0] + beta * ((1 - tau) * q[1] + epsilon_b[1] * (r_k[1] * z[1] - psi^-1 * r_k[ss] * (-1 + exp(psi * (-1 + z[1])))) * (C[1] - h * C[0])^(-sigma_c))
     
     -q_f[0] + beta * ((1 - tau) * q_f[1] + epsilon_b[1] * (r_k_f[1] * z_f[1] - psi^-1 * r_k_f[ss] * (-1 + exp(psi * (-1 + z_f[1])))) * (C_f[1] - h * C_f[0])^(-sigma_c))
@@ -33,7 +33,7 @@ using MacroModelling, StatsPlots, Random
     
     -Q_f[0] + epsilon_b[0]^-1 * q_f[0] * (C_f[0] - h * C_f[-1])^(sigma_c)
     
-    -W[0] + epsilon_a[0] * mc[0] * (1 - alpha) * L[0]^(-alpha) * (K[-1] * z[0])^alpha
+    #-W[0] + epsilon_a[0] * mc[0] * (1 - alpha) * L[0]^(-alpha) * (K[-1] * z[0])^alpha
     
     -W_f[0] + epsilon_a[0] * mc_f[0] * (1 - alpha) * L_f[0]^(-alpha) * (K_f[-1] * z_f[0])^alpha
     
@@ -105,21 +105,21 @@ using MacroModelling, StatsPlots, Random
     
     epsilon_b[0] * (K_f[-1] * r_k_f[0] - r_k_f[ss] * K_f[-1] * exp(psi * (-1 + z_f[0]))) * (C_f[0] - h * C_f[-1])^(-sigma_c)
 
+
     # Perceived inflation objective
     std_eta_pi * eta_pi[x] - log(pi_obj[0]) + rho_pi_bar * log(pi_obj[-1]) + log(calibr_pi_obj) * (1 - rho_pi_bar)
 
     # Taylor rule with effective lower bound
     log(R[0]) = max(R̄ , r_Delta_pi * (-log(pi[ss]^-1 * pi[-1]) + log(pi[ss]^-1 * pi[0])) + r_Delta_y * (-log(Y[ss]^-1 * Y[-1]) + log(Y[ss]^-1 * Y[0]) + log(Y_f[ss]^-1 * Y_f[-1]) - log(Y_f[ss]^-1 * Y_f[0])) + rho * log(R[ss]^-1 * R[-1]) + (1 - rho) * (log(pi_obj[0]) + r_pi * (-log(pi_obj[0]) + log(pi[ss]^-1 * pi[-1])) + r_Y * (log(Y[ss]^-1 * Y[0]) - log(Y_f[ss]^-1 * Y_f[0]))) - calibr_pi + std_eta_R * eta_R[x] - log(R[ss]^-1))
-    # log(R[0]) =  r_Delta_pi * (-log(pi[ss]^-1 * pi[-1]) + log(pi[ss]^-1 * pi[0])) + r_Delta_y * (-log(Y[ss]^-1 * Y[-1]) + log(Y[ss]^-1 * Y[0]) + log(Y_f[ss]^-1 * Y_f[-1]) - log(Y_f[ss]^-1 * Y_f[0])) + rho * log(R[ss]^-1 * R[-1]) + (1 - rho) * (log(pi_obj[0]) + r_pi * (-log(pi_obj[0]) + log(pi[ss]^-1 * pi[-1])) + r_Y * (log(Y[ss]^-1 * Y[0]) - log(Y_f[ss]^-1 * Y_f[0]))) - calibr_pi + std_eta_R * eta_R[x] - log(R[ss]^-1)
-    # Nonimal wage growth rate
-    W[0] = max( epsilon_a[0] * mc[0] * (1 - alpha) * L[0]^(-alpha) * (K[-1] * z[0])^alpha,  ι * W[-1])
-    #gW[0] = max(ι, W[0]/W[-1])
+
+    W[0] = max(epsilon_a[0] * mc[0] * (1 - alpha) * L[0]^(-alpha) * (K[-1] * z[0])^alpha,  ι * W[-1])
     gW[0] = W[0]/W[-1]
+
 end
 
 @parameters SW03_obc begin  
     R̄ = 0.0  # effective lower bound
-    ι = 0.0
+    ι = 0.95
     lambda_p = 0.368
     G_bar    = 0.362
     lambda_w = 0.5
@@ -153,7 +153,7 @@ end
     rho_G       = 0.949
     rho_pi_bar  = 0.924
 
-    std_scaling_factor = 10
+    std_scaling_factor = 10*5
 
     std_eta_b   = σ_eta_b  / std_scaling_factor
     std_eta_L   = σ_eta_L  / std_scaling_factor
@@ -179,26 +179,24 @@ end
     calibr_pi | pi[ss] = pi_obj[ss]
 end
 
-Random.seed!(200)
-get_shocks(SW03_obc)
 
+Random.seed!(210)
+get_shocks(SW03_obc)
 prds = 100
 shcks = randn(9,prds)
 shocks = KeyedArray(shcks, Shocks = Symbol.(get_shocks(SW03_obc)[1:9]), periods = 1:prds)
 
-
-plot_irf(SW03_obc, parameters = [:xi_w => 0.86], variables = [:W,:R,:Y,:Y_f,:C,:I,:pi,:gW], shocks = shocks, periods = prds)
-
+plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds)
 
 
-plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi,:gW], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
+plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
 
 
 
-plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi,:gW], shocks = shocks, periods = prds, save_plots = true)
+plot_irf(SW03_obc, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, save_plots = true)
 
 
-plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi,:gW], shocks = shocks, periods = prds, algorithm = :pruned_second_order, save_plots = true)
+plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order, save_plots = true)
 
 
 plot_solution(SW03_obc, :W, σ = 6, algorithm = [:first_order, :pruned_second_order], save_plots = true)
