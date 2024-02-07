@@ -210,18 +210,18 @@ for scaling in  0.1:1:10
 
     shocks =  zeros(m.timings.nExo,prds)
     shockIC = zeros(m.timings.nExo,prds)
-    shocks[fgshockloc,1:20].= 10;
-    shocks[pishockloc,1:20].=-scaling *1;
-    shockIC[pishockloc,1:20].=-scaling *1;
+    shocks[fgshockloc,1].= 1;
+    shocks[pishockloc,1:20].=-scaling *0;
+    shockIC[pishockloc,1:20].=-scaling *0;
 
-    R_IRF[i,:] = get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'  # - get_irf(m, parameters = :xi_w => 0.86, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'
+    R_IRF[i,:] = get_irf(m,parameters = :activeᵒᵇᶜshocks => 1.0,  variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'  #- get_irf(m, parameters = :activeᵒᵇᶜshocks => 1.0 , variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'
 end
-    surface(R_IRF, color = nothing, transparency = 0.5)
+    surface(R_IRF, transparency = 0.5)
 
 shocksIC = shocks
 shockIC[fgshockloc,1:20].=1000;
-plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
-plot_irf(SW03_obc, variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)
+plot_irf(SW03_obc, parameters = :activeᵒᵇᶜshocks => 1.0,variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)
+plot_irf(SW03_obc, parameters = :activeᵒᵇᶜshocks => 1.0,variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)
 
 
 gshockgrid = 0.1:0.1:100
