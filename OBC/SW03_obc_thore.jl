@@ -205,16 +205,16 @@ pishockloc = findall(x->x== :eta_pi, vec(m.timings.exo))
 fgshockloc = findall(x->x== :ϵᵒᵇᶜ⁺ꜝ¹ꜝ⁽¹⁾, vec(m.timings.exo))
 
 i = 0
-for scaling in  0.1:1:10
+for scaling in  0.1:1:1
     i  = i+1
 
     shocks =  zeros(m.timings.nExo,prds)
     shockIC = zeros(m.timings.nExo,prds)
-    shocks[fgshockloc,1].= 1;
-    shocks[pishockloc,1:20].=-scaling *0;
-    shockIC[pishockloc,1:20].=-scaling *0;
+    shocks[fgshockloc,5].= 2;
+    shocks[pishockloc,1:20].=-scaling *1;
+    shockIC[pishockloc,1:20].=-scaling *1;
 
-    R_IRF[i,:] = get_irf(m,parameters = :activeᵒᵇᶜshocks => 1.0,  variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'  #- get_irf(m, parameters = :activeᵒᵇᶜshocks => 1.0 , variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'
+    R_IRF[i,:] = get_irf(m,parameters = :activeᵒᵇᶜshocks => 1.0,  variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shocks, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'  - get_irf(m, parameters = :activeᵒᵇᶜshocks => 1.0 , variables = [:W,:R,:Y,:Y_f,:C,:I,:pi], shocks = shockIC, periods = prds, algorithm = :pruned_second_order)(:R,:,:Shock_matrix)'
 end
     surface(R_IRF, transparency = 0.5)
 

@@ -554,7 +554,7 @@ md"Ad-hoc loss function's output gap weight: $(λ = 0.05)"
 md"Debt-to-GDP constraint: $(@bind L_BGTAR MySlider(0.9:0.01:1.5,0.9))"
 
 # ╔═╡ 05ebf845-dd94-4316-b5cd-a6533180f7bc
-md"TR inflation coefficient: $(@bind TINFE MySlider(1.5:0.01:2.5,1.9590))"
+#md"TR inflation coefficient: $(@bind TINFE MySlider(1.5:0.01:2.5,1.9590))"
 
 # ╔═╡ a768841d-8542-4028-b85b-ddbb64a2df62
 md"TR output gap coefficient: $(@bind TYE1 MySlider(0.0:0.01:0.9,0.4274))"
@@ -564,23 +564,32 @@ md"TR output gap difference coefficient: $(@bind TYE2 MySlider(0.0:0.01:0.1,0.07
 #@bind TYE2 MySlider(0.0:0.1,default=0.0783,step=0.01)
 
 # ╔═╡ 79447d59-8fd3-46f5-a587-8481996e126e
-sims = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true);
+#sims = get_irf(QUEST3_2009_OBC,parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2], periods = 100, shocks = :simulate, levels = true);
 
 # ╔═╡ 1c410958-1fa9-45b0-9884-a00356c9b986
-Loss_new = Statistics.std(sims(:inflation,:,:))^2 +λ * Statistics.std(sims(:outputgap,:,:))^2
+#Loss_new = Statistics.std(sims(:inflation,:,:))^2 +λ * Statistics.std(sims(:outputgap,:,:))^2
 
 
 # ╔═╡ 700b4dc3-2ae1-4889-99fa-352bf00b284d
 md"Ratio of welfare losses: $(Loss_percent =round(Loss_new/Loss*100)) %"
 
 # ╔═╡ 982e21a1-b390-4fe3-991a-6fd5b50ed17d
-IRFpltos = plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40,variables = [:interest,:E_LBGYN, :outputgap,:E_TAXYN])[1]
+#IRFpltos = plot_simulations(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2],periods = 40,variables = [:interest,:E_LBGYN, :outputgap,:E_TAXYN])[1]
+
+# ╔═╡ 981efe32-60cf-440e-bbcf-562dcd76ba9e
+
 
 # ╔═╡ 1d1f523b-bf0a-4bee-b601-0ce0c9a2b3de
 md"Std of the shock hitting the economy: $(@bind shocksize MySlider(0.0:0.01:20,0.15))"
 
+# ╔═╡ 3e793fc6-220f-45d6-9e5b-2d69e1004aab
+md"TR inflation coefficient: $(@bind TINFE MySlider(1.5:0.01:2.5,1.9590))"
+
+# ╔═╡ 392ffd5d-6a12-4141-9c0d-787730717ecf
+
+
 # ╔═╡ dc9caaf1-ccef-4e36-b909-6ce981ba280a
-IRFplot_noconst = plot_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETA =>shocksize, :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETA, ignore_obc=true)[1]
+#IRFplot_noconst = plot_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETA =>shocksize, :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETA, ignore_obc=true)[1]
 
 # ╔═╡ f864b39a-5a38-43d8-84da-bf1701f448b8
 irf_noconst = get_irf(QUEST3_2009_OBC, parameters = [:BGTAR_BAR => exp(L_BGTAR), :TINFE => TINFE, :TYE1 => TYE1, :TYE2 => TYE2, :STD_EPS_ETA =>shocksize , :RPREME => 0.1],periods = 40,variables = [:interest,:inflation,  :outputgap,:E_LBGYN,:E_TAXYN],shocks =:E_EPS_ETA, ignore_obc=true);
@@ -2875,20 +2884,23 @@ version = "1.4.1+1"
 # ╟─54f3c4ef-15eb-433e-8a6e-be9e24f9ed15
 # ╟─a57cb99e-f529-4d81-907f-32d29550c656
 # ╟─7456672a-3c4d-45c9-a169-86c504e2bc06
-# ╟─597042e6-9fca-4608-ab05-dd7f9c075055
+# ╠═597042e6-9fca-4608-ab05-dd7f9c075055
 # ╟─c59dd77d-df63-43d4-947f-347adb1bcc28
 # ╟─c921052a-9dcb-4873-8d1a-171b6bbbb172
 # ╠═422b109e-5e7c-4ff1-ac66-021257b05b07
-# ╟─27facf5b-3040-4f71-8b58-83e5dbff8abc
-# ╟─05ebf845-dd94-4316-b5cd-a6533180f7bc
+# ╠═27facf5b-3040-4f71-8b58-83e5dbff8abc
+# ╠═05ebf845-dd94-4316-b5cd-a6533180f7bc
 # ╟─a768841d-8542-4028-b85b-ddbb64a2df62
 # ╟─b704c9bf-1200-485c-9938-8d0f4b9d2dba
 # ╠═79447d59-8fd3-46f5-a587-8481996e126e
-# ╟─1c410958-1fa9-45b0-9884-a00356c9b986
+# ╠═1c410958-1fa9-45b0-9884-a00356c9b986
 # ╟─700b4dc3-2ae1-4889-99fa-352bf00b284d
-# ╟─3a9d77c1-e0b3-405d-a08f-5f7c32560e3c
+# ╠═3a9d77c1-e0b3-405d-a08f-5f7c32560e3c
 # ╠═982e21a1-b390-4fe3-991a-6fd5b50ed17d
-# ╟─1d1f523b-bf0a-4bee-b601-0ce0c9a2b3de
+# ╠═981efe32-60cf-440e-bbcf-562dcd76ba9e
+# ╠═1d1f523b-bf0a-4bee-b601-0ce0c9a2b3de
+# ╠═3e793fc6-220f-45d6-9e5b-2d69e1004aab
+# ╠═392ffd5d-6a12-4141-9c0d-787730717ecf
 # ╠═dc9caaf1-ccef-4e36-b909-6ce981ba280a
 # ╟─f864b39a-5a38-43d8-84da-bf1701f448b8
 # ╠═f10ebcfb-9a63-4a6e-b715-f154b21fbb88
