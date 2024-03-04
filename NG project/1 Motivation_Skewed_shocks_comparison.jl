@@ -201,7 +201,7 @@ using Dates
 dates = Date(1980, 6, 30):Month(3):Date(2023, 6, 30)
 tm_ticks = round.(dates, Quarter(16)) |> unique;
 
-StatsPlots.plot(dates, parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN),ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
+StatsPlots.plot(dates, parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN),ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate in the EA",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
 
 
 # load US data
