@@ -1,3 +1,4 @@
+#using Pkg; Pkg.add(["Turing", "ChainRulesCore","CSV","DataFrames","Dates","Distributions","ForwardDiff","HypothesisTests","LinearAlgebra","Random","Statistics","StatsPlots"])
 using MacroModelling, JuMP, Ipopt
 import Turing, StatsPlots, Random, Statistics
 using CSV, DataFrames, Dates
@@ -151,7 +152,9 @@ Turing.@model function loglikelihood_scaling_function(m, data, observables)
     # SIGRN ~  MacroModelling.InverseGamma( 0.001,1., 10^(-8), 1., μσ = true)
     
     # RHORN = 0.9
-    RHORN ~ MacroModelling.Beta( 0.9,0.1,μσ = true)
+    #    RHORN ~ MacroModelling.Beta( 0.9,0.1,μσ = true)
+    RHORN ~ Turing.Uniform(-1,1)
+
      #RA = 1
     # PA = 3.2
 	# GAMQ = 0
@@ -199,6 +202,38 @@ dates = Date(1980, 6, 30):Month(3):Date(2023, 6, 30)
 tm_ticks = round.(dates, Quarter(16)) |> unique;
 
 StatsPlots.plot(dates, parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN),ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
+
+
+# load US data
+us_dat = CSV.read("C:/Users/fm007/Documents/GitHub/MacroModelling.jl/NG project/US/sw07_data.csv", DataFrame)
+us_data = KeyedArray(Array(us_dat[:,1:end])' ,Variable = (Symbol.(names(us_dat[:,1:end]))) , Time = 1:size(us_dat)[1] ) #Dates.DateTime.(dat[:,1], Dates.DateFormat("d-u-yyyy"))
+us_data[2,:] = us_data(:R)*4 # Need to multipy Robs from SW07 with 100
+observables = [:DYA, :R, :PIC]
+
+# Estimate US model 
+us_loglikelihood_scaling = loglikelihood_scaling_function(AS07, us_data, observables) # Kalman
+us_samps = Turing.sample(us_loglikelihood_scaling,Turing.NUTS(),n_samples, progress = true)
+
+
+StatsPlots.plot(us_samps)
+
+using StatsBase
+us_summ = summarystats(us_samps)
+us_parameter_mean  = us_summ.nt.mean
+us_parameter_std  = us_summ.nt.std
+
+us_filtered_states = get_estimated_variables(AS07, us_data,parameters = us_parameter_mean)
+plot_model_estimates(AS07,us_data(observables))
+plot_shock_decomposition(AS07,us_data(observables))
+
+us_dates = Date(1947, 6, 30):Month(3):Date(2023, 9, 30)
+us_tm_ticks = round.(us_dates, Quarter(16)) |> unique;
+
+StatsPlots.plot(us_dates, us_parameter_mean[1].+  us_parameter_mean[3]*4 .+ us_filtered_states(:RN),ribbon= (us_parameter_std[1]+us_parameter_std[3])*2,label= "Filtered natural rate estimate in the US",xticks=(us_tm_ticks, Dates.format.(us_tm_ticks, "yyyy")))
+
+
+
+
 
 
 StatsBase.describe(KF_shocks[1,:])
