@@ -1,4 +1,5 @@
 #using Pkg; Pkg.add(["Turing", "ChainRulesCore","CSV","DataFrames","Dates","Distributions","ForwardDiff","HypothesisTests","LinearAlgebra","Random","Statistics","StatsPlots"])
+import Pkg; Pkg.add("GLM")
 using MacroModelling, JuMP, Ipopt
 import Turing, StatsPlots, Random, Statistics
 using CSV, DataFrames, Dates
@@ -201,7 +202,16 @@ using Dates
 dates = Date(1980, 6, 30):Month(3):Date(2023, 6, 30)
 tm_ticks = round.(dates, Quarter(16)) |> unique;
 
+EA_rnat = parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN)
+using GLM
+
+OLSsetup= DataFrame(X=  (1:size(EA_rnat,1)) , Y = collect(EA_rnat), LY= [collect(EA_rnat[2:end]) ; 1.5 ])
+ols = lm(@formula(Y~X), OLSsetup)
+EA_cyclicalrnat= collect(EA_rnat) - predict(ols)
+
 StatsPlots.plot(dates, parameter_mean[1].+  parameter_mean[3]*4 .+ filtered_states(:RN),ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate in the EA",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
+
+StatsPlots.plot(dates, EA_cyclicalrnat,ribbon= (parameter_std[1]+parameter_std[3])*2,label= "Filtered natural rate estimate in the EA",xticks=(tm_ticks, Dates.format.(tm_ticks, "yyyy")))
 
 
 # load US data
