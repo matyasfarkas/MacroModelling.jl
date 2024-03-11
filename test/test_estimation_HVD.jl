@@ -4,6 +4,8 @@ import Turing: NUTS, sample, logpdf
 import Optim, LineSearches
 using Random, CSV, DataFrames, MCMCChains, AxisKeys
 import DynamicPPL: logjoint
+import ForwardDiff as ℱ
+
 
 include("../models/FS2000.jl")
 
@@ -18,7 +20,6 @@ observables = sort(Symbol.("log_".*names(dat)))
 # subset observables in data
 data = data(observables,:)
 
-
 Turing.@model function FS2000_loglikelihood_function(data, m, observables)
     alp     ~ Beta(0.356, 0.02, μσ = true)
     bet     ~ Beta(0.993, 0.002, μσ = true)
@@ -30,18 +31,48 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables)
     z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
     z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
     # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+    
+    parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing
+
+    # This model tells you  that we have a system prior telling that with a 50% probability (when logistic funtion is 0) the HVD is larger than 0.7
+    #    Turing.@addlogprob! sum(log.(Turing.logistic(only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10], parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7))))
+
+    # This definition argues that we have a logistic function generating an acceptance of the HVD, with unkown location and slope of 1.
+    # HVD is satisfied is a Bernoulli draw from a coin toss with a probability given the logistic function - the higher the HVD the higher the probability that the HVD is satisfied. The constant's std is the tightness of the prior.
+    # logistic_const ~ Normal(0,0.1)
+    # 1 ~ Turing.Bernoulli(Turing.logistic(logistic_const+only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10];parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7)))
+    
+    HVD_condition_error = ℱ.value.(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10], parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7);
+
+    Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_condition_error)
+
+    #Turing.@addlogprob! Turing.loglikelihood(Turing.Normal(0, 10^-3), HVD_condition_error)
+    
+
     Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
 end
 
 FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables)
 
-
-
-n_samples = 1000
+n_samples = 100
 
 # using Zygote
 # Turing.setadbackend(:zygote)
 samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
+
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+end
+using StatsPlots 
+density(hvdi,label= "Posterior distribution of HVD of the Technology shock at period 10 for HICP")
+alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
+hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+vline!([(hvdmean)], label= "Posterior mean of HVD of the Technology shock at period 10 for HICP")
+
+
+
 
 # println(mean(samps).nt.mean)
 
@@ -60,6 +91,7 @@ function calculate_posterior_loglikelihood(parameters)
     log_lik -= logpdf(Beta(0.01, 0.005, μσ = true),del)
     log_lik -= logpdf(InverseGamma(0.035449, Inf, μσ = true),z_e_a)
     log_lik -= logpdf(InverseGamma(0.008862, Inf, μσ = true),z_e_m)
+
     return log_lik
 end
 
