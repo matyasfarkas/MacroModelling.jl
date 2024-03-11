@@ -20,7 +20,26 @@ observables = sort(Symbol.("log_".*names(dat)))
 # subset observables in data
 data = data(observables,:)
 
-Turing.@model function FS2000_loglikelihood_function(data, m, observables)
+
+narrative_target = 0.2;
+hvdhoriz  = 1:10
+shock =2
+vari = :log_gp_obs;
+
+println("*********************************************************************")
+println("*************  SETTINGS FOR NARRATIVE RESTRICTIONS  *****************")
+println("*********************************************************************")
+
+println("Variance target was set to: ", float(narrative_target*100),  " percent.")
+println("HVD cummulated over periods: " , min(hvdhoriz...), " to ", max(hvdhoriz...), ".")
+println("Structural shock selected: ", FS2000.timings.exo[shock])
+println("Endogenous variable selected: ", vari)
+
+println("*********************************************************************")
+println("********************** INITIALIZING ESTIMATION **********************")
+println("*********************************************************************")
+
+Turing.@model function FS2000_loglikelihood_function(data, m, observables,narrative_target,hvdhoriz,shock,vari)
     alp     ~ Beta(0.356, 0.02, μσ = true)
     bet     ~ Beta(0.993, 0.002, μσ = true)
     gam     ~ Normal(0.0085, 0.003)
@@ -33,7 +52,10 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables)
     # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
     
     parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing
-
+    
+    #println(parameters_HVD)
+    
+    
     # This model tells you  that we have a system prior telling that with a 50% probability (when logistic funtion is 0) the HVD is larger than 0.7
     #    Turing.@addlogprob! sum(log.(Turing.logistic(only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10], parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7))))
 
@@ -42,17 +64,27 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables)
     # logistic_const ~ Normal(0,0.1)
     # 1 ~ Turing.Bernoulli(Turing.logistic(logistic_const+only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10];parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7)))
     
-    HVD_condition_error = ℱ.value.(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10], parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7);
+    # LR variance contribution of inflation due to e_a (first shock) is at least 70%
+    # HVD_condition_error = ℱ.value.(collect(get_conditional_variance_decomposition(m, verbose = true, parameters = parameters_HVD)(:log_gp_obs,:,:)[1,end]).-0.7);
 
-    Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_condition_error)
-
-    #Turing.@addlogprob! Turing.loglikelihood(Turing.Normal(0, 10^-3), HVD_condition_error)
+    # HVD of technology shock (e_a, first shock) is at least 5% for inflation for periods 1 to 10 -  i.e. the cummulated contribution by period 10 is more than 5% due to technology 
+    try
     
-
+        cummulated_HVD_contribution_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))).-narrative_target;
+        Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),cummulated_HVD_contribution_error)
+ 
+        HVD_importance_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz]))))-0.5;
+        Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_importance_error)
+    
+        #Turing.@addlogprob! Turing.loglikelihood(Turing.Normal(0, 10^-3), HVD_condition_error)
+    catch
+        println("Narrative restriction cannot be satisfied. Adding -Inf to the objective function.")
+        Turing.@addlogprob! -Inf
+    end
     Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
 end
 
-FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables)
+FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables,narrative_target,hvdhoriz,shock,vari)
 
 n_samples = 100
 
@@ -60,18 +92,47 @@ n_samples = 100
 # Turing.setadbackend(:zygote)
 samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
 
+m = FS2000
+
 hvdi = zeros(n_samples,1)
 for i = 1:n_samples
     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
-    hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+    hvdi[i] = sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 end
 using StatsPlots 
 density(hvdi,label= "Posterior distribution of HVD of the Technology shock at period 10 for HICP")
 alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
-hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+hvdmean = sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 vline!([(hvdmean)], label= "Posterior mean of HVD of the Technology shock at period 10 for HICP")
+vline!([(narrative_target)], label= "Hard narrative restriction - at least % of HVD explained is due to technology shocks")
 
 
+
+hvdi_violin= zeros(n_samples,size(data,2))
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi_violin[i,:] = get_shock_decomposition(FS2000,  data,parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[]
+end
+
+
+## Code for FEVD 
+# hvdi = zeros(n_samples,1)
+# for i = 1:n_samples
+#     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+#     hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+# end
+# using StatsPlots 
+# density(hvdi,label= "Posterior distribution of HVD of the Technology shock at period 10 for HICP")
+# alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
+# hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+# vline!([(hvdmean)], label= "Posterior mean of HVD of the Technology shock at period 10 for HICP")
+
+
+# hvdi_violin= zeros(n_samples,size(data,2))
+# for i = 1:n_samples
+#     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+#     hvdi_violin[i,:] = get_variance_decomposition(FS2000, verbose = true,  parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
+# end
 
 
 # println(mean(samps).nt.mean)
