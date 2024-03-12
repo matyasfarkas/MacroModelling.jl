@@ -5,6 +5,7 @@ import Optim, LineSearches
 using Random, CSV, DataFrames, MCMCChains, AxisKeys
 import DynamicPPL: logjoint
 import ForwardDiff as ℱ
+using StatsPlots 
 
 
 include("../models/FS2000.jl")
@@ -19,8 +20,203 @@ observables = sort(Symbol.("log_".*names(dat)))
 
 # subset observables in data
 data = data(observables,:)
+m = FS2000
+n_samples = 1000
+
+## Code for baseline 
+
+Turing.@model function FS2000_loglikelihood_function(data, m, observables)
+    alp     ~ Beta(0.356, 0.02, μσ = true)
+    bet     ~ Beta(0.993, 0.002, μσ = true)
+    gam     ~ Normal(0.0085, 0.003)
+    mst     ~ Normal(1.0002, 0.007)
+    rho     ~ Beta(0.129, 0.223, μσ = true)
+    psi     ~ Beta(0.65, 0.05, μσ = true)
+    del     ~ Beta(0.01, 0.005, μσ = true)
+    z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
+    z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])   
+    # UNCOMMENT BELOW TO APPLY NARRATIVE RESTRICTIONS
+    # parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing  
+        #  try
+        
+        #     FVED_contribution_error = ℱ.value.(collect(get_conditional_variance_decomposition(m;  parameters = parameters_HVD)(vari,:,:)[shock,periods])).-narrative_target;
+        #     Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),FVED_contribution_error)
+    
+        # catch
+        #     println("Narrative restriction cannot be satisfied. Adding -Inf to the LL function.")
+        #     Turing.@addlogprob! -Inf
+        # end
+
+    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+end
+
+FS2000_loglikelihood = FS2000_loglikelihood_function(data, m, observables)
+
+# using Zygote
+# Turing.setadbackend(:zygote)
+samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
+periods = 10
+shock =2
+vari = :log_gp_obs;
+
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,periods]
+end
+min(hvdi...)
+
+density(hvdi,label= "Posterior distribution of FEVD - no constraint")
+alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
+hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,periods]
+vline!([(hvdmean)], label= "Posterior mean of FEVD - no constraint")
+
+hvdhoriz  = 1:10
+
+# HVD distribuiton of the prior
+hvdi_base = zeros(n_samples,1)
+for i = 1:n_samples
+    parameters_HVD = collect(samps.value[i,1:9])
+    hvdi_base[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+end
+
+min(hvdi_base...)
+density(hvdi_base,trim =true,label= "No importance restriction",legend=:bottomleft)
+parameters_HVD= mean(samps).nt.mean
+hvdmean_base = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+vline!([(hvdmean_base)], label= "Posterior mean")
 
 
+## OVERWHELMING IMPORTANCE restriction
+hvdi_overw_base = zeros(n_samples,1)
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi_overw_base[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+end
+using StatsPlots 
+density(hvdi_overw_base,label= ["Posterior distribution of the ratio of sum of abs(HVDs) - no restriction"] )
+alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
+hvdmean_overw_base = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+vline!([(hvdmean_overw_base)], label= "Mean of posterior distribution of the ratio of sum of abs(HVDs)- no restriction")
+
+
+println("*********************************************************************")
+println("**************  ESTIMATION FINISHED FOR BASELINE  *******************")
+println("*********************************************************************")
+
+## CODE FOR NARRATIVE RESTRICTIONS
+narrative_target = 0.1;
+hvdhoriz  = 1:10
+shock =2
+vari = :log_gp_obs;
+ndraws_w = 1000;
+println("*********************************************************************")
+println("*************  SETTINGS FOR NARRATIVE RESTRICTIONS  *****************")
+println("*********************************************************************")
+
+println("Variance target was set to: ", float(narrative_target*100),  " percent.")
+println("HVD cummulated over periods: " , min(hvdhoriz...), " to ", max(hvdhoriz...), ".")
+println("Structural shock selected: ", FS2000.timings.exo[shock])
+println("Endogenous variable selected: ", vari)
+
+println("*********************************************************************")
+println("********************** INITIALIZING ESTIMATION **********************")
+println("*********************************************************************")
+
+Turing.@model function FS2000_loglikelihood_function(data, m, observables,narrative_target,hvdhoriz,shock,vari,ndraws_w)
+    alp     ~ Beta(0.356, 0.02, μσ = true)
+    bet     ~ Beta(0.993, 0.002, μσ = true)
+    gam     ~ Normal(0.0085, 0.003)
+    mst     ~ Normal(1.0002, 0.007)
+    rho     ~ Beta(0.129, 0.223, μσ = true)
+    psi     ~ Beta(0.65, 0.05, μσ = true)
+    del     ~ Beta(0.01, 0.005, μσ = true)
+    z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
+    z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+    
+    parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing
+    
+    try
+        cummulated_HVD_contribution_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))).-narrative_target;
+        Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),cummulated_HVD_contribution_error)
+ 
+        HVD_importance_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz]))))-1.0;
+        Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_importance_error)
+      
+        # IMPORTANCE SAMPLING
+        m.parameter_values = parameters_HVD;
+        omega_hvd_cont = zeros(1,ndraws_w);omega_hvd_imp = zeros(1,ndraws_w);
+        for j = 1:ndraws_w
+        simulation = simulate(m, periods= size(data,2))
+        omega_hvd_cont[j] = (ℱ.value.(collect(get_shock_decomposition(m,simulation(observables,:,:simulate))(vari,:,:)[shock,periods])).-narrative_target)>0
+        omega_hvd_imp[j] =  ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,simulation(observables,:,:simulate), parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,simulation(observables,:,:simulate), parameters = parameters_HVD)(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz]))))>1.0
+        end
+        wi  = sum(omega_hvd_cont.*omega_hvd_imp)/ndraws_w;
+        if wi ==0.
+            println("Likelihood weight simulation failed. Adding -Inf to the objective function.")
+            Turing.@addlogprob! -Inf
+        else
+            Turing.@addlogprob!  +log(wi)
+        end
+    catch
+        println("Narrative restriction cannot be satisfied. Adding -Inf to the objective function.")
+        Turing.@addlogprob! -Inf
+    end
+    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+end
+
+FS2000_loglikelihood = FS2000_loglikelihood_function(data, FS2000, observables,narrative_target,hvdhoriz,shock,vari,ndraws_w)
+
+n_samples = 100
+
+# using Zygote
+# Turing.setadbackend(:zygote)
+samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
+
+
+
+## NARRATIVE RESTRICTION
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    parameters_HVD = collect(samps.value[i,1:9])
+    hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+end
+
+min(hvdi...)
+
+
+density(hvdi,trim =true,label= "Importance restriction",legend=:bottomleft)
+parameters_HVD= mean(samps).nt.mean
+hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+vline!([(hvdmean)], label= "Posterior mean of Importance restriction")
+
+
+
+## OVERWHELMING IMPORTANCE restriction
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+end
+using StatsPlots 
+density(hvdi,label= ["Posterior distribution of the ratio of sum of abs(HVDs)"] )
+alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
+hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+vline!([(hvdmean)], label= "Mean of posterior distribution of the ratio of sum of abs(HVDs)")
+
+
+
+hvdi_violin= zeros(n_samples,size(data,2))
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
+    hvdi_violin[i,:] = get_shock_decomposition(FS2000,  data,parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,:]
+end
+
+violin(hvdi_violin, side=:left, linewidth=0, label="")
+
+### 
 narrative_target = 0.4;
 hvdhoriz  = 1:10
 shock =2
@@ -53,21 +249,6 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables,narrat
     
     parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing
     
-    #println(parameters_HVD)
-    
-    
-    # This model tells you  that we have a system prior telling that with a 50% probability (when logistic funtion is 0) the HVD is larger than 0.7
-    #    Turing.@addlogprob! sum(log.(Turing.logistic(only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10], parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7))))
-
-    # This definition argues that we have a logistic function generating an acceptance of the HVD, with unkown location and slope of 1.
-    # HVD is satisfied is a Bernoulli draw from a coin toss with a probability given the logistic function - the higher the HVD the higher the probability that the HVD is satisfied. The constant's std is the tightness of the prior.
-    # logistic_const ~ Normal(0,0.1)
-    # 1 ~ Turing.Bernoulli(Turing.logistic(logistic_const+only(collect(get_conditional_variance_decomposition(m, verbose = true, periods = [10];parameters = parameters_HVD)(:log_gp_obs,:,:)[1]).-0.7)))
-    
-    # LR variance contribution of inflation due to e_a (first shock) is at least 70%
-    # HVD_condition_error = ℱ.value.(collect(get_conditional_variance_decomposition(m, verbose = true, parameters = parameters_HVD)(:log_gp_obs,:,:)[1,end]).-0.7);
-
-    # HVD of technology shock (e_a, first shock) is at least 5% for inflation for periods 1 to 10 -  i.e. the cummulated contribution by period 10 is more than 5% due to technology 
     try
     
         cummulated_HVD_contribution_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))).-narrative_target;
@@ -75,7 +256,11 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables,narrat
  
         HVD_importance_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz]))))-0.5;
         Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_importance_error)
-    
+       # IMPORTANCE SAMPLING
+       m.parameter_values = parameters_HVD
+       simulation = simulate(m, periods= size(data,2))
+      omega = ℱ.value.(collect(get_shock_decomposition(m,simulation(observables,:,:simulate))(vari,:,:)[shock,periods])).-narrative_target
+     wi  ~ Normal(omega,eps)
     catch
         println("Narrative restriction cannot be satisfied. Adding -Inf to the objective function.")
         Turing.@addlogprob! -Inf
@@ -91,7 +276,6 @@ n_samples = 100
 # Turing.setadbackend(:zygote)
 samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_params = sol)
 
-m = FS2000
 
 
 ## NARRATIVE RESTRICTION
@@ -100,8 +284,10 @@ for i = 1:n_samples
     parameters_HVD = collect(samps.value[i,1:9])
     hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
 end
+
 min(hvdi...)
-using StatsPlots 
+
+
 density(hvdi,trim =true,label= "Importance restriction",legend=:bottomleft)
 parameters_HVD= mean(samps).nt.mean
 hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
@@ -116,38 +302,90 @@ for i = 1:n_samples
     hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 end
 using StatsPlots 
-density(hvdi,label= "Posterior distribution of the ratio of sum of abs(HVD) of the shock for 1:10 for HICP against the other shocks")
+density(hvdi,label= ["Posterior distribution of the ratio of sum of abs(HVDs)"] )
 alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
 hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
-vline!([(hvdmean)], label= "Posterior mean of Posterior distribution of the ratio of sum of abs(HVD) of the shock for 1:10 for HICP against the other shocks")
+vline!([(hvdmean)], label= "Mean of posterior distribution of the ratio of sum of abs(HVDs)")
 
 
 
 hvdi_violin= zeros(n_samples,size(data,2))
 for i = 1:n_samples
     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
-    hvdi_violin[i,:] = get_shock_decomposition(FS2000,  data,parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[]
+    hvdi_violin[i,:] = get_shock_decomposition(FS2000,  data,parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,:]
 end
+
+violin(hvdi_violin, side=:left, linewidth=0, label="")
+
+
 
 
 ## Code for FEVD 
-# hvdi = zeros(n_samples,1)
-# for i = 1:n_samples
-#     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
-#     hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
-# end
-# using StatsPlots 
-# density(hvdi,label= "Posterior distribution of HVD of the Technology shock at period 10 for HICP")
-# alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
-# hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, periods = [10], parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
-# vline!([(hvdmean)], label= "Posterior mean of HVD of the Technology shock at period 10 for HICP")
+periods = 10
+narrative_target = 0.75
+println("*********************************************************************")
+println("*************  SETTINGS FOR NARRATIVE RESTRICTIONS  *****************")
+println("*********************************************************************")
+
+println("Variance target was set to: ", float(narrative_target*100),  " percent.")
+println("FEVD measured at period: " , periods ,".")
+println("Structural shock selected: ", FS2000.timings.exo[shock])
+println("Endogenous variable selected: ", vari)
+
+println("*********************************************************************")
+println("********************** INITIALIZING ESTIMATION **********************")
+println("*********************************************************************")
+
+Turing.@model function FS2000_loglikelihood_function_FEVD(data, m, observables,narrative_target,periods,shock,vari)
+    alp     ~ Beta(0.356, 0.02, μσ = true)
+    bet     ~ Beta(0.993, 0.002, μσ = true)
+    gam     ~ Normal(0.0085, 0.003)
+    mst     ~ Normal(1.0002, 0.007)
+    rho     ~ Beta(0.129, 0.223, μσ = true)
+    psi     ~ Beta(0.65, 0.05, μσ = true)
+    del     ~ Beta(0.01, 0.005, μσ = true)
+    z_e_a   ~ InverseGamma(0.035449, Inf, μσ = true)
+    z_e_m   ~ InverseGamma(0.008862, Inf, μσ = true)
+    # println([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])   
+    # UNCOMMENT BELOW TO APPLY NARRATIVE RESTRICTIONS
+    parameters_HVD= ℱ.value.([alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m]); # Need to store them as FWD Difference values to pass to the HVD to avoid error in Turing  
+         try
+        
+            FVED_contribution_error = ℱ.value.(collect(get_conditional_variance_decomposition(m;  parameters = parameters_HVD)(vari,:,:)[shock,periods])).-narrative_target;
+            Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),FVED_contribution_error)
+    
+        catch
+            println("Narrative restriction cannot be satisfied. Adding -Inf to the LL function.")
+            Turing.@addlogprob! -Inf
+        end
+
+    Turing.@addlogprob! calculate_kalman_filter_loglikelihood(m, data(observables), observables; parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])
+end
+
+FS2000_loglikelihood_FEVD = FS2000_loglikelihood_function_FEVD(data, m, observables,narrative_target,periods,shock,vari)
+
+n_samples = 100
+
+# using Zygote
+# Turing.setadbackend(:zygote)
+samps_FEVD = sample(FS2000_loglikelihood_FEVD, NUTS(), n_samples, progress = true)#, init_params = sol)
 
 
-# hvdi_violin= zeros(n_samples,size(data,2))
-# for i = 1:n_samples
-#     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
-#     hvdi_violin[i,:] = get_variance_decomposition(FS2000, verbose = true,  parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(:log_gp_obs,:,:)[1]
-# end
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps_FEVD.value[i,1:9])
+    hvdi[i] = get_conditional_variance_decomposition(FS2000, verbose = true, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,periods]
+end
+min(hvdi...)
+
+density(hvdi,trim =true,label= "Posterior distribution of FEVD - with constraint")
+alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps_FEVD).nt.mean
+hvdmean = get_conditional_variance_decomposition(FS2000, verbose = true, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,periods]
+vline!([(hvdmean)], label= "Posterior mean of FEVD - with constraint")
+
+
+
+
 
 
 # println(mean(samps).nt.mean)
