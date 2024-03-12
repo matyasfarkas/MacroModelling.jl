@@ -21,7 +21,7 @@ observables = sort(Symbol.("log_".*names(dat)))
 data = data(observables,:)
 
 
-narrative_target = 0.2;
+narrative_target = 0.4;
 hvdhoriz  = 1:10
 shock =2
 vari = :log_gp_obs;
@@ -76,7 +76,6 @@ Turing.@model function FS2000_loglikelihood_function(data, m, observables,narrat
         HVD_importance_error = ℱ.value.(sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz]))))-0.5;
         Turing.@addlogprob! Turing.loglikelihood(Turing.truncated(Turing.Normal(0, 100); lower=0),HVD_importance_error)
     
-        #Turing.@addlogprob! Turing.loglikelihood(Turing.Normal(0, 10^-3), HVD_condition_error)
     catch
         println("Narrative restriction cannot be satisfied. Adding -Inf to the objective function.")
         Turing.@addlogprob! -Inf
@@ -94,17 +93,33 @@ samps = sample(FS2000_loglikelihood, NUTS(), n_samples, progress = true)#, init_
 
 m = FS2000
 
+
+## NARRATIVE RESTRICTION
+hvdi = zeros(n_samples,1)
+for i = 1:n_samples
+    parameters_HVD = collect(samps.value[i,1:9])
+    hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+end
+min(hvdi...)
+using StatsPlots 
+density(hvdi,trim =true,label= "Importance restriction",legend=:bottomleft)
+parameters_HVD= mean(samps).nt.mean
+hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = parameters_HVD)(vari,:,:)[shock,hvdhoriz])))
+vline!([(hvdmean)], label= "Posterior mean of Importance restriction")
+
+
+
+## OVERWHELMING IMPORTANCE restriction
 hvdi = zeros(n_samples,1)
 for i = 1:n_samples
     alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = collect(samps.value[i,1:9])
-    hvdi[i] = sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+    hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 end
 using StatsPlots 
-density(hvdi,label= "Posterior distribution of HVD of the Technology shock at period 10 for HICP")
+density(hvdi,label= "Posterior distribution of the ratio of sum of abs(HVD) of the shock for 1:10 for HICP against the other shocks")
 alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
-hvdmean = sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
-vline!([(hvdmean)], label= "Posterior mean of HVD of the Technology shock at period 10 for HICP")
-vline!([(narrative_target)], label= "Hard narrative restriction - at least % of HVD explained is due to technology shocks")
+hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
+vline!([(hvdmean)], label= "Posterior mean of Posterior distribution of the ratio of sum of abs(HVD) of the shock for 1:10 for HICP against the other shocks")
 
 
 
