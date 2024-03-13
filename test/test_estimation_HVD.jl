@@ -110,7 +110,7 @@ narrative_target = 0.1;
 hvdhoriz  = 1:10
 shock =2
 vari = :log_gp_obs;
-ndraws_w = 1000;
+ndraws_w = 100;
 println("*********************************************************************")
 println("*************  SETTINGS FOR NARRATIVE RESTRICTIONS  *****************")
 println("*********************************************************************")
@@ -302,7 +302,7 @@ for i = 1:n_samples
     hvdi[i] = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters =[alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 end
 using StatsPlots 
-density(hvdi,label= ["Posterior distribution of the ratio of sum of abs(HVDs)"] )
+density(hvdi,trim =true,label= ["Posterior distribution of the ratio of sum of abs(HVDs)"] )
 alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m = mean(samps).nt.mean
 hvdmean = sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[shock,hvdhoriz])))./sum(abs.(collect(get_shock_decomposition(m,data, parameters = [alp, bet, gam, mst, rho, psi, del, z_e_a, z_e_m])(vari,:,:)[setdiff(1:m.timings.nExo+1,shock),hvdhoriz])))
 vline!([(hvdmean)], label= "Mean of posterior distribution of the ratio of sum of abs(HVDs)")
