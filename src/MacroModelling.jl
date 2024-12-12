@@ -8629,68 +8629,184 @@ function run_kalman_iterations(A::Matrix{S}, 𝐁::Matrix{S}, C::Matrix{Float64}
     F = similar(C * C')
 
     K = similar(C')
+   
     # Ktmp = similar(C')
 
     tmp = similar(P)
     Ptmp = similar(P)
 
     for t in 1:size(data_in_deviations, 2)
-        ℒ.axpby!(1, data_in_deviations[:, t], -1, z)
-        # v = data_in_deviations[:, t] - z
+        mask = .!isnan.(data_in_deviations[:, t]) 
+        if mask == 0  # There is no observation in period t, then just propagate the state and covariance matrix
+            
+            u = A*u
+            # u = A*u, or in Dynare a = T * a
 
-        mul!(Ctmp, C, P) # use Octavian.jl
-        mul!(F, Ctmp, C')
-        # F = C * P * C'
+            mul!(P, P, A')
+            ℒ.axpy!(1, 𝐁, P)
+            # P = A * P * A' + 𝐁 or in Dynare P = T * P * T' +QQ
 
-        luF = RF.lu!(F, check = false) ###
+        else
+            if sum(mask) != length(data_in_deviations[:, t]) # There is missing observation in period
 
-        if !ℒ.issuccess(luF)
-            return -Inf
+                v = data_in_deviations[mask, t] - z[mask]
+              
+                F = C[mask,:] * P * C[mask,:]' 
+
+                luF = RF.lu!(F, check = false) ###
+
+                if !ℒ.issuccess(luF)
+                    return -Inf
+                end
+
+                Fdet = ℒ.det(luF)
+
+                # Early return if determinant is too small, indicating numerical instability.
+                if Fdet < eps(Float64)
+                    return -Inf
+                end
+
+                invF = inv(luF) ###
+
+                if t > presample_periods
+                    loglik += log(Fdet) + ℒ.dot(v, invF, v)###
+                end
+
+                K = P * C[mask,:]' * invF
+
+                P = A * (P - K * C[mask,:] * P) * A' + 𝐁
+        
+                u = A * (u + K * v)
+        
+                mul!(z, C, u)
+
+
+            elseif (t>1) && (sum(mask) == length(data_in_deviations[:, t])) # We are not at the intial value
+                if sum(.!isnan.(data_in_deviations[:, t-1])) != length(data_in_deviations[:, t-1])
+                    # if previous period had missing values F and K need to be reallocated
+                    v =  (data_in_deviations[:, t] - z)              
+                    
+                    F = C * P * C'
+
+                    luF = RF.lu!(F, check = false) ###
+
+                    if !ℒ.issuccess(luF)
+                        return -Inf
+                    end
+
+                    Fdet = ℒ.det(luF)
+
+                    # Early return if determinant is too small, indicating numerical instability.
+                    if Fdet < eps(Float64)
+                        return -Inf
+                    end
+
+                    invF = inv(luF) ###
+
+                    if t > presample_periods
+                        loglik += log(Fdet) + ℒ.dot(v, invF, v)###
+                    end
+
+                    K = P * C' * invF
+
+                    P = A * (P - K * C * P) * A' + 𝐁
+            
+                    u = A * (u + K * v)
+            
+                    mul!(z, C, u)
+                else
+                    # Run KF          
+                    ℒ.axpby!(1, data_in_deviations[:, t], -1, z)
+                    # v = data_in_deviations[:, t] - z
+                            mul!(Ctmp, C, P) # use Octavian.jl
+                    mul!(F, Ctmp, C')
+                    # F = C * P * C'
+                    luF = RF.lu!(F, check = false) ###
+                    if !ℒ.issuccess(luF)
+                        return -Inf
+                    end
+                    Fdet = ℒ.det(luF)
+                            # Early return if determinant is too small, indicating numerical instability.
+                    if Fdet < eps(Float64)
+                        return -Inf
+                    end
+                    # invF = inv(luF) ###
+                    if t > presample_periods
+                        ℒ.ldiv!(ztmp, luF, z)
+                        loglik += log(Fdet) + ℒ.dot(z', ztmp) ###
+                        # loglik += log(Fdet) + z' * invF * z###
+                        # loglik += log(Fdet) + v' * invF * v###
+                    end
+                            # mul!(Ktmp, P, C')
+                    # mul!(K, Ktmp, invF)
+                    mul!(K, P, C')
+                    ℒ.rdiv!(K, luF)
+                    # K = P * Ct / luF
+                    # K = P * C' * invF
+                    mul!(tmp, K, C)
+                    mul!(Ptmp, tmp, P)
+                    ℒ.axpy!(-1, Ptmp, P)
+                    mul!(Ptmp, A, P)
+                    mul!(P, Ptmp, A')
+                    ℒ.axpy!(1, 𝐁, P)
+                    # P = A * (P - K * C * P) * A' + 𝐁
+                    mul!(u, K, z, 1, 1)
+                    mul!(utmp, A, u)
+                    u .= utmp
+                    # u = A * (u + K * v)
+                    mul!(z, C, u)
+                    # z = C * u          
+                end
+
+            else
+                # Run KF          
+                ℒ.axpby!(1, data_in_deviations[:, t], -1, z)
+                # v = data_in_deviations[:, t] - z
+                        mul!(Ctmp, C, P) # use Octavian.jl
+                mul!(F, Ctmp, C')
+                # F = C * P * C'
+                luF = RF.lu!(F, check = false) ###
+                if !ℒ.issuccess(luF)
+                    return -Inf
+                end
+                Fdet = ℒ.det(luF)
+                        # Early return if determinant is too small, indicating numerical instability.
+                if Fdet < eps(Float64)
+                    return -Inf
+                end
+                # invF = inv(luF) ###
+                if t > presample_periods
+                    ℒ.ldiv!(ztmp, luF, z)
+                    loglik += log(Fdet) + ℒ.dot(z', ztmp) ###
+                    # loglik += log(Fdet) + z' * invF * z###
+                    # loglik += log(Fdet) + v' * invF * v###
+                end
+                        # mul!(Ktmp, P, C')
+                # mul!(K, Ktmp, invF)
+                mul!(K, P, C')
+                ℒ.rdiv!(K, luF)
+                # K = P * Ct / luF
+                # K = P * C' * invF
+                mul!(tmp, K, C)
+                mul!(Ptmp, tmp, P)
+                ℒ.axpy!(-1, Ptmp, P)
+                mul!(Ptmp, A, P)
+                mul!(P, Ptmp, A')
+                ℒ.axpy!(1, 𝐁, P)
+                # P = A * (P - K * C * P) * A' + 𝐁
+                mul!(u, K, z, 1, 1)
+                mul!(utmp, A, u)
+                u .= utmp
+                # u = A * (u + K * v)
+                mul!(z, C, u)
+                # z = C * u    
+            end
         end
-
-        Fdet = ℒ.det(luF)
-
-        # Early return if determinant is too small, indicating numerical instability.
-        if Fdet < eps(Float64)
-            return -Inf
-        end
-
-        # invF = inv(luF) ###
-
-        if t > presample_periods
-            ℒ.ldiv!(ztmp, luF, z)
-            loglik += log(Fdet) + ℒ.dot(z', ztmp) ###
-            # loglik += log(Fdet) + z' * invF * z###
-            # loglik += log(Fdet) + v' * invF * v###
-        end
-
-        # mul!(Ktmp, P, C')
-        # mul!(K, Ktmp, invF)
-        mul!(K, P, C')
-        ℒ.rdiv!(K, luF)
-        # K = P * Ct / luF
-        # K = P * C' * invF
-
-        mul!(tmp, K, C)
-        mul!(Ptmp, tmp, P)
-        ℒ.axpy!(-1, Ptmp, P)
-
-        mul!(Ptmp, A, P)
-        mul!(P, Ptmp, A')
-        ℒ.axpy!(1, 𝐁, P)
-        # P = A * (P - K * C * P) * A' + 𝐁
-
-        mul!(u, K, z, 1, 1)
-        mul!(utmp, A, u)
-        u .= utmp
-        # u = A * (u + K * v)
-
-        mul!(z, C, u)
-        # z = C * u
     end
 
-    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * log(2 * 3.141592653589793)) / 2 
+    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)-sum(isnan.(data_in_deviations))) * log(2 * 3.141592653589793)) / 2 
 end
+
 
 
 
