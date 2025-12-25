@@ -3,7 +3,7 @@ include("models/Smets_Wouters_2007_HLT.jl")
 m = Smets_Wouters_2007_HLT                # no parentheses
 
 # First-order perturbation (default)
-plot_irf(m; shocks = :epinf)              # or MacroModelling.plot_irf
+p = plot_irf(m; shocks = :epinf)          # Capture the plot
 
 # Second-order perturbation
 plot_irf!(m,
@@ -28,16 +28,20 @@ solve!(m,
 println("Extracting SEP IRF...")
 irf_sep = get_sep_irf(m, :epinf, 1.0; periods = 20)
 
-# Add SEP IRF to the plot
-# Get the variable names and plot for each variable
-vars = m.var
-for (i, v) in enumerate(vars)
-    # Find the subplot for this variable and add SEP line
-    plot!(irf_sep[i, :],
+# Add SEP IRF to the existing plot
+# Note: irf_sep has dimensions (variables × periods)
+# Time axis is 0:20, so we need periods+1 points
+nvars = size(irf_sep, 1)
+time_axis = 0:size(irf_sep, 2)-1
+
+for i in 1:nvars
+    plot!(p, time_axis, irf_sep[i, :],
           label = "SEP",
           linewidth = 2,
           linestyle = :dash,
+          color = :black,
           subplot = i)
 end
 
 println("✓ SEP IRF added to comparison plot")
+display(p)
