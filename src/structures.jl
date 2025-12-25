@@ -208,6 +208,18 @@ struct third_order_perturbation_solution
     state_update_obc::Union{Function,Nothing}
 end
 
+struct sep_solution
+    Y::Vector{Float64}                # Full path solution
+    layout::Any                       # SEPLayout (tree structure)
+    state_update::Function            # Policy function
+    periods::Int                      # Horizon T
+    order::Int                        # Branching order L
+    nnodes::Int                       # GH nodes per shock
+    convergence_flag::Int             # 0=success, 1=max_iter, 2=domain
+    final_error::Float64              # Max residual norm
+    runtime_seconds::Float64          # Solve time
+end
+
 mutable struct perturbation
     first_order::perturbation_solution
     linear_time_iteration::perturbation_solution
@@ -216,6 +228,7 @@ mutable struct perturbation
     pruned_second_order::second_order_perturbation_solution
     third_order::third_order_perturbation_solution
     pruned_third_order::third_order_perturbation_solution
+    stochastic_extended_path::Union{sep_solution, Nothing}
     auxilliary_indices::auxilliary_indices
     second_order_auxilliary_matrices::second_order_auxilliary_matrices
     third_order_auxilliary_matrices::third_order_auxilliary_matrices
