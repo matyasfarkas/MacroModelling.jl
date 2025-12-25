@@ -152,8 +152,22 @@ function sep_solve_mm!(
     SS = 𝓂.solution.non_stochastic_steady_state
     calib_pars = Float64[]
     if length(𝓂.calibration_equations) > 0
+        # Get available keys from SS_result
+        ss_keys = try
+            axiskeys(SS_result, 1)
+        catch
+            Symbol[]  # If SS_result is not a KeyedArray
+        end
+
         for param in 𝓂.calibration_equations_parameters
-            push!(calib_pars, Float64(SS_result(param)))
+            # Only add parameter if it exists in SS_result
+            if param ∈ ss_keys
+                push!(calib_pars, Float64(SS_result(param)))
+            else
+                # Parameter not in steady state, skip it
+                # This can happen for flex-price variables in sticky-price models
+                @debug "Calibration parameter $param not found in steady state, skipping"
+            end
         end
     end
     SS_and_pars = vcat(SS, calib_pars)
