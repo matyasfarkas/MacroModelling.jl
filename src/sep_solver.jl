@@ -145,25 +145,34 @@ function sep_solve_mm!(
     dε = length(𝓂.exo)
 
     # Get steady state
-    SS_result = get_steady_state(𝓂; parameters=parameters)
-    yss = [Float64(SS_result[var]) for var in 𝓂.var]
+    SS_result = get_steady_state(𝓂; parameters=parameters, return_variables_only=true, derivatives=false)
+    yss = [Float64(SS_result(var)) for var in 𝓂.var]
 
     # Get Jacobian
     SS = 𝓂.solution.non_stochastic_steady_state
     calib_pars = Float64[]
     if length(𝓂.calibration_equations) > 0
         for param in 𝓂.calibration_equations_parameters
-            push!(calib_pars, Float64(SS_result[param]))
+            push!(calib_pars, Float64(SS_result(param)))
         end
     end
     SS_and_pars = vcat(SS, calib_pars)
-    J_full = calculate_jacobian(parameters, SS_and_pars, 𝓂)
+    J_compressed = calculate_jacobian(parameters, SS_and_pars, 𝓂)
+    timings = 𝓂.timings
 
-    # Extract Jacobian blocks [∇₊, ∇₀, ∇₋, ∇ₑ]
-    ∇₊ = J_full[:, 1:ny_]                      # Future
-    ∇₀ = J_full[:, ny_+1:2*ny_]                # Current
-    ∇₋ = J_full[:, 2*ny+1:3*ny_]              # Past
-    ∇ₑ = J_full[:, 3*ny_+1:3*ny_+dε]          # Shocks
+    # Reconstruct full Jacobian blocks from compressed format
+    # J_compressed has structure: [future_dynamic, all_current, past_dynamic, shocks]
+    # We need: [all_future, all_current, all_past, shocks]
+
+    ∇₊ = zeros(Float64, ny_, ny_)
+    ∇₊[:, timings.future_not_past_and_mixed_idx] = J_compressed[:, 1:timings.nFuture_not_past_and_mixed]
+
+    ∇₀ = J_compressed[:, timings.nFuture_not_past_and_mixed .+ (1:timings.nVars)]
+
+    ∇₋ = zeros(Float64, ny_, ny_)
+    ∇₋[:, timings.past_not_future_and_mixed_idx] = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars .+ (1:timings.nPast_not_future_and_mixed)]
+
+    ∇ₑ = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars + timings.nPast_not_future_and_mixed .+ (1:timings.nExo)]
 
     # Get shock covariance (placeholder - needs proper extraction)
     Σ = Matrix{Float64}(I, dε, dε) * 0.01  # Default: small variance
@@ -212,7 +221,9 @@ function sep_solve_mm!(
     layout = SEPLayout(T, Lbr, K, G, voff, eoff, ny_, dε)
 
     # Initialize solution at steady state
-    nvars_total = voff[T+2] - 1
+    # voff[T+2] is the next free index after all variables, so we need voff[T+2]-1 elements
+    # But index_y can return voff[T+2] as max index, so we allocate voff[T+2] elements
+    nvars_total = voff[T+2]
     Y = zeros(nvars_total)
     for t in 0:T, g in 1:G[t+1]
         Y[index_y(layout, t, g)] .= yss
@@ -386,15 +397,19 @@ function sep_solve_mm!(
         J = sparse(view(rows, 1:nnz_count), view(cols, 1:nnz_count),
                    view(vals, 1:nnz_count), neq, length(Y))
 
+        # Check current residual
+        err = maximum(abs, R)
+
         # Solve Newton step with regularization
         λ = 1e-8
         Δ = (J'*J + λ*I) \ (J'*(-R))
 
-        # Update with damping
-        Y .+= 0.3 * Δ
+        # Adaptive damping based on residual norm
+        # Start aggressive, reduce if residual is large
+        α = err > 1e-3 ? 0.5 : (err > 1e-5 ? 0.7 : 1.0)
 
-        # Check convergence
-        err = maximum(abs, R)
+        # Apply update with adaptive step size
+        Y .+= α * Δ
         if opts.verbose && (it % 5 == 0 || it == 1)
             @info "SEP it=$it/$opts.maxit  max|res|=$err  step_norm=$(norm(Δ))"
         end

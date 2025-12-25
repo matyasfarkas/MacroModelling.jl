@@ -165,7 +165,6 @@ include("dynare.jl")
 include("inspect.jl")
 include("moments.jl")
 include("sep_solver.jl")
-include("sep_irf.jl")
 include("perturbation.jl")
 
 include("./algorithms/sylvester.jl")
@@ -190,7 +189,7 @@ export plot_irfs!, plot_irf!, plot_IRF!, plot_girf!, plot_simulations!, plot_sim
 
 export Normal, Beta, Cauchy, Gamma, InverseGamma
 
-export get_irfs, get_irf, get_IRF, simulate, get_simulation, get_simulations, get_girf, get_sep_irf, get_sep_simulation
+export get_irfs, get_irf, get_IRF, simulate, get_simulation, get_simulations, get_girf
 export get_conditional_forecast
 export get_solution, get_first_order_solution, get_perturbation_solution, get_second_order_solution, get_third_order_solution
 export get_steady_state, get_SS, get_ss, get_non_stochastic_steady_state, get_stochastic_steady_state, get_SSS, steady_state, SS, SSS, ss, sss
@@ -6658,18 +6657,13 @@ end
 
 @stable default_mode = "disable" begin
 
-function solve!(𝓂::ℳ;
-                parameters::ParameterType = nothing,
-                dynamics::Bool = false,
-                algorithm::Symbol = :first_order,
+function solve!(𝓂::ℳ; 
+                parameters::ParameterType = nothing, 
+                dynamics::Bool = false, 
+                algorithm::Symbol = :first_order, 
                 opts::CalculationOptions = merge_calculation_options(),
                 obc::Bool = false,
-                silent::Bool = false,
-                sep_periods::Int = 20,
-                sep_order::Int = 1,
-                sep_nnodes::Int = 3,
-                sep_maxit::Int = 80,
-                sep_tol::Float64 = 1e-7) #,
+                silent::Bool = false) #,
                 # quadratic_matrix_equation_algorithm::Symbol = :schur,
                 # verbose::Bool = false,
                 # timer::TimerOutput = TimerOutput(),
@@ -6903,56 +6897,6 @@ function solve!(𝓂::ℳ;
             𝓂.solution.perturbation.pruned_third_order = third_order_perturbation_solution(stochastic_steady_state, state_update₃, state_update₃̂)
 
             𝓂.solution.outdated_algorithms = setdiff(𝓂.solution.outdated_algorithms,[:pruned_third_order])
-        end
-    end
-    
-    # SEP (Stochastic Extended Path) algorithm dispatch
-    if (algorithm == :stochastic_extended_path) && (:stochastic_extended_path ∈ 𝓂.solution.outdated_algorithms)
-        if !silent println("Solving with Stochastic Extended Path algorithm...") end
-
-        # Use function parameters directly for SEP options
-        sep_opts = SEPSolverOptions(
-            periods = sep_periods,
-            order = sep_order,
-            nnodes = sep_nnodes,
-            maxit = sep_maxit,
-            tol = sep_tol,
-            verbose = !silent
-        )
-        
-        # Solve SEP
-        t_start = time()
-        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts)
-        runtime = time() - t_start
-
-        # Extract results from named tuple
-        Y = result.Y
-        layout = result.layout
-        conv_flag = result.flag
-        final_err = result.err
-        
-        # Create placeholder state_update function
-        # Future: use SEP tree for nonlinear policy
-        function state_update(state::Vector{T}, shock::Vector{S}) where {T,S}
-            # Placeholder - returns steady state for now
-            # Full implementation would use SEP tree structure
-            return 𝓂.solution.non_stochastic_steady_state
-        end
-        
-        # Store solution
-        𝓂.solution.perturbation.stochastic_extended_path = sep_solution(
-            Y, layout, state_update,
-            sep_opts.periods, sep_opts.order, sep_opts.nnodes,
-            conv_flag, final_err, runtime
-        )
-        
-        # Mark as solved
-        𝓂.solution.outdated_algorithms = setdiff(𝓂.solution.outdated_algorithms, [:stochastic_extended_path])
-        
-        if !silent 
-            println("SEP solution computed in ", round(runtime, digits=3), " seconds")
-            println("Convergence: ", conv_flag == 0 ? "SUCCESS" : "FAILED (code: $conv_flag)")
-            println("Final error: ", final_err)
         end
     end
     
