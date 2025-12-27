@@ -166,6 +166,7 @@ include("inspect.jl")
 include("moments.jl")
 include("sep_solver.jl")
 include("sep_irf.jl")
+include("sep_simulation.jl")
 include("perturbation.jl")
 
 include("./algorithms/sylvester.jl")
@@ -190,7 +191,7 @@ export plot_irfs!, plot_irf!, plot_IRF!, plot_girf!, plot_simulations!, plot_sim
 
 export Normal, Beta, Cauchy, Gamma, InverseGamma
 
-export get_irfs, get_irf, get_IRF, simulate, get_simulation, get_simulations, get_girf, get_sep_irf, get_sep_simulation
+export get_irfs, get_irf, get_IRF, simulate, get_simulation, get_simulations, get_girf, get_sep_irf, get_sep_simulation, simulate_sep
 export get_conditional_forecast
 export get_solution, get_first_order_solution, get_perturbation_solution, get_second_order_solution, get_third_order_solution
 export get_steady_state, get_SS, get_ss, get_non_stochastic_steady_state, get_stochastic_steady_state, get_SSS, steady_state, SS, SSS, ss, sss
@@ -2932,7 +2933,7 @@ end
 Max = max
 Min = min
 
-function simplify(ex::Expr)::Union{Expr,Symbol,Int}
+function simplify(ex::Expr)::Union{Expr,Symbol,Int,Float64}
     ex_ss = convert_to_ss_equation(ex)
 
     for x in get_symbols(ex_ss)
@@ -2942,10 +2943,10 @@ function simplify(ex::Expr)::Union{Expr,Symbol,Int}
 
     parsed = ex_ss |> x -> Core.eval(SymPyWorkspace, x) |> string |> Meta.parse
 
-    postwalk(x ->   x isa Expr ? 
-                        x.args[1] == :conjugate ? 
-                            x.args[2] : 
-                        x : 
+    postwalk(x ->   x isa Expr ?
+                        x.args[1] == :conjugate ?
+                            x.args[2] :
+                        x :
                     x, parsed)
 end
 
@@ -6669,7 +6670,8 @@ function solve!(𝓂::ℳ;
                 sep_order::Int = 1,
                 sep_nnodes::Int = 3,
                 sep_maxit::Int = 80,
-                sep_tol::Float64 = 1e-7) #,
+                sep_tol::Float64 = 1e-7,
+                sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing) #,
                 # quadratic_matrix_equation_algorithm::Symbol = :schur,
                 # verbose::Bool = false,
                 # timer::TimerOutput = TimerOutput(),
@@ -6919,10 +6921,34 @@ function solve!(𝓂::ℳ;
             tol = sep_tol,
             verbose = !silent
         )
-        
+
+        # Automatic warm start: use previous solution if compatible
+        if isnothing(sep_initial_guess)
+            # Check if there's a previous SEP solution we can use
+            prev_sep = 𝓂.solution.perturbation.stochastic_extended_path
+            if !isnothing(prev_sep)
+                # Check if parameters match (same tree structure)
+                if prev_sep.periods == sep_periods &&
+                   prev_sep.order == sep_order &&
+                   prev_sep.nnodes == sep_nnodes
+                    # Use previous solution as warm start
+                    sep_initial_guess = prev_sep.Y
+                    if !silent
+                        println("  Using previous SEP solution as warm start (automatic)")
+                    end
+                else
+                    if !silent
+                        println("  Previous SEP solution has different parameters - cold start")
+                        println("    (prev: T=$(prev_sep.periods), Lbr=$(prev_sep.order), K=$(prev_sep.nnodes))")
+                        println("    (curr: T=$sep_periods, Lbr=$sep_order, K=$sep_nnodes)")
+                    end
+                end
+            end
+        end
+
         # Solve SEP
         t_start = time()
-        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts)
+        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts, initial_guess=sep_initial_guess)
         runtime = time() - t_start
 
         # Extract results from named tuple

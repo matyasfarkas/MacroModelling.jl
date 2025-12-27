@@ -55,7 +55,10 @@ end
 
 function child_groups(layout::SEPLayout, t::Int, g::Int)
     if t == 0 return 1:layout.K end
-    if t >= layout.Lbr return g:g end
+    if t >= layout.Lbr
+        # Return K copies of the same group to integrate over K shock realizations
+        return [g for _ in 1:layout.K]
+    end
     return (g-1)*layout.K .+ (1:layout.K)
 end
 
@@ -129,16 +132,25 @@ end
 """
 Main SEP solver implementation.
 
+# Arguments
+- `𝓂`: MacroModelling model
+- `parameters`: Vector of parameter values
+- `opts`: SEPSolverOptions configuration (optional)
+- `initial_guess`: Vector{Float64} from previous solution for warm start (optional)
+  When solving over parameter grids, passing the previous solution as initial_guess
+  dramatically speeds up convergence. Get this from result.Y of previous solve.
+
 Returns: (flag, Y, layout, err) where:
 - flag: 0=success, 1=max iterations, 2=domain violation
-- Y: Solution vector containing all states
+- Y: Solution vector containing all states (use this for next warm start)
 - layout: SEPLayout describing tree structure
 - err: Final residual norm
 """
 function sep_solve_mm!(
     𝓂::ℳ,
     parameters::Vector{Float64};
-    opts::SEPSolverOptions=SEPSolverOptions()
+    opts::SEPSolverOptions=SEPSolverOptions(),
+    initial_guess::Union{Nothing,Vector{Float64}}=nothing
 )
     # Get model dimensions
     ny_ = length(𝓂.var)
@@ -188,8 +200,44 @@ function sep_solve_mm!(
 
     ∇ₑ = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars + timings.nPast_not_future_and_mixed .+ (1:timings.nExo)]
 
-    # Get shock covariance (placeholder - needs proper extraction)
-    Σ = Matrix{Float64}(I, dε, dε) * 0.01  # Default: small variance
+    if opts.verbose
+        @info "Shock Jacobian ∇ₑ stats:" size=size(∇ₑ) norm=norm(∇ₑ) max_abs=maximum(abs.(∇ₑ)) nnz=count(x -> abs(x) > 1e-12, ∇ₑ)
+        # Print ALL non-zero values
+        println("  Non-zero elements of ∇ₑ:")
+        for i in 1:size(∇ₑ, 1)
+            for j in 1:size(∇ₑ, 2)
+                if abs(∇ₑ[i, j]) > 1e-12
+                    shock_name = length(𝓂.exo) >= j ? 𝓂.exo[j] : "shock$j"
+                    println("    ∇ₑ[eq $i, $shock_name] = $(∇ₑ[i,j])")
+                end
+            end
+        end
+    end
+
+    # Get shock covariance from model parameters
+    # MacroModelling stores shock std devs as parameters named "z_{shock_name}"
+    Σ = zeros(dε, dε)
+    for (i, shock_name) in enumerate(𝓂.exo)
+        # Look for parameter z_{shock_name}
+        param_name = Symbol("z_", shock_name)
+        param_idx = findfirst(==(param_name), 𝓂.parameters)
+
+        if param_idx !== nothing
+            σ = parameters[param_idx]
+            Σ[i, i] = σ^2  # Variance = std^2
+            if opts.verbose
+                @info "Shock $shock_name: σ = $σ (from parameter $param_name)"
+            end
+        else
+            # Fallback to small default if parameter not found
+            @warn "Shock std parameter $param_name not found, using default 0.01"
+            Σ[i, i] = 0.01^2
+        end
+    end
+
+    if opts.verbose
+        @info "Shock covariance matrix Σ:" Σ
+    end
 
     # Setup GH quadrature
     T = opts.periods
@@ -234,13 +282,30 @@ function sep_solve_mm!(
 
     layout = SEPLayout(T, Lbr, K, G, voff, eoff, ny_, dε)
 
-    # Initialize solution at steady state
+    # Initialize solution
     # voff[T+2] is the next free index after all variables, so we need voff[T+2]-1 elements
     # But index_y can return voff[T+2] as max index, so we allocate voff[T+2] elements
     nvars_total = voff[T+2]
-    Y = zeros(nvars_total)
-    for t in 0:T, g in 1:G[t+1]
-        Y[index_y(layout, t, g)] .= yss
+
+    if !isnothing(initial_guess)
+        # Use provided initial guess (from previous solution)
+        # This dramatically speeds up convergence when solving over parameter grids
+        if length(initial_guess) != nvars_total
+            @warn "Initial guess dimension ($(length(initial_guess))) doesn't match expected ($nvars_total). Using steady state instead."
+            Y = zeros(nvars_total)
+            for t in 0:T, g in 1:G[t+1]
+                Y[index_y(layout, t, g)] .= yss
+            end
+        else
+            Y = copy(initial_guess)
+            opts.verbose && @info "Using provided initial guess for warm start"
+        end
+    else
+        # Default: initialize at steady state
+        Y = zeros(nvars_total)
+        for t in 0:T, g in 1:G[t+1]
+            Y[index_y(layout, t, g)] .= yss
+        end
     end
 
     # Pre-allocate workspace
@@ -272,6 +337,18 @@ function sep_solve_mm!(
         fill!(R, 0.0)
         nnz_count = 0
 
+        # Diagnostic: Check Y variation at t=1 on first iteration
+        if it == 1 && opts.verbose && T >= 1
+            y_idx_test = 1  # Test first variable
+            println("\n  Diagnostic - Y values at t=1 for different groups (variable $y_idx_test):")
+            for g in [1, 100, 500, 1000, 1175, 1500, 2000, min(2187, G[2])]
+                if g <= G[2]
+                    y_test = Y[index_y(layout, 1, g)[y_idx_test]]
+                    println("    Group $g: Y[$y_idx_test] = $y_test, dev=$(y_test - yss[y_idx_test])")
+                end
+            end
+        end
+
         for t in 1:T
             Gt = G[t+1]
             for g in 1:Gt
@@ -286,6 +363,10 @@ function sep_solve_mm!(
                     fill!(J_lag, 0.0)
                     fill!(J_cur, 0.0)
 
+                    # Extract shock for current group g (same for all children)
+                    k_shock = mod(g - 1, K) + 1
+                    ε_curr = view(X, :, k_shock)
+
                     for (kidx, cg) in enumerate(cgs)
                         yl1 = get_y(t+1, cg)
 
@@ -293,9 +374,6 @@ function sep_solve_mm!(
                         Δy_lag = yl - yss
                         Δy_cur = yc - yss
                         Δy_fwd = yl1 - yss
-
-                        # Get shock for this node
-                        ε_curr = view(X, :, kidx)
 
                         # Linear approximation: r = J*(y - yss)
                         r = ∇₊ * Δy_fwd + ∇₀ * Δy_cur + ∇₋ * Δy_lag + ∇ₑ * ε_curr
@@ -305,6 +383,7 @@ function sep_solve_mm!(
                         J_cur_local = ∇₀
                         J_fwd = ∇₊
 
+                        # Use weight for enumeration index (Gauss-Hermite weight)
                         wk = W[kidx]
                         r_sum .+= wk .* r
                         J_lag .+= wk .* J_lag_local

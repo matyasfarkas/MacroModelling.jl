@@ -5,7 +5,7 @@
 # - solve!(model, algorithm=:stochastic_extended_path)
 # - get_sep_irf(model, shock, size)
 
-using MacroModelling, Plots, Printf
+using MacroModelling, Plots, Printf, StatsBase, AxisKeys
 include("models/Smets_Wouters_2007_HLT.jl")
 
 """
@@ -42,7 +42,7 @@ function get_sep_irf_markup(; periods=40)
            sep_order = 1,      # First-order branching
            sep_nnodes = 3,     # 3 GH nodes per shock
            sep_maxit = 80,
-           sep_tol = 1e-7,
+           sep_tol = 1e-6,
            silent = false)
 
     # Check convergence
@@ -160,9 +160,9 @@ function compare_markup_irfs(; periods=40)
             sep_r = sep_resp[1:n]
 
             # Metrics
-            corr = cor(mm_r, sep_r)
-            peak_mm = maximum(abs.(mm_r))
-            peak_sep = maximum(abs.(sep_r))
+            corr = StatsBase.cor(mm_r, sep_r)
+            peak_mm = StatsBase.maximum(abs.(mm_r))
+            peak_sep = StatsBase.maximum(abs.(sep_r))
             peak_ratio = peak_sep / peak_mm
             rmse = sqrt(mean((mm_r - sep_r).^2))
 
@@ -199,10 +199,12 @@ function compare_markup_irfs(; periods=40)
     for (i, var) in enumerate(key_vars)
         if haskey(mm_responses, var) && haskey(sep_responses, var)
             # Plot both MM and SEP
+            # MM IRF: 1 to periods
             plot!(p[i], 1:periods, mm_responses[var],
                   label="MM (1st-order)", linewidth=2, linestyle=:solid,
                   color=:blue, title=string(var))
-            plot!(p[i], 1:periods, sep_responses[var],
+            # SEP IRF: 0 to periods (includes t=0)
+            plot!(p[i], 0:length(sep_responses[var])-1, sep_responses[var],
                   label="SEP (nonlinear)", linewidth=2, linestyle=:dash,
                   color=:red)
             hline!(p[i], [0], color=:black, linestyle=:dot, label="")
@@ -214,8 +216,8 @@ function compare_markup_irfs(; periods=40)
         end
     end
 
-    savefig(p, "markup_irf_comparison.png")
-    println("  ✓ Plot saved: markup_irf_comparison.png")
+    savefig(p, "markup_irf_comparison.pdf")
+    println("  ✓ Plot saved: markup_irf_comparison.pdf")
 
     println("\n" * "="^70)
     println("VALIDATION SUMMARY")
