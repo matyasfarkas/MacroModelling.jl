@@ -31,7 +31,7 @@ julia --project=. tests/sep_validation/test_rbc_sparse_tree_irf_validation.jl
 
 **Expected outcome**: tt path matches Dynare to machine precision
 
-### test_sw07_sep_for_dynare_comparison.jl
+### test_sw07_HLT_sep_for_dynare_comparison.jl
 
 **Purpose**: SW07_HLT model IRF comparison
 
@@ -40,7 +40,7 @@ julia --project=. tests/sep_validation/test_rbc_sparse_tree_irf_validation.jl
 
 **Run**:
 ```bash
-julia --project=. tests/sep_validation/test_sw07_sep_for_dynare_comparison.jl
+julia --project=. tests/sep_validation/test_sw07_HLT_sep_for_dynare_comparison.jl
 ```
 
 ### test_dynare_rs_replication.jl
@@ -133,7 +133,7 @@ julia --project=. tests/sep_development/test_sep_vs_pert.jl
 
 **Model**: Smets-Wouters 2007 with Kimball aggregator
 **Location**: `models/Smets_Wouters_2007_HLT.jl`
-**Test**: `tests/sep_validation/test_sw07_sep_for_dynare_comparison.jl`
+**Test**: `tests/sep_validation/test_sw07_HLT_sep_for_dynare_comparison.jl`
 
 **Challenge**: High-order nonlinearity from Kimball aggregator
 
@@ -146,7 +146,7 @@ julia --project=. tests/sep_development/test_sep_vs_pert.jl
 ### Running SW07 Test
 
 ```bash
-julia --project=. tests/sep_validation/test_sw07_sep_for_dynare_comparison.jl
+julia --project=. tests/sep_validation/test_sw07_HLT_sep_for_dynare_comparison.jl
 ```
 
 ## Test File Naming Convention

@@ -42,7 +42,7 @@ solve!(Smets_Wouters_2007_HLT,
 sep_sol_1 = Smets_Wouters_2007_HLT.solution.perturbation.stochastic_extended_path
 
 println("\nSolution status:")
-println("  - Convergence: ", sep_sol_1.convergence_flag ? "✓" : "✗")
+println("  - Convergence: ", sep_sol_1.convergence_flag == 0 ? "✓" : "✗")
 println("  - Final error: ", sep_sol_1.final_error)
 println("  - Runtime: ", sep_sol_1.runtime_seconds, " seconds")
 
@@ -83,7 +83,7 @@ solve!(Smets_Wouters_2007_HLT,
 sep_sol_2 = Smets_Wouters_2007_HLT.solution.perturbation.stochastic_extended_path
 
 println("\nSolution status:")
-println("  - Convergence: ", sep_sol_2.convergence_flag ? "✓" : "✗")
+println("  - Convergence: ", sep_sol_2.convergence_flag == 0 ? "✓" : "✗")
 println("  - Final error: ", sep_sol_2.final_error)
 println("  - Runtime: ", sep_sol_2.runtime_seconds, " seconds")
 

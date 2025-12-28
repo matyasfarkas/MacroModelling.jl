@@ -41,7 +41,7 @@ println("Generated file: Smets_Wouters_2007_HLT.mod")
 - Diagnostic output for key variables: y, c, inve, pinf, lab
 
 ### 3. MacroModelling Test Script
-**File**: `test_sw07_sep_for_dynare_comparison.jl`
+**File**: `test_sw07_HLT_sep_for_dynare_comparison.jl`
 
 Runs identical SEP configuration in MacroModelling.jl:
 - SEP(1): periods=10, order=1, nnodes=3
@@ -53,7 +53,7 @@ Runs identical SEP configuration in MacroModelling.jl:
 ### Step 1: Run MacroModelling Test
 
 ```bash
-julia --project=. test_sw07_sep_for_dynare_comparison.jl
+julia --project=. test_sw07_HLT_sep_for_dynare_comparison.jl
 ```
 
 Expected output:

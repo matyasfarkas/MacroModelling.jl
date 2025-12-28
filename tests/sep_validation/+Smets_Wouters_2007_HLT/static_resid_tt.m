@@ -1,0 +1,64 @@
+function [T_order, T] = static_resid_tt(y, x, params, T_order, T)
+if T_order >= 0
+    return
+end
+T_order = 0;
+if size(T, 1) < 55
+    T = [T; NaN(55 - size(T, 1), 1)];
+end
+T(1) = y(31)^params(6);
+T(2) = y(35)^(1-params(6));
+T(3) = y(1)/y(16);
+T(4) = (1+params(38))*(-params(8))/(params(8)-1);
+T(5) = y(42)^params(13);
+T(6) = params(19)^(1-params(13));
+T(7) = T(5)*T(6)/y(42);
+T(8) = T(7)^T(4);
+T(9) = y(59)/y(17);
+T(10) = (-params(15))*(1+params(39))/(params(15)-1);
+T(11) = y(42)^params(14);
+T(12) = params(19)^(1-params(14));
+T(13) = T(11)*T(12)/y(42);
+T(14) = T(13)^T(10);
+T(15) = (-(1+params(40)*(1-params(8))))/(params(8)-1);
+T(16) = T(7)^T(15);
+T(17) = (-(1+params(41)*(1-params(15))))/(params(15)-1);
+T(18) = T(13)^T(17);
+T(19) = (params(35)-1)/(1+params(34));
+T(20) = y(35)*(y(56)+params(39))/(1+params(39));
+T(21) = exp(T(19)*T(20)^(1+params(34)));
+T(22) = y(12)-y(12)*params(12)/params(10);
+T(23) = T(22)^(-params(35));
+T(24) = 1-y(2)-y(29)*params(10)*y(3)/y(29);
+T(25) = params(10)^2;
+T(26) = y(55)^(1-params(6));
+T(27) = y(49)^params(6);
+T(28) = T(26)*T(27);
+T(29) = params(6)^params(6);
+T(30) = (1-params(6))^(1-params(6));
+T(31) = y(6)*T(29)*T(30);
+T(32) = params(15)*(1+params(39))/(params(15)-1);
+T(33) = y(59)^(1+T(32));
+T(34) = y(17)^T(32);
+T(35) = T(20)^params(34);
+T(36) = (1+params(38))*params(8)/(params(8)-1);
+T(37) = y(1)^(1+T(36));
+T(38) = y(16)^T(36);
+T(39) = (y(48))^(1-params(31));
+T(40) = y(48)^params(31);
+T(41) = T(39)*T(40);
+T(42) = (y(42)/params(19))^((1-params(31))*params(30));
+T(43) = y(62)/y(63);
+T(44) = T(43)^((1-params(31))*params(32));
+T(45) = T(41)*T(42)*T(44);
+T(46) = y(32)^params(6);
+T(47) = y(36)^(1-params(6));
+T(48) = exp(T(19)*y(36)^(1+params(34)));
+T(49) = y(13)-params(12)*y(13)/params(10);
+T(50) = T(49)^(-params(35));
+T(51) = 1-y(5)-params(10)*y(30)*y(4)/y(30);
+T(52) = y(58)^(1-params(6));
+T(53) = y(50)^params(6);
+T(54) = T(52)*T(53);
+T(55) = params(15)*y(36)^params(34);
+end
