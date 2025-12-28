@@ -1,12 +1,11 @@
 using MacroModelling, StatsPlots          # StatsPlots triggers plotting.jl
-include("models/Smets_Wouters_2007_HLT.jl")
+include("../models/Smets_Wouters_2007_HLT.jl")
 m = Smets_Wouters_2007_HLT                # no parentheses
-
 # First-order perturbation (default)
-p = plot_irf(m; shocks = :epinf)          # Capture the plot
+p= plot_irf(m; shocks = :epinf)          # Capture the plot
 
 # Second-order perturbation
-plot_irf!(m,
+MacroModelling.plot_irf!(m,
     shocks = :epinf,
     algorithm = :second_order)
 
