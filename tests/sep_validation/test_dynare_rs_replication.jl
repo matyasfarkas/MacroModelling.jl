@@ -9,20 +9,20 @@ println("REPLICATING DYNARE SEP TESTS: rs.mod")
 println("="^70)
 
 # Load the translated model
-include("/tmp/rstrue_clean.jl")
+include("/tmp/rs_clean.jl")
 
 # Model instance already created by include()
 println("\n1. Model loaded successfully")
 
-println("   Model variables: ", length(rstrue_clean.var))
-println("   Model shocks: ", rstrue_clean.exo)
-println("   Model parameters: ", length(rstrue_clean.parameters))
+println("   Model variables: ", length(rs_clean.var))
+println("   Model shocks: ", rs_clean.exo)
+println("   Model parameters: ", length(rs_clean.parameters))
 
 # Dynare Test 1: extended_path(periods=10, order=1)
 println("\n2. Running SEP(1): extended_path(periods=10, order=1)...")
 println("   (T=10, Lbr=1, nnodes=3)")
 
-solve!(rstrue_clean,
+solve!(rs_clean,
        algorithm = :stochastic_extended_path,
        sep_periods = 10,
        sep_order = 1,
@@ -50,7 +50,7 @@ yss_indices = 1:layout.ny_
 yss = sep_sol_1.Y[yss_indices]
 
 for var in test_vars
-    var_idx = findfirst(==(var), rstrue_clean.var)
+    var_idx = findfirst(==(var), rs_clean.var)
     if !isnothing(var_idx)
         @printf("   %-12s  %12.8f\n", string(var), yss[var_idx])
     end
@@ -60,7 +60,7 @@ end
 println("\n5. Running SEP(2): extended_path(periods=10, order=2)...")
 println("   (T=10, Lbr=2, nnodes=3)")
 
-solve!(rstrue_clean,
+solve!(rs_clean,
        algorithm = :stochastic_extended_path,
        sep_periods = 10,
        sep_order = 2,
@@ -87,7 +87,7 @@ yss_indices_2 = 1:layout_2.ny_
 yss_2 = sep_sol_2.Y[yss_indices_2]
 
 for var in test_vars
-    var_idx = findfirst(==(var), rstrue_clean.var)
+    var_idx = findfirst(==(var), rs_clean.var)
     if !isnothing(var_idx)
         @printf("   %-12s  %12.8f\n", string(var), yss_2[var_idx])
     end
@@ -99,7 +99,7 @@ println("   Variable      SEP(1)         SEP(2)         Difference")
 println("   " * "-"^65)
 
 for var in test_vars
-    var_idx = findfirst(==(var), rstrue_clean.var)
+    var_idx = findfirst(==(var), rs_clean.var)
     if !isnothing(var_idx)
         val1 = yss[var_idx]
         val2 = yss_2[var_idx]

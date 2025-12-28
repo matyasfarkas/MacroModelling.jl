@@ -6671,7 +6671,9 @@ function solve!(𝓂::ℳ;
                 sep_nnodes::Int = 3,
                 sep_maxit::Int = 80,
                 sep_tol::Float64 = 1e-7,
-                sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing) #,
+                sep_sparse_tree::Bool = true,
+                sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing,
+                sep_deterministic_shocks::Union{Nothing,Matrix{Float64}} = nothing) #,
                 # quadratic_matrix_equation_algorithm::Symbol = :schur,
                 # verbose::Bool = false,
                 # timer::TimerOutput = TimerOutput(),
@@ -6919,7 +6921,9 @@ function solve!(𝓂::ℳ;
             nnodes = sep_nnodes,
             maxit = sep_maxit,
             tol = sep_tol,
-            verbose = !silent
+            verbose = !silent,
+            sparse_tree = sep_sparse_tree,
+            deterministic_shocks = sep_deterministic_shocks  # NEW
         )
 
         # Automatic warm start: use previous solution if compatible
