@@ -1,7 +1,7 @@
 # Stochastic Extended Path (SEP) Solver for MacroModelling.jl
 # Implements global nonlinear solution method with Gauss-Hermite quadrature
 
-using SparseArrays, LinearAlgebra, ForwardDiff
+using SparseArrays, LinearAlgebra, ForwardDiff, MacroTools
 
 """
 Configuration options for SEP solver.
@@ -59,6 +59,197 @@ function SEPLayout(T::Int, Lbr::Int, K::Int, G::Vector{Int}, voff::Vector{Int},
     SEPLayout(T, Lbr, K, G, voff, eoff, ny_, dε, false, 0)
 end
 
+function replace_symbols_local(exprs, remap::Dict{Symbol,<:Any})
+    MacroTools.postwalk(node -> node isa Symbol && haskey(remap, node) ? remap[node] : node, exprs)
+end
+
+function build_dynamic_residual_jacobian(𝓂::ℳ)
+    dyn_future_list = collect(reduce(union, 𝓂.dyn_future_list))
+    dyn_present_list = collect(reduce(union, 𝓂.dyn_present_list))
+    dyn_past_list = collect(reduce(union, 𝓂.dyn_past_list))
+    dyn_exo_list = collect(reduce(union, 𝓂.dyn_exo_list))
+    dyn_ss_list = Symbol.(string.(collect(reduce(union, 𝓂.dyn_ss_list))) .* "₍ₛₛ₎")
+
+    future = map(x -> Symbol(replace(string(x), r"₍₁₎" => "")), string.(dyn_future_list))
+    present = map(x -> Symbol(replace(string(x), r"₍₀₎" => "")), string.(dyn_present_list))
+    past = map(x -> Symbol(replace(string(x), r"₍₋₁₎" => "")), string.(dyn_past_list))
+    exo = map(x -> Symbol(replace(string(x), r"₍ₓ₎" => "")), string.(dyn_exo_list))
+    stst = map(x -> Symbol(replace(string(x), r"₍ₛₛ₎" => "")), string.(dyn_ss_list))
+
+    vars_raw = vcat(
+        dyn_future_list[indexin(sort(future), future)],
+        dyn_present_list[indexin(sort(present), present)],
+        dyn_past_list[indexin(sort(past), past)],
+        dyn_exo_list[indexin(sort(exo), exo)]
+    )
+
+    pars_ext = vcat(𝓂.parameters, 𝓂.calibration_equations_parameters)
+    parameters_and_SS = vcat(pars_ext, dyn_ss_list[indexin(sort(stst), stst)])
+
+    np = length(parameters_and_SS)
+    nv = length(vars_raw)
+    Symbolics.@variables 𝔓[1:np] 𝔙[1:nv]
+
+    parameter_dict = Dict{Symbol, Symbol}()
+    back_to_array_dict = Dict{Symbolics.Num, Symbolics.Num}()
+
+    for (i, v) in enumerate(parameters_and_SS)
+        push!(parameter_dict, v => :($(Symbol("𝔓_$i"))))
+        push!(back_to_array_dict, Symbolics.parse_expr_to_symbolic(:($(Symbol("𝔓_$i"))), @__MODULE__) => 𝔓[i])
+    end
+
+    for (i, v) in enumerate(vars_raw)
+        push!(parameter_dict, v => :($(Symbol("𝔙_$i"))))
+        push!(back_to_array_dict, Symbolics.parse_expr_to_symbolic(:($(Symbol("𝔙_$i"))), @__MODULE__) => 𝔙[i])
+    end
+
+    calib_vars = Symbol[]
+    calib_expr = []
+    for v in 𝓂.calibration_equations_no_var
+        push!(calib_vars, v.args[1])
+        push!(calib_expr, v.args[2])
+    end
+
+    calib_replacements = Dict{Symbol,Any}()
+    for (i, x) in enumerate(calib_vars)
+        replacement = Dict(x => calib_expr[i])
+        for ii in i+1:length(calib_vars)
+            calib_expr[ii] = replace_symbols_local(calib_expr[ii], replacement)
+        end
+        push!(calib_replacements, x => calib_expr[i])
+    end
+
+    dyn_equations_sub = 𝓂.dyn_equations |>
+        x -> replace_symbols_local.(x, Ref(calib_replacements)) |>
+        x -> replace_symbols_local.(x, Ref(parameter_dict)) |>
+        x -> Symbolics.parse_expr_to_symbolic.(x, Ref(@__MODULE__)) |>
+        x -> Symbolics.substitute.(x, Ref(back_to_array_dict))
+
+    _, resid_func = Symbolics.build_function(dyn_equations_sub, 𝔓, 𝔙,
+                                            cse = true,
+                                            skipzeros = true,
+                                            parallel = Symbolics.SerialForm(),
+                                            expression_module = @__MODULE__,
+                                            expression = Val(false))
+
+    jac_sym = Symbolics.sparsejacobian(dyn_equations_sub, 𝔙)
+    _, jac_func = Symbolics.build_function(jac_sym, 𝔓, 𝔙,
+                                           cse = true,
+                                           skipzeros = true,
+                                           parallel = Symbolics.SerialForm(),
+                                           expression_module = @__MODULE__,
+                                           expression = Val(false))
+
+    resid_buffer = zeros(Float64, length(dyn_equations_sub))
+    jac_buffer = jac_sym isa SparseMatrixCSC ? similar(jac_sym, Float64) : zeros(Float64, size(jac_sym))
+    if jac_sym isa SparseMatrixCSC
+        jac_buffer.nzval .= 0
+    end
+
+    return resid_func, jac_func, vars_raw, parameters_and_SS, resid_buffer, jac_buffer
+end
+
+function build_parameters_and_ss_values(parameters_and_SS, parameters, 𝓂::ℳ, yss, SS_result)
+    vals = zeros(Float64, length(parameters_and_SS))
+    ss_lookup = Dict{Symbol,Float64}()
+    if SS_result isa KeyedArray
+        for key in axiskeys(SS_result, 1)
+            ss_lookup[Symbol(key)] = Float64(SS_result(key))
+        end
+    end
+
+    param_index = Dict{Symbol,Int}(p => i for (i, p) in enumerate(𝓂.parameters))
+    var_index = Dict{Symbol,Int}(v => i for (i, v) in enumerate(𝓂.var))
+
+    for (i, sym) in enumerate(parameters_and_SS)
+        if haskey(param_index, sym)
+            vals[i] = parameters[param_index[sym]]
+        elseif sym in 𝓂.calibration_equations_parameters
+            if haskey(ss_lookup, sym)
+                vals[i] = ss_lookup[sym]
+            else
+                vals[i] = 0.0
+            end
+        elseif occursin("₍ₛₛ₎", string(sym))
+            base = Symbol(replace(string(sym), r"₍ₛₛ₎$" => ""))
+            if haskey(var_index, base)
+                vals[i] = yss[var_index[base]]
+            else
+                vals[i] = 0.0
+            end
+        else
+            vals[i] = 0.0
+        end
+    end
+
+    return vals
+end
+
+function fill_dyn_values!(
+    dyn_values::Vector{Float64},
+    var_kind::Vector{Symbol},
+    var_idx::Vector{Int},
+    y_lag::AbstractVector{Float64},
+    y_cur::AbstractVector{Float64},
+    y_fwd::AbstractVector{Float64},
+    ε_curr::AbstractVector{Float64}
+)
+    @inbounds for i in 1:length(var_kind)
+        kind = var_kind[i]
+        idx = var_idx[i]
+        if kind == :future
+            dyn_values[i] = y_fwd[idx]
+        elseif kind == :present
+            dyn_values[i] = y_cur[idx]
+        elseif kind == :past
+            dyn_values[i] = y_lag[idx]
+        elseif kind == :shock
+            dyn_values[i] = ε_curr[idx]
+        else
+            dyn_values[i] = 0.0
+        end
+    end
+    return
+end
+
+function build_dyn_var_maps(𝓂::ℳ, vars_raw::Vector{Symbol})
+    var_index_map = Dict{Symbol,Int}(v => i for (i, v) in enumerate(𝓂.var))
+    shock_index_map = Dict{Symbol,Int}(v => i for (i, v) in enumerate(𝓂.exo))
+    var_kind = Vector{Symbol}(undef, length(vars_raw))
+    var_idx = Vector{Int}(undef, length(vars_raw))
+
+    for (i, v) in enumerate(vars_raw)
+        vstr = string(v)
+        if occursin("₍₁₎", vstr)
+            base = Symbol(replace(vstr, r"₍₁₎$" => ""))
+            var_kind[i] = :future
+            var_idx[i] = var_index_map[base]
+        elseif occursin("₍₀₎", vstr)
+            base = Symbol(replace(vstr, r"₍₀₎$" => ""))
+            var_kind[i] = :present
+            var_idx[i] = var_index_map[base]
+        elseif occursin("₍₋₁₎", vstr)
+            base = Symbol(replace(vstr, r"₍₋₁₎$" => ""))
+            var_kind[i] = :past
+            var_idx[i] = var_index_map[base]
+        elseif occursin("₍ₓ₎", vstr)
+            base = Symbol(replace(vstr, r"₍ₓ₎$" => ""))
+            var_kind[i] = :shock
+            var_idx[i] = shock_index_map[base]
+        else
+            base = Symbol(replace(vstr, r"₍.*₎$" => ""))
+            if haskey(var_index_map, base)
+                var_kind[i] = :present
+                var_idx[i] = var_index_map[base]
+            else
+                error("Unrecognized dynamic variable $v in SEP residual mapping.")
+            end
+        end
+    end
+
+    return var_kind, var_idx
+end
+
 # Tree navigation functions
 groups_at(layout::SEPLayout, t::Int) = layout.G[t+1]
 index_y(layout::SEPLayout, t::Int, g::Int) = layout.voff[t+1] + (g-1)*layout.ny_ .+ (1:layout.ny_)
@@ -81,8 +272,8 @@ end
 
 """
 Fishbone sparse tree navigation functions.
-For sparse tree: only the trunk (group 1 at each t) branches.
-Side branches are deterministic continuations.
+For sparse tree: only the trunk (group 1) branches; side branches are created
+over time and then follow deterministic continuations.
 """
 
 function is_trunk_node(layout::SEPLayout, t::Int, g::Int)
@@ -94,106 +285,80 @@ function parent_group_sparse(layout::SEPLayout, t::Int, g::Int)
     !layout.sparse && return parent_group(layout, t, g)  # Fall back to full tree
 
     (t == 0) && return 1
-    (t > layout.Lbr) && return g  # After branching period, stay in same group
+    (g == 1) && return 1
 
-    # In branching period: trunk stays trunk, side branches follow their parent
-    if g == 1
-        return 1  # Trunk's parent is always trunk
-    else
-        # Side branch: came from trunk at previous period
-        # Group g at time t corresponds to shock dimension h and node index k
-        # We need to maintain the mapping
-        return 1  # All side branches come from trunk
+    # Side branch: parent is trunk only at branch time, otherwise self
+    info = branch_info_sparse(layout, g)
+    if isnothing(info)
+        return g
     end
+    branch_time, _ = info
+    return (t == branch_time) ? 1 : g
 end
 
 function child_groups_sparse(layout::SEPLayout, t::Int, g::Int)
     !layout.sparse && return child_groups(layout, t, g)  # Fall back to full tree
 
-    if t == 0
-        # t=0: trunk branches into trunk + H*(m-1) side branches
-        # Group numbering: 1=trunk, 2...(1+H*(m-1))=side branches
-        return 1:(1 + layout.dε * (layout.m - 1))
+    # No branching after Lbr
+    if t > layout.Lbr
+        return [g]
     end
 
-    if t >= layout.Lbr
-        # After branching: integrate over shocks but stay in same group
-        # Return copies for integration
-        return [g for _ in 1:layout.m]
+    # Side branches never branch
+    if g != 1
+        return [g]
     end
 
-    # In branching period (1 ≤ t < Lbr):
-    if g == 1
-        # Trunk branches into trunk + side branches
-        return 1:(1 + layout.dε * (layout.m - 1))
-    else
-        # Side branch: deterministic continuation (no branching)
-        # Return same group repeated for shock integration
-        return [g for _ in 1:layout.m]
+    # Trunk branches: nodes map to branches created at t+1 (Dynare indexing)
+    if layout.K <= 1
+        return [1]
     end
+
+    branch_time = t + 1
+    cgs = Vector{Int}(undef, layout.K)
+    cgs[1] = 1  # zero node stays on trunk
+    for k in 2:layout.K
+        cgs[k] = branch_group_index(layout, branch_time, k)
+    end
+    return cgs
 end
 
 """
-Get shock dimension and node index from side branch group number.
-For sparse tree, groups are organized as:
-- g=1: trunk (zero-shock path)
-- g=2 to 1+H*(m-1): side branches, one for each (shock_dim, non-zero node) pair
+Get branch time and node index from side branch group number.
+Groups are organized as:
+- g=1: trunk
+- g>1: side branches created at times 2..Lbr+1, K-1 per time
 
-Returns: (shock_dim, node_index) or nothing for trunk
+Returns: (branch_time, node_index) or nothing for trunk
 """
+function branch_info_sparse(layout::SEPLayout, g::Int)
+    !layout.sparse && error("branch_info_sparse only valid for sparse tree")
+
+    if g == 1 || layout.K <= 1
+        return nothing
+    end
+
+    idx = g - 2  # 0-based index among side branches
+    branch_offset = div(idx, layout.K - 1)
+    node_offset = mod(idx, layout.K - 1)
+    branch_time = 2 + branch_offset
+    node_index = 2 + node_offset
+    return (branch_time, node_index)
+end
+
 function get_shock_from_group(layout::SEPLayout, g::Int)
-    !layout.sparse && error("get_shock_from_group only valid for sparse tree")
-
-    if g == 1
-        return nothing  # Trunk
-    else
-        # Map group to (h, k)
-        # Groups 2 to 1+H*(m-1) correspond to H dimensions × (m-1) non-zero nodes
-        branch_idx = g - 1  # 1-indexed to 0-indexed (branch_idx = 1, 2, ..., H*(m-1))
-        h = div(branch_idx - 1, layout.m - 1) + 1  # Shock dimension (1 to H)
-        k_offset = mod(branch_idx - 1, layout.m - 1)  # Offset from zero node (0 to m-2)
-        k = k_offset + 2  # Node index (2 to m), skipping k=1 which is zero/trunk
-        return (h, k)
-    end
+    return branch_info_sparse(layout, g)
 end
 
 """
-Get child group index for a given shock realization in sparse tree.
-For trunk at time t, when shock dimension h realizes node k:
-- If k=1 (zero node): child stays on trunk (group 1)
-- If k≠1: child goes to side branch for that (h,k) pair
+Get child group index for a given branch time and node index.
 """
-function get_child_group_for_shock(layout::SEPLayout, h::Int, k::Int)
-    !layout.sparse && error("get_child_group_for_shock only valid for sparse tree")
-
-    if k == 1
-        return 1  # Zero-shock node stays on trunk
-    else
-        # Side branch: group = 1 + (h-1)*(m-1) + (k-1)
-        # This maps (h,k) with k∈{2,...,m} to groups {2,...,1+H*(m-1)}
-        return 1 + (h-1)*(layout.m - 1) + (k - 1)
+function branch_group_index(layout::SEPLayout, branch_time::Int, node_index::Int)
+    !layout.sparse && error("branch_group_index only valid for sparse tree")
+    if node_index == 1
+        return 1
     end
-end
-
-"""
-Get shock realization vector for a side branch group.
-Side branches follow deterministic paths with one specific shock.
-"""
-function get_shock_for_branch(layout::SEPLayout, g::Int, X::Matrix{Float64})
-    !layout.sparse && error("get_shock_for_branch only valid for sparse tree")
-
-    shock_info = get_shock_from_group(layout, g)
-    if isnothing(shock_info)
-        # Trunk: zero shocks
-        return zeros(layout.dε)
-    else
-        h, k = shock_info
-        # Extract shock from sparse node matrix
-        # For sparse tree, X has H*m columns
-        # Column index = (h-1)*m + k
-        shock_idx = (h-1)*layout.m + k
-        return X[:, shock_idx]
-    end
+    return 1 + (branch_time - 2) * (layout.K - 1) + (node_index - 1)
 end
 
 """
@@ -213,6 +378,9 @@ function gh_tensor_nodes_weights(nnodes::Int, dim::Int)
     else
         error("Only nnodes ∈ {1,3,5} supported")
     end
+
+    # Ensure zero node is first for Dynare-compatible ordering
+    reorder_1d_zero_first!(x1d, w1d)
 
     # Tensor product
     K = nnodes^dim
@@ -247,6 +415,32 @@ function transform_nodes!(X::Matrix{Float64}, Σ::Matrix{Float64})
 end
 
 """
+Ensure the zero-shock node is first (Dynare ordering).
+"""
+function reorder_nodes_zero_first!(X::Matrix{Float64}, W::Vector{Float64}; tol::Float64=1e-12)
+    zero_idx = findfirst(i -> all(abs.(view(X, :, i)) .< tol), 1:size(X, 2))
+    if zero_idx === nothing || zero_idx == 1
+        return
+    end
+    X[:, [1, zero_idx]] = X[:, [zero_idx, 1]]
+    W[[1, zero_idx]] = W[[zero_idx, 1]]
+    return
+end
+
+"""
+Ensure zero node is first for 1D node arrays.
+"""
+function reorder_1d_zero_first!(x::Vector{Float64}, w::Vector{Float64}; tol::Float64=1e-12)
+    zero_idx = findfirst(v -> abs(v) < tol, x)
+    if zero_idx === nothing || zero_idx == 1
+        return
+    end
+    x[1], x[zero_idx] = x[zero_idx], x[1]
+    w[1], w[zero_idx] = w[zero_idx], w[1]
+    return
+end
+
+"""
 Get 1D Gauss-Hermite nodes and weights for sparse tree.
 Returns nodes and weights for a single dimension.
 """
@@ -254,11 +448,15 @@ function gh_nodes_1d(nnodes::Int)
     if nnodes == 1
         return [0.0], [√π]
     elseif nnodes == 3
-        return [-√3, 0.0, √3], [π/6, 2π/3, π/6]
+        x = [-√3, 0.0, √3]
+        w = [π/6, 2π/3, π/6]
+        reorder_1d_zero_first!(x, w)
+        return x, w
     elseif nnodes == 5
         x = [-√(5+2√(10/7)), -√(5-2√(10/7)), 0.0, √(5-2√(10/7)), √(5+2√(10/7))]
         w = [π*(322-13√70)/900, π*(322+13√70)/900, 128π/225,
              π*(322+13√70)/900, π*(322-13√70)/900]
+        reorder_1d_zero_first!(x, w)
         return x, w
     else
         error("Unsupported nnodes=$nnodes for sparse tree. Use 1, 3, or 5.")
@@ -349,7 +547,9 @@ function solve_deterministic_path(
     opts::SEPSolverOptions,
     initial_guess::Union{Nothing,Vector{Float64}},
     yss::Vector{Float64},
-    SS_and_pars::Vector{Float64}
+    SS_and_pars::Vector{Float64},
+    SS_result,
+    initial_state::Union{Nothing,Vector{Float64}}=nothing
 )
     # Extract dimensions
     ny_ = length(𝓂.var)
@@ -358,20 +558,17 @@ function solve_deterministic_path(
 
     opts.verbose && @info "Deterministic path solver" T=T ny_=ny_ dε=dε
 
-    # Compute Jacobian blocks
-    J_compressed = calculate_jacobian(parameters, SS_and_pars, 𝓂)
-    timings = 𝓂.timings
+    # Build nonlinear residual and Jacobian for dynamic equations
+    dyn_resid_func, dyn_jac_func, vars_raw, parameters_and_SS, resid_buffer, jac_buffer =
+        build_dynamic_residual_jacobian(𝓂)
 
-    # Extract Jacobian blocks [∇₊, ∇₀, ∇₋, ∇ₑ] for y_{t+1}, y_t, y_{t-1}, ε_t
-    ∇₊ = zeros(Float64, ny_, ny_)
-    ∇₊[:, timings.future_not_past_and_mixed_idx] = J_compressed[:, 1:timings.nFuture_not_past_and_mixed]
+    # Map parameters and steady state values into parameters_and_SS ordering
+    params_and_ss = build_parameters_and_ss_values(parameters_and_SS, parameters, 𝓂, yss, SS_result)
 
-    ∇₀ = J_compressed[:, timings.nFuture_not_past_and_mixed .+ (1:timings.nVars)]
+    # Precompute variable mapping from vars_raw to y/shock vectors
+    var_kind, var_idx = build_dyn_var_maps(𝓂, vars_raw)
 
-    ∇₋ = zeros(Float64, ny_, ny_)
-    ∇₋[:, timings.past_not_future_and_mixed_idx] = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars .+ (1:timings.nPast_not_future_and_mixed)]
-
-    ∇ₑ = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars + timings.nPast_not_future_and_mixed .+ (1:timings.nExo)]
+    dyn_values = zeros(Float64, length(vars_raw))
 
     # Create deterministic layout (no branching - single path)
     G = ones(Int, T+2)  # One group at each period
@@ -392,15 +589,24 @@ function solve_deterministic_path(
     layout = SEPLayout(T, 0, 1, G, voff, eoff, ny_, dε, false, 1)
 
     # Initialize solution vector Y: [y₀, y₁, ..., yT]
-    nvars_total = ny_ * (T + 1)
+    # Indexing uses layout.voff starting at 1, so keep Y[1] as unused padding.
+    nvars_total = ny_ * (T + 1) + 1
 
     if !isnothing(initial_guess) && length(initial_guess) == nvars_total
         Y = copy(initial_guess)
         opts.verbose && @info "Using provided initial guess"
+    elseif !isnothing(initial_guess) && length(initial_guess) == nvars_total - 1
+        Y = zeros(nvars_total)
+        Y[2:end] .= initial_guess
+        opts.verbose && @info "Using provided initial guess (padded)"
     else
-        # Initialize at steady state
-        Y = repeat(yss, T + 1)
+        Y = zeros(nvars_total)
+        Y[2:end] .= repeat(yss, T + 1)
         opts.verbose && @info "Initializing at steady state"
+    end
+    if !isnothing(initial_state)
+        @assert length(initial_state) == ny_ "sep_initial_state must have length $ny_ (got $(length(initial_state)))"
+        Y[2:ny_+1] .= initial_state
     end
 
     # Newton solver
@@ -418,66 +624,59 @@ function solve_deterministic_path(
 
         # Build stacked system for t=1,...,T
         for t in 1:T
-            # Get states at t-1, t, t+1
-            y_lag = view(Y, (t-1)*ny_ .+ (1:ny_))
-            y_cur = view(Y, t*ny_ .+ (1:ny_))
-            y_fwd = (t < T) ? view(Y, (t+1)*ny_ .+ (1:ny_)) : yss  # Terminal: return to SS
+            # Get states at t-1, t, t+1 (offset by 1 due to padding)
+            y_lag = view(Y, 1 .+ (t-1)*ny_ .+ (1:ny_))
+            y_cur = view(Y, 1 .+ t*ny_ .+ (1:ny_))
+            y_fwd = (t < T) ? view(Y, 1 .+ (t+1)*ny_ .+ (1:ny_)) : yss  # Terminal: return to SS
 
             # Get deterministic shock at period t
             ε_t = view(opts.deterministic_shocks, t, :)
 
-            # Deviations from steady state
-            Δy_lag = y_lag - yss
-            Δy_cur = y_cur - yss
-            Δy_fwd = y_fwd - yss
+            fill_dyn_values!(dyn_values, var_kind, var_idx, y_lag, y_cur, y_fwd, ε_t)
 
-            # Equilibrium condition (first-order approximation)
-            r = ∇₊ * Δy_fwd + ∇₀ * Δy_cur + ∇₋ * Δy_lag + ∇ₑ * ε_t
+            # Nonlinear residual and Jacobian
+            dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+            dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
 
             # Store residual
             rr = (t-1)*ny_ .+ (1:ny_)
-            R[rr] .= r
+            R[rr] .= resid_buffer
 
             # Fill Jacobian blocks
             # Note: Column indices are for [y₁, ..., yT] (excluding fixed y₀)
             # So we map: y₁ → cols 1:ny_, y₂ → cols ny_+1:2*ny_, etc.
 
-            # J[rr, y_{t-1}] = ∇₋ (for t>1; for t=1, y₀ is fixed so no derivative)
-            if t > 1
-                c_lag = (t-2)*ny_ .+ (1:ny_)  # y_{t-1} columns (already excludes y₀)
-                for i in 1:ny_, j in 1:ny_
-                    v = ∇₋[i, j]
-                    if abs(v) > 1e-16
-                        nnz_count += 1
-                        rows[nnz_count] = rr[i]
-                        cols[nnz_count] = c_lag[j]
-                        vals[nnz_count] = v
-                    end
-                end
-            end
-
-            # J[rr, y_t] = ∇₀
             c_cur = (t-1)*ny_ .+ (1:ny_)  # y_t columns (t=1 maps to cols 1:ny_)
-            for i in 1:ny_, j in 1:ny_
-                v = ∇₀[i, j]
-                if abs(v) > 1e-16
-                    nnz_count += 1
-                    rows[nnz_count] = rr[i]
-                    cols[nnz_count] = c_cur[j]
-                    vals[nnz_count] = v
-                end
-            end
+            c_lag = (t-2)*ny_ .+ (1:ny_)
+            c_fwd = t*ny_ .+ (1:ny_)
 
-            # J[rr, y_{t+1}] = ∇₊
-            if t < T
-                c_fwd = t*ny_ .+ (1:ny_)  # y_{t+1} columns
-                for i in 1:ny_, j in 1:ny_
-                    v = ∇₊[i, j]
+            for i in 1:ny_
+                r_row = rr[i]
+                for j in 1:length(vars_raw)
+                    v = jac_buffer[i, j]
                     if abs(v) > 1e-16
-                        nnz_count += 1
-                        rows[nnz_count] = rr[i]
-                        cols[nnz_count] = c_fwd[j]
-                        vals[nnz_count] = v
+                        kind = var_kind[j]
+                        idx = var_idx[j]
+                        if kind == :present
+                            nnz_count += 1
+                            rows[nnz_count] = r_row
+                            cols[nnz_count] = c_cur[idx]
+                            vals[nnz_count] = v
+                        elseif kind == :past
+                            if t > 1
+                                nnz_count += 1
+                                rows[nnz_count] = r_row
+                                cols[nnz_count] = c_lag[idx]
+                                vals[nnz_count] = v
+                            end
+                        elseif kind == :future
+                            if t < T
+                                nnz_count += 1
+                                rows[nnz_count] = r_row
+                                cols[nnz_count] = c_fwd[idx]
+                                vals[nnz_count] = v
+                            end
+                        end
                     end
                 end
             end
@@ -510,7 +709,7 @@ function solve_deterministic_path(
         α = err > 1e-3 ? 0.5 : (err > 1e-5 ? 0.7 : 1.0)
 
         # Apply update to y₁, ..., yT (keep y₀ fixed at steady state)
-        Y[ny_+1:end] .+= α * Δ
+        Y[(ny_+2):end] .+= α * Δ
     end
 
     # Did not converge
@@ -540,7 +739,8 @@ function sep_solve_mm!(
     𝓂::ℳ,
     parameters::Vector{Float64};
     opts::SEPSolverOptions=SEPSolverOptions(),
-    initial_guess::Union{Nothing,Vector{Float64}}=nothing
+    initial_guess::Union{Nothing,Vector{Float64}}=nothing,
+    initial_state::Union{Nothing,Vector{Float64}}=nothing
 )
     # Get model dimensions
     ny_ = length(𝓂.var)
@@ -587,39 +787,48 @@ function sep_solve_mm!(
     end
     SS_and_pars = vcat(SS, calib_pars)
 
-    # DETERMINISTIC MODE BRANCHING: If deterministic shocks provided, use perfect foresight solver
-    if !isnothing(opts.deterministic_shocks)
-        opts.verbose && @info "Deterministic mode detected - using perfect foresight solver"
-        return solve_deterministic_path(𝓂, parameters, opts, initial_guess, yss, SS_and_pars)
+    # DETERMINISTIC MODE BRANCHING: Only use perfect foresight when order == 0
+    if !isnothing(opts.deterministic_shocks) && opts.order == 0
+        opts.verbose && @info "Deterministic mode detected (order=0) - using perfect foresight solver"
+        return solve_deterministic_path(𝓂, parameters, opts, initial_guess, yss, SS_and_pars, SS_result, initial_state)
     end
 
     # STOCHASTIC MODE: Continue with existing SEP solver
-    J_compressed = calculate_jacobian(parameters, SS_and_pars, 𝓂)
-    timings = 𝓂.timings
+    use_nonlinear_residuals = true
+    if use_nonlinear_residuals
+        dyn_resid_func, dyn_jac_func, vars_raw, parameters_and_SS, resid_buffer, jac_buffer =
+            build_dynamic_residual_jacobian(𝓂)
+        params_and_ss = build_parameters_and_ss_values(parameters_and_SS, parameters, 𝓂, yss, SS_result)
+        var_kind, var_idx = build_dyn_var_maps(𝓂, vars_raw)
+        dyn_values = zeros(Float64, length(vars_raw))
+    else
+        J_compressed = calculate_jacobian(parameters, SS_and_pars, 𝓂)
+        timings = 𝓂.timings
 
-    # Reconstruct full Jacobian blocks from compressed format
-    # J_compressed has structure: [future_dynamic, all_current, past_dynamic, shocks]
-    # We need: [all_future, all_current, all_past, shocks]
+        # Reconstruct full Jacobian blocks from compressed format
+        # J_compressed has structure: [future_dynamic, all_current, past_dynamic, shocks]
+        # We need: [all_future, all_current, all_past, shocks]
 
-    ∇₊ = zeros(Float64, ny_, ny_)
-    ∇₊[:, timings.future_not_past_and_mixed_idx] = J_compressed[:, 1:timings.nFuture_not_past_and_mixed]
+        ∇₊ = zeros(Float64, ny_, ny_)
+        ∇₊[:, timings.future_not_past_and_mixed_idx] = J_compressed[:, 1:timings.nFuture_not_past_and_mixed]
 
-    ∇₀ = J_compressed[:, timings.nFuture_not_past_and_mixed .+ (1:timings.nVars)]
+        ∇₀ = J_compressed[:, timings.nFuture_not_past_and_mixed .+ (1:timings.nVars)]
 
-    ∇₋ = zeros(Float64, ny_, ny_)
-    ∇₋[:, timings.past_not_future_and_mixed_idx] = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars .+ (1:timings.nPast_not_future_and_mixed)]
+        ∇₋ = zeros(Float64, ny_, ny_)
+        ∇₋[:, timings.past_not_future_and_mixed_idx] = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars .+ (1:timings.nPast_not_future_and_mixed)]
 
-    ∇ₑ = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars + timings.nPast_not_future_and_mixed .+ (1:timings.nExo)]
+        ∇ₑ = J_compressed[:, timings.nFuture_not_past_and_mixed + timings.nVars + timings.nPast_not_future_and_mixed .+ (1:timings.nExo)]
 
-    if opts.verbose
-        @info "Shock Jacobian ∇ₑ stats:" size=size(∇ₑ) norm=norm(∇ₑ) max_abs=maximum(abs.(∇ₑ)) nnz=count(x -> abs(x) > 1e-12, ∇ₑ)
-        # Print ALL non-zero values
-        println("  Non-zero elements of ∇ₑ:")
-        for i in 1:size(∇ₑ, 1)
-            for j in 1:size(∇ₑ, 2)
-                if abs(∇ₑ[i, j]) > 1e-12
-                    shock_name = length(𝓂.exo) >= j ? 𝓂.exo[j] : "shock$j"
-                    println("    ∇ₑ[eq $i, $shock_name] = $(∇ₑ[i,j])")
+        if opts.verbose
+            @info "Shock Jacobian ∇ₑ stats:" size=size(∇ₑ) norm=norm(∇ₑ) max_abs=maximum(abs.(∇ₑ)) nnz=count(x -> abs(x) > 1e-12, ∇ₑ)
+            # Print ALL non-zero values
+            println("  Non-zero elements of ∇ₑ:")
+            for i in 1:size(∇ₑ, 1)
+                for j in 1:size(∇ₑ, 2)
+                    if abs(∇ₑ[i, j]) > 1e-12
+                        shock_name = length(𝓂.exo) >= j ? 𝓂.exo[j] : "shock$j"
+                        println("    ∇ₑ[eq $i, $shock_name] = $(∇ₑ[i,j])")
+                    end
                 end
             end
         end
@@ -640,9 +849,9 @@ function sep_solve_mm!(
                 @info "Shock $shock_name: σ = $σ (from parameter $param_name)"
             end
         else
-            # Fallback to small default if parameter not found
-            @warn "Shock std parameter $param_name not found, using default 0.01"
-            Σ[i, i] = 0.01^2
+            # Fallback to unit variance if parameter not found (Dynare-style)
+            @warn "Shock std parameter $param_name not found, using default 1.0"
+            Σ[i, i] = 1.0
         end
     end
 
@@ -674,24 +883,20 @@ function sep_solve_mm!(
     # For full tree, apply transformation here
     if !opts.sparse_tree && dε > 0
         transform_nodes!(X, Σ)
+        # Ensure zero node is first (Dynare ordering)
+        reorder_nodes_zero_first!(X, W)
     end
 
     # Build tree structure
     G = Vector{Int}(undef, T+2)
     if opts.sparse_tree
-        # Sparse tree: only trunk branches
-        # Groups per period: 1 trunk + H*(m-1) side branches
-        G_branch = 1 + dε*(m-1)  # Total groups that can exist
+        # Sparse tree: trunk branches over time, adding (K-1) side branches per period
         for t in 0:T+1
-            if t == 0
-                G[t+1] = 1  # Just steady state
-            elseif t <= Lbr
-                # In branching region: trunk + side branches from all previous periods
-                # Actually, for fishbone: same number of groups at each branching period
-                G[t+1] = G_branch
+            if t == 0 || K <= 1
+                G[t+1] = 1
             else
-                # After branching: maintain same groups (no new branching)
-                G[t+1] = G_branch
+                branch_levels = min(t - 1, Lbr)
+                G[t+1] = 1 + (K - 1) * branch_levels
             end
         end
     else
@@ -751,6 +956,14 @@ function sep_solve_mm!(
         end
     end
 
+    # Fix initial conditions (y0) for stochastic SEP
+    y0_idx = index_y(layout, 0, 1)
+    if !isnothing(initial_state)
+        @assert length(initial_state) == ny_ "sep_initial_state must have length $ny_ (got $(length(initial_state)))"
+        Y[y0_idx] .= initial_state
+    end
+    y0_fixed = copy(Y[y0_idx])
+
     # Pre-allocate workspace
     neq = ny_ * sum(G[2:end-1])
     nnz_est = estimate_nnz(layout, T, ny_, K, Lbr)
@@ -773,6 +986,8 @@ function sep_solve_mm!(
     r_sum = zeros(ny_)
     J_lag = zeros(ny_, ny_)
     J_cur = zeros(ny_, ny_)
+    ε_det = isnothing(opts.deterministic_shocks) ? nothing : zeros(dε)
+    ε_tmp = zeros(dε)
 
     # Helper to get state
     function get_y(t, g)
@@ -815,86 +1030,91 @@ function sep_solve_mm!(
                 end
 
                 if node_branches
-                    # Branching node: expectation over child groups
+                    # Branching node: expectation over child groups (nonlinear residuals)
                     fill!(r_sum, 0.0)
                     fill!(J_lag, 0.0)
                     fill!(J_cur, 0.0)
 
-                    # Extract shock for current group g
-                    if layout.sparse
-                        # Sparse tree: trunk at t-1 experienced zero shock
-                        ε_curr = zeros(dε)
-                    else
-                        # Full tree: extract shock from tensor product
-                        k_shock = mod(g - 1, K) + 1
-                        ε_curr = view(X, :, k_shock)
-                    end
+                    rr = row_range(layout, t, g)
 
                     for (kidx, cg) in enumerate(cgs)
                         yl1 = get_y(t+1, cg)
 
-                        # Deviations from steady state
-                        Δy_lag = yl - yss
-                        Δy_cur = yc - yss
-                        Δy_fwd = yl1 - yss
-
-                        # For sparse tree, extract shock that leads to this child group
                         if layout.sparse
-                            # Sparse tree trunk branches: iterate over shock dimensions × nodes
-                            # kidx maps to (h, k) via linear indexing
-                            # For sparse tree X has H*m columns organized as [(h=1,k=1)...(h=1,k=m), (h=2,k=1)...(h=2,k=m), ...]
                             shock_idx = kidx
                             ε_to_child = view(X, :, shock_idx)
                             wk = W[shock_idx]
                         else
-                            # Full tree: shock for parent group g
                             k_shock = mod(g - 1, K) + 1
                             ε_to_child = view(X, :, k_shock)
                             wk = W[kidx]
                         end
 
-                        # Linear approximation: r = J*(y - yss) + shock term
-                        r = ∇₊ * Δy_fwd + ∇₀ * Δy_cur + ∇₋ * Δy_lag + ∇ₑ * ε_to_child
+                        # Dynare convention: at t=1 use deterministic shock only; at t>=2 use node shocks
+                        if t == 1
+                            if ε_det !== nothing
+                                ε_det .= view(opts.deterministic_shocks, t, :)
+                                ε_curr = ε_det
+                            else
+                                fill!(ε_tmp, 0.0)
+                                ε_curr = ε_tmp
+                            end
+                        else
+                            ε_curr = ε_to_child
+                        end
 
-                        # Jacobian blocks
-                        J_lag_local = ∇₋
-                        J_cur_local = ∇₀
-                        J_fwd = ∇₊
-                        r_sum .+= wk .* r
-                        J_lag .+= wk .* J_lag_local
-                        J_cur .+= wk .* J_cur_local
+                        fill_dyn_values!(dyn_values, var_kind, var_idx, yl, yc, yl1, ε_curr)
+                        dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+                        dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
 
-                        # Lead Jacobian entries
+                        r_sum .+= wk .* resid_buffer
+
                         if t+1 <= T
-                            rrng = row_range(layout, t, g)
                             c_rng = index_y(layout, t+1, cg)
-                            for irow in 1:ny_, jcol in 1:ny_
-                                v = wk * J_fwd[irow, jcol]
+                        end
+
+                        for irow in 1:ny_
+                            r_row = first(rr) + irow - 1
+                            for j in 1:length(vars_raw)
+                                v = jac_buffer[irow, j]
                                 if abs(v) > 1e-16
-                                    nnz_count += 1
-                                    rows[nnz_count] = first(rrng) + irow - 1
-                                    cols[nnz_count] = first(c_rng) + jcol - 1
-                                    vals[nnz_count] = v
+                                    kind = var_kind[j]
+                                    idx = var_idx[j]
+                                    if kind == :present
+                                        J_cur[irow, idx] += wk * v
+                                    elseif kind == :past
+                                        if t > 1
+                                            J_lag[irow, idx] += wk * v
+                                        end
+                                    elseif kind == :future
+                                        if t+1 <= T
+                                            nnz_count += 1
+                                            rows[nnz_count] = r_row
+                                            cols[nnz_count] = c_rng.start + idx - 1
+                                            vals[nnz_count] = wk * v
+                                        end
+                                    end
                                 end
                             end
                         end
                     end
 
                     # Store residual and lag/current Jacobians
-                    rr = row_range(layout, t, g)
                     R[rr] .= r_sum
                     c_lag = index_y(layout, t-1, pg)
                     c_cur = index_y(layout, t, g)
 
                     for irow in 1:ny_
                         r_gl = first(rr) + irow - 1
-                        for jcol in 1:ny_
-                            v = J_lag[irow, jcol]
-                            if abs(v) > 1e-16
-                                nnz_count += 1
-                                rows[nnz_count] = r_gl
-                                cols[nnz_count] = c_lag.start + jcol - 1
-                                vals[nnz_count] = v
+                        if t > 1
+                            for jcol in 1:ny_
+                                v = J_lag[irow, jcol]
+                                if abs(v) > 1e-16
+                                    nnz_count += 1
+                                    rows[nnz_count] = r_gl
+                                    cols[nnz_count] = c_lag.start + jcol - 1
+                                    vals[nnz_count] = v
+                                end
                             end
                         end
                         for jcol in 1:ny_
@@ -912,56 +1132,71 @@ function sep_solve_mm!(
                     cg = first(cgs)
                     yl1 = get_y(t+1, cg)
 
-                    Δy_lag = yl - yss
-                    Δy_cur = yc - yss
-                    Δy_fwd = yl1 - yss
-
-                    # For sparse tree side branches, include shock term
+                    # For sparse tree side branches, apply node shock only at branch time
                     if layout.sparse && g > 1
-                        # Side branch: extract fixed shock for this branch
-                        ε_branch = get_shock_for_branch(layout, g, X)
-                        r = ∇₊ * Δy_fwd + ∇₀ * Δy_cur + ∇₋ * Δy_lag + ∇ₑ * ε_branch
+                        info = branch_info_sparse(layout, g)
+                        if !isnothing(info) && t == info[1]
+                            ε_curr = view(X, :, info[2])
+                        else
+                            if ε_det !== nothing
+                                ε_det .= view(opts.deterministic_shocks, t, :)
+                                ε_curr = ε_det
+                            else
+                                fill!(ε_tmp, 0.0)
+                                ε_curr = ε_tmp
+                            end
+                        end
                     else
                         # Full tree non-branching or sparse trunk after branching period
-                        r = ∇₊ * Δy_fwd + ∇₀ * Δy_cur + ∇₋ * Δy_lag
+                        if ε_det !== nothing
+                            ε_det .= view(opts.deterministic_shocks, t, :)
+                            ε_curr = ε_det
+                        else
+                            fill!(ε_tmp, 0.0)
+                            ε_curr = ε_tmp
+                        end
                     end
 
+                    fill_dyn_values!(dyn_values, var_kind, var_idx, yl, yc, yl1, ε_curr)
+                    dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+                    dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
+
                     rr = row_range(layout, t, g)
-                    R[rr] .= r
+                    R[rr] .= resid_buffer
                     c_lag = index_y(layout, t-1, pg)
                     c_cur = index_y(layout, t, g)
 
                     if t+1 <= T
                         c_lea = index_y(layout, t+1, cg)
-                        for irow in 1:ny_, jcol in 1:ny_
-                            v = ∇₊[irow, jcol]
-                            if abs(v) > 1e-16
-                                nnz_count += 1
-                                rows[nnz_count] = first(rr) + irow - 1
-                                cols[nnz_count] = c_lea.start + jcol - 1
-                                vals[nnz_count] = v
-                            end
-                        end
                     end
 
                     for irow in 1:ny_
                         r_gl = first(rr) + irow - 1
-                        for jcol in 1:ny_
-                            v = ∇₋[irow, jcol]
+                        for j in 1:length(vars_raw)
+                            v = jac_buffer[irow, j]
                             if abs(v) > 1e-16
-                                nnz_count += 1
-                                rows[nnz_count] = r_gl
-                                cols[nnz_count] = c_lag.start + jcol - 1
-                                vals[nnz_count] = v
-                            end
-                        end
-                        for jcol in 1:ny_
-                            v = ∇₀[irow, jcol]
-                            if abs(v) > 1e-16
-                                nnz_count += 1
-                                rows[nnz_count] = r_gl
-                                cols[nnz_count] = c_cur.start + jcol - 1
-                                vals[nnz_count] = v
+                                kind = var_kind[j]
+                                idx = var_idx[j]
+                                if kind == :future
+                                    if t+1 <= T
+                                        nnz_count += 1
+                                        rows[nnz_count] = r_gl
+                                        cols[nnz_count] = c_lea.start + idx - 1
+                                        vals[nnz_count] = v
+                                    end
+                                elseif kind == :past
+                                    if t > 1
+                                        nnz_count += 1
+                                        rows[nnz_count] = r_gl
+                                        cols[nnz_count] = c_lag.start + idx - 1
+                                        vals[nnz_count] = v
+                                    end
+                                elseif kind == :present
+                                    nnz_count += 1
+                                    rows[nnz_count] = r_gl
+                                    cols[nnz_count] = c_cur.start + idx - 1
+                                    vals[nnz_count] = v
+                                end
                             end
                         end
                     end
@@ -984,8 +1219,10 @@ function sep_solve_mm!(
         # Start aggressive, reduce if residual is large
         α = err > 1e-3 ? 0.5 : (err > 1e-5 ? 0.7 : 1.0)
 
-        # Apply update with adaptive step size
+        # Apply update with adaptive step size (keep y0 fixed)
+        Δ[y0_idx] .= 0.0
         Y .+= α * Δ
+        Y[y0_idx] .= y0_fixed
         if opts.verbose && (it % 5 == 0 || it == 1)
             @info "SEP it=$it/$opts.maxit  max|res|=$err  step_norm=$(norm(Δ))"
         end

@@ -6673,7 +6673,8 @@ function solve!(𝓂::ℳ;
                 sep_tol::Float64 = 1e-7,
                 sep_sparse_tree::Bool = true,
                 sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing,
-                sep_deterministic_shocks::Union{Nothing,Matrix{Float64}} = nothing) #,
+                sep_deterministic_shocks::Union{Nothing,Matrix{Float64}} = nothing,
+                sep_initial_state::Union{Nothing,Vector{Float64}} = nothing) #,
                 # quadratic_matrix_equation_algorithm::Symbol = :schur,
                 # verbose::Bool = false,
                 # timer::TimerOutput = TimerOutput(),
@@ -6911,7 +6912,22 @@ function solve!(𝓂::ℳ;
     end
     
     # SEP (Stochastic Extended Path) algorithm dispatch
-    if (algorithm == :stochastic_extended_path) && (:stochastic_extended_path ∈ 𝓂.solution.outdated_algorithms)
+    sep_force = !isnothing(sep_deterministic_shocks) || !isnothing(sep_initial_state)
+    sep_needs_update = (:stochastic_extended_path ∈ 𝓂.solution.outdated_algorithms)
+    if !sep_needs_update
+        prev_sep = 𝓂.solution.perturbation.stochastic_extended_path
+        if isnothing(prev_sep)
+            sep_needs_update = true
+        else
+            if prev_sep.periods != sep_periods ||
+               prev_sep.order != sep_order ||
+               prev_sep.nnodes != sep_nnodes ||
+               (hasproperty(prev_sep, :layout) && prev_sep.layout.sparse != sep_sparse_tree)
+                sep_needs_update = true
+            end
+        end
+    end
+    if (algorithm == :stochastic_extended_path) && (sep_needs_update || sep_force)
         if !silent println("Solving with Stochastic Extended Path algorithm...") end
 
         # Use function parameters directly for SEP options
@@ -6952,7 +6968,7 @@ function solve!(𝓂::ℳ;
 
         # Solve SEP
         t_start = time()
-        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts, initial_guess=sep_initial_guess)
+        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts, initial_guess=sep_initial_guess, initial_state=sep_initial_state)
         runtime = time() - t_start
 
         # Extract results from named tuple

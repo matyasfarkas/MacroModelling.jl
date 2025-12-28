@@ -85,6 +85,9 @@ function simulate_sep(
             if !isnothing(param_idx)
                 σ = params[param_idx]
                 Σ[i, i] = σ^2
+            else
+                @warn "Shock std parameter $param_name not found, using default 1.0"
+                Σ[i, i] = 1.0
             end
         end
 
