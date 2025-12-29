@@ -1,46 +1,92 @@
-using MacroModelling, StatsPlots          # StatsPlots triggers plotting.jl
+using MacroModelling, StatsPlots, Printf, AxisKeys
+
 include("../models/Smets_Wouters_2007_HLT.jl")
-m = Smets_Wouters_2007_HLT                # no parentheses
-# First-order perturbation (default)
-p= plot_irf(m; shocks = :epinf)          # Capture the plot
+m = Smets_Wouters_2007_HLT
 
-# Second-order perturbation
-MacroModelling.plot_irf!(m,
-    shocks = :epinf,
-    algorithm = :second_order)
+shock = :epinf
+shock_size = 1.0
+periods = 20
 
-# Pruned third-order perturbation
-plot_irf!(m,
-    shocks = :epinf,
-    algorithm = :pruned_third_order)
+key_vars = [:y, :c, :inve, :pinf, :r, :w, :lab]
 
-# Stochastic Extended Path (SEP) - Global nonlinear solution
-println("\nSolving with SEP...")
-solve!(m,
-    algorithm = :stochastic_extended_path,
-    sep_periods = 20,
-    sep_order = 1,
-    sep_nnodes = 3,
-    silent = false)
+println("="^70)
+println("HLT IRF COMPARISON: PERTURBATION ORDERS vs SEP")
+println("="^70)
+println("Shock: $(shock)")
+println("Periods: $(periods)")
+println("Variables: $(key_vars)")
 
-# Get SEP IRF
-println("Extracting SEP IRF...")
-irf_sep = get_sep_irf(m, :epinf, 1.0; periods = 20)
+println("\n1. Computing perturbation IRFs...")
+irf_fo = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm=:first_order)
+irf_so = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm=:second_order)
+irf_p3 = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm=:pruned_third_order)
 
-# Add SEP IRF to the existing plot
-# Note: irf_sep has dimensions (variables × periods)
-# Time axis is 0:20, so we need periods+1 points
-nvars = size(irf_sep, 1)
-time_axis = 0:size(irf_sep, 2)-1
+println("✓ Perturbation IRFs computed")
 
-for i in 1:nvars
-    plot!(p, time_axis, irf_sep[i, :],
-          label = "SEP",
-          linewidth = 2,
-          linestyle = :dash,
-          color = :black,
-          subplot = i)
+sep_periods = max(periods, 40)
+sep_order = 1
+sep_nnodes = 3
+sep_tol = 5e-3
+
+println("\n2. Computing SEP IRF (funnel baseline)...")
+irf_sep = get_sep_irf(m, shock, shock_size;
+                      variables=key_vars,
+                      periods=periods,
+                      method=:funnel,
+                      baseline=:steady_state,
+                      shock_scaling=:none,
+                      sep_periods=sep_periods,
+                      sep_order=sep_order,
+                      sep_nnodes=sep_nnodes,
+                      sep_tol=sep_tol,
+                      sep_sparse_tree=true,
+                      silent=false)
+
+println("✓ SEP IRF computed")
+
+function series_for(irf, var)
+    var_idx = findfirst(==(var), axiskeys(irf, 1))
+    if isnothing(var_idx)
+        return nothing
+    end
+    return Float64.(irf[var_idx, :, 1])
 end
 
-println("✓ SEP IRF added to comparison plot")
-display(p)
+function series_for_sep(irf, var)
+    var_idx = findfirst(==(var), axiskeys(irf, 1))
+    if isnothing(var_idx)
+        return nothing
+    end
+    return Float64.(irf[var_idx, :])
+end
+
+time_mm = collect(axiskeys(irf_fo, 2))
+time_sep = collect(axiskeys(irf_sep, 2))
+
+println("\n3. Plotting comparison...")
+p = plot(layout=(3,3), size=(1200, 900),
+         plot_title="Smets_Wouters_2007_HLT: epinf IRFs (SEP vs perturbation)")
+
+for (i, var) in enumerate(key_vars)
+    fo = series_for(irf_fo, var)
+    so = series_for(irf_so, var)
+    p3 = series_for(irf_p3, var)
+    sep = series_for_sep(irf_sep, var)
+
+    show_legend = (i == 1)
+    fo_label = show_legend ? "1st order" : ""
+    so_label = show_legend ? "2nd order" : ""
+    p3_label = show_legend ? "Pruned 3rd" : ""
+    sep_label = show_legend ? "SEP" : ""
+
+    plot!(p[i], time_mm, fo, label=fo_label, color=:blue, linewidth=2)
+    plot!(p[i], time_mm, so, label=so_label, color=:green, linewidth=2, linestyle=:dash)
+    plot!(p[i], time_mm, p3, label=p3_label, color=:purple, linewidth=2, linestyle=:dot)
+    plot!(p[i], time_sep, sep, label=sep_label, color=:black, linewidth=2, linestyle=:dashdot)
+    hline!(p[i], [0], color=:black, linestyle=:dot, label="")
+    plot!(p[i], title=string(var))
+end
+
+pdf_path = joinpath(@__DIR__, "HLT_comparison_sep_irf.pdf")
+savefig(p, pdf_path)
+println("✓ Saved: $(pdf_path)")

@@ -84,13 +84,17 @@ Convergence flags:
 # Compute IRF for a technology shock
 irf = get_sep_irf(MyModel,
                   :eps_z,           # Shock name
-                  1.0;              # Shock size (std devs)
+                  1.0;              # Shock size (shock units)
                   variables = [:c, :k, :y],  # Variables to plot
                   periods = 40)     # IRF horizon
 
 # IRF is returned as deviations from steady state
 # Access values: irf[variable_index, period]
 ```
+
+`get_sep_irf` interprets `shock_size` in shock units (consistent with `get_irf`).
+If you store shock standard deviations in parameters named `z_<shock>` and want
+Dynare-style scaling, pass `shock_scaling = :parameter`.
 
 ### Example: Technology Shock IRF
 

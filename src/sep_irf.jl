@@ -3,6 +3,70 @@
 
 using Statistics
 
+function sep_irf_shock_std(𝓂::ℳ, shock::Symbol; warn_missing::Bool=true)
+    param_name = Symbol("z_", shock)
+    param_idx = findfirst(==(param_name), 𝓂.parameters)
+    if param_idx === nothing
+        if warn_missing
+            @warn "Shock std parameter $param_name not found, using default 1.0"
+        end
+        return 1.0
+    end
+    return 𝓂.parameter_values[param_idx]
+end
+
+function sep_irf_shock_scale(
+    𝓂::ℳ,
+    shock::Symbol,
+    shock_size::Float64;
+    shock_scaling::Symbol=:none,
+    negative_shock::Bool=false
+)
+    shock_scale = negative_shock ? -abs(shock_size) : shock_size
+    if shock_scaling == :none
+        return shock_scale
+    elseif shock_scaling == :parameter
+        return shock_scale * sep_irf_shock_std(𝓂, shock)
+    end
+    error("Unknown shock_scaling=$shock_scaling. Use :none or :parameter.")
+end
+
+function sep_irf_stochastic_state(𝓂::ℳ, algorithm::Symbol; silent::Bool=true)
+    solve!(𝓂, algorithm = algorithm, dynamics = true, silent = silent)
+    if algorithm == :first_order
+        nss = 𝓂.solution.non_stochastic_steady_state
+        return nss[1:length(𝓂.var)]
+    elseif algorithm == :third_order
+        return copy(𝓂.solution.perturbation.third_order.stochastic_steady_state)
+    elseif algorithm == :pruned_third_order
+        return copy(𝓂.solution.perturbation.pruned_third_order.stochastic_steady_state)
+    elseif algorithm == :pruned_second_order
+        return copy(𝓂.solution.perturbation.pruned_second_order.stochastic_steady_state)
+    else
+        return copy(𝓂.solution.perturbation.second_order.stochastic_steady_state)
+    end
+end
+
+function sep_irf_extract_path(
+    sep_sol::sep_solution,
+    var_indices::Vector{Int},
+    periods::Int
+)
+    layout = sep_sol.layout
+    ny_ = layout.ny_
+    nvars = length(var_indices)
+    path = zeros(nvars, periods + 1)
+
+    for t in 0:periods
+        y_t = sep_sol.Y[layout.voff[t + 1] .+ (1:ny_)]
+        for (i, vidx) in enumerate(var_indices)
+            path[i, t + 1] = y_t[vidx]
+        end
+    end
+
+    return path
+end
+
 """
     extract_sep_irf(sep_sol::sep_solution, shock_idx::Int, shock_size::Float64,
                     var_indices::Vector{Int}; path_type::Symbol=:mean)
@@ -135,7 +199,8 @@ end
 
 """
     get_sep_irf_tree(𝓂::ℳ, shock::Symbol, shock_size::Float64=1.0;
-                     variables::Vector{Symbol}=Symbol[], periods::Int=40)
+                     variables::Vector{Symbol}=Symbol[], periods::Int=40,
+                     shock_scaling::Symbol=:none)
 
 Compute impulse response by extracting path from pre-solved SEP tree.
 
@@ -145,9 +210,10 @@ is preferred and available via get_sep_irf().
 # Arguments
 - `𝓂`: Model with SEP solution
 - `shock`: Shock name
-- `shock_size`: Shock size in standard deviations (default: 1.0)
+- `shock_size`: Shock size in shock units (default: 1.0)
 - `variables`: Variables to include (default: all)
 - `periods`: IRF horizon (default: 40)
+- `shock_scaling`: `:none` for shock units, `:parameter` to scale by `z_<shock>`
 
 # Returns
 - KeyedArray with IRF paths
@@ -157,7 +223,8 @@ function get_sep_irf_tree(
     shock::Symbol,
     shock_size::Float64=1.0;
     variables::Vector{Symbol}=Symbol[],
-    periods::Int=40
+    periods::Int=40,
+    shock_scaling::Symbol=:none
 )
     # Check if SEP solution exists
     sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
@@ -165,10 +232,15 @@ function get_sep_irf_tree(
         error("No SEP solution found. Run solve!(model, algorithm=:stochastic_extended_path) first.")
     end
 
-    # Get shock index
+    # Get shock index (full exo list)
     shock_idx = findfirst(==(shock), 𝓂.exo)
     if shock_idx === nothing
         error("Shock $shock not found in model")
+    end
+    stochastic_idx = findall(x -> !contains(x, "ᵒᵇᶜ"), string.(𝓂.exo))
+    shock_idx_stoch = findfirst(==(shock_idx), stochastic_idx)
+    if shock_idx_stoch === nothing
+        error("Shock $shock is not a stochastic shock (OBC shocks are excluded from SEP trees).")
     end
 
     # Get variable indices
@@ -191,8 +263,12 @@ function get_sep_irf_tree(
         @warn "SEP horizon ($T_sep) is shorter than requested IRF horizon ($periods). Using $T_irf periods."
     end
 
+    shock_size_effective = shock_scaling == :parameter ?
+        shock_size * sep_irf_shock_std(𝓂, shock) :
+        shock_size
+
     # Extract IRF
-    irf, scale_factor = extract_sep_irf(sep_sol, shock_idx, shock_size, var_indices)
+    irf, scale_factor = extract_sep_irf(sep_sol, shock_idx_stoch, shock_size_effective, var_indices)
 
     # Convert to deviations from steady state and apply scaling
     for i in 1:size(irf, 1)
@@ -208,33 +284,262 @@ end
 
 
 """
+    get_sep_irf_funnel(𝓂::ℳ, shock::Symbol, shock_size::Float64=1.0;
+                       variables::Vector{Symbol}=Symbol[],
+                       periods::Int=40,
+                       sep_periods::Union{Nothing,Int}=nothing,
+                       sep_order::Union{Nothing,Int}=nothing,
+                       sep_nnodes::Union{Nothing,Int}=nothing,
+                       sep_maxit::Int=80,
+                       sep_tol::Float64=1e-7,
+                       sep_sparse_tree::Union{Nothing,Bool}=nothing,
+                       initial_state::Union{Nothing,Vector{Float64}}=nothing,
+                       sss_algorithm::Symbol=:second_order,
+                       baseline::Symbol=:funnel,
+                       shock_scaling::Symbol=:none,
+                       negative_shock::Bool=false,
+                       silent::Bool=true)
+
+Compute SEP IRF using Dynare-style funnel baseline (tt - ts).
+
+This method:
+1. Solves SEP once at the full branching order for the shocked path (tt).
+2. Builds the funnel baseline (ts) by decreasing the branching order and
+   appending the first-period solution at each order, with a final
+   deterministic continuation.
+3. Returns IRF = tt - ts (levels), with t=0 included.
+
+Set `baseline=:steady_state` to return tt deviations from the initial state
+instead of the funnel baseline.
+
+`shock_scaling=:none` interprets `shock_size` in shock units (consistent with
+`get_irf`); use `shock_scaling=:parameter` to multiply by `z_<shock>`.
+"""
+function get_sep_irf_funnel(
+    𝓂::ℳ,
+    shock::Symbol,
+    shock_size::Float64=1.0;
+    variables::Vector{Symbol}=Symbol[],
+    periods::Int=40,
+    sep_periods::Union{Nothing,Int}=nothing,
+    sep_order::Union{Nothing,Int}=nothing,
+    sep_nnodes::Union{Nothing,Int}=nothing,
+    sep_maxit::Int=80,
+    sep_tol::Float64=1e-7,
+    sep_sparse_tree::Union{Nothing,Bool}=nothing,
+    initial_state::Union{Nothing,Vector{Float64}}=nothing,
+    sss_algorithm::Symbol=:second_order,
+    baseline::Symbol=:funnel,
+    shock_scaling::Symbol=:none,
+    negative_shock::Bool=false,
+    silent::Bool=true
+)
+    sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
+    if sep_sol === nothing && (sep_periods === nothing || sep_order === nothing || sep_nnodes === nothing || sep_sparse_tree === nothing)
+        error("No SEP solution found. Run solve!(model, algorithm=:stochastic_extended_path) or provide sep_* options.")
+    end
+
+    if sep_periods === nothing
+        sep_periods = sep_sol.periods
+    end
+    if sep_order === nothing
+        sep_order = sep_sol.order
+    end
+    if sep_nnodes === nothing
+        sep_nnodes = sep_sol.nnodes
+    end
+    if sep_sparse_tree === nothing
+        sep_sparse_tree = hasproperty(sep_sol, :layout) ? sep_sol.layout.sparse : true
+    end
+
+    if sep_periods < periods
+        @warn "SEP horizon ($sep_periods) is shorter than requested IRF horizon ($periods). Using $sep_periods periods."
+        periods = sep_periods
+    end
+
+    shock_idx = findfirst(==(shock), 𝓂.exo)
+    if shock_idx === nothing
+        error("Shock $shock not found in model")
+    end
+
+    if isempty(variables)
+        var_names = 𝓂.var
+        var_indices = collect(1:length(𝓂.var))
+    else
+        var_names = variables
+        var_indices = [findfirst(==(v), 𝓂.var) for v in variables]
+        if any(isnothing, var_indices)
+            error("Some variables not found in model")
+        end
+    end
+
+    if isnothing(initial_state)
+        initial_state = sep_irf_stochastic_state(𝓂, sss_algorithm; silent = silent)
+    else
+        @assert length(initial_state) == length(𝓂.var) "initial_state must have length $(length(𝓂.var))"
+    end
+
+    shock_value = sep_irf_shock_scale(𝓂, shock, shock_size;
+                                      shock_scaling = shock_scaling,
+                                      negative_shock = negative_shock)
+    nshocks = length(𝓂.exo)
+
+    shock_sequence = zeros(sep_periods, nshocks)
+    shock_sequence[1, shock_idx] = shock_value
+
+    solve!(𝓂,
+           algorithm = :stochastic_extended_path,
+           sep_periods = sep_periods,
+           sep_order = sep_order,
+           sep_nnodes = sep_nnodes,
+           sep_maxit = sep_maxit,
+           sep_tol = sep_tol,
+           sep_sparse_tree = sep_sparse_tree,
+           sep_initial_state = initial_state,
+           sep_deterministic_shocks = shock_sequence,
+           silent = silent)
+
+    sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
+    tt_path = sep_irf_extract_path(sep_sol, var_indices, periods)
+
+    if baseline == :steady_state
+        irf = tt_path .- initial_state[var_indices]
+    elseif baseline == :funnel
+        ts_path = zeros(length(var_indices), periods + 1)
+        ts_path[:, 1] = initial_state[var_indices]
+
+        ny = length(𝓂.var)
+        cursor = 2
+        prev = copy(initial_state)
+
+        for order in sep_order:-1:0
+            shock_sequence = zeros(sep_periods, nshocks)
+            if order == sep_order
+                shock_sequence[1, shock_idx] = shock_value
+                periods_step = 1
+            elseif order == 0
+                periods_step = periods
+            else
+                periods_step = 1
+            end
+
+            if order == 0
+                initial_guess = repeat(initial_state, sep_periods + 1)
+                initial_guess[1:ny] .= prev
+            else
+                initial_guess = nothing
+            end
+
+            solve!(𝓂,
+                   algorithm = :stochastic_extended_path,
+                   sep_periods = sep_periods,
+                   sep_order = order,
+                   sep_nnodes = sep_nnodes,
+                   sep_maxit = sep_maxit,
+                   sep_tol = sep_tol,
+                   sep_sparse_tree = sep_sparse_tree,
+                   sep_initial_guess = initial_guess,
+                   sep_initial_state = prev,
+                   sep_deterministic_shocks = shock_sequence,
+                   silent = silent)
+
+            sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
+            layout = sep_sol.layout
+
+            if order == 0
+                for t in 1:periods_step
+                    if cursor > periods + 1
+                        break
+                    end
+                    y_t = sep_sol.Y[layout.voff[t + 1] .+ (1:layout.ny_)]
+                    ts_path[:, cursor] = y_t[var_indices]
+                    prev = y_t
+                    cursor += 1
+                end
+            else
+                if cursor <= periods + 1
+                    y_t = sep_sol.Y[layout.voff[2] .+ (1:layout.ny_)]
+                    ts_path[:, cursor] = y_t[var_indices]
+                    cursor += 1
+                    prev = y_t
+                end
+            end
+
+            if cursor > periods + 1
+                break
+            end
+        end
+
+        irf = tt_path .- ts_path
+    else
+        error("Unknown baseline $baseline. Use :funnel or :steady_state.")
+    end
+
+    time_labels = 0:periods
+    return KeyedArray(irf; Variables=var_names, Periods=time_labels)
+end
+
+
+"""
     get_sep_irf(𝓂::ℳ, shock::Symbol, shock_size::Float64=1.0;
                 variables::Vector{Symbol}=Symbol[],
                 periods::Int=40,
                 burn_in::Int=100,
                 random_seed::Union{Nothing,Int}=nothing,
+                method::Symbol=:simulation,
+                baseline::Symbol=:funnel,
+                sep_periods::Union{Nothing,Int}=nothing,
+                sep_order::Union{Nothing,Int}=nothing,
+                sep_nnodes::Union{Nothing,Int}=nothing,
+                sep_maxit::Int=80,
+                sep_tol::Float64=1e-7,
+                sep_sparse_tree::Union{Nothing,Bool}=nothing,
+                initial_state::Union{Nothing,Vector{Float64}}=nothing,
+                sss_algorithm::Symbol=:second_order,
+                shock_scaling::Symbol=:none,
+                negative_shock::Bool=false,
                 silent::Bool=true)
 
-Compute impulse response using SEP stochastic simulation.
+Compute SEP IRFs using either a Dynare-style funnel baseline or a stochastic
+simulation baseline.
 
-This function follows Dynare's extended path approach:
-1. Run burn-in simulation to reach stochastic steady state
-2. From SSS, run baseline simulation (zero shocks)
-3. From SSS, run shocked simulation (specific shock applied at t=0)
-4. IRF = shocked_path - baseline_path
+Use `method=:funnel` to compute IRF = tt − ts (funnel baseline).
+Use `method=:simulation` to compute IRF = shocked path − baseline path
+from stochastic simulations (legacy behavior).
 
 # Arguments
 - `𝓂`: Model with SEP solution
 - `shock`: Shock name
-- `shock_size`: Shock size in standard deviations (default: 1.0)
+- `shock_size`: Shock size in shock units (default: 1.0)
 - `variables`: Variables to include (default: all)
 - `periods`: IRF horizon (default: 40)
-- `burn_in`: Burn-in periods to reach SSS (default: 100)
-- `random_seed`: Random seed for reproducibility (default: nothing)
-- `silent`: Suppress progress messages (default: true)
+- `burn_in`: Burn-in periods to reach SSS (simulation method only)
+- `random_seed`: Random seed for simulation reproducibility (simulation only)
+- `method`: `:funnel` or `:simulation`
+- `baseline`: For `method=:funnel`:
+    - `:funnel` returns IRF = tt − ts (Dynare SEP funnel baseline)
+    - `:steady_state` returns tt − initial_state (absolute deviation from SSS)
+- `sep_periods`: SEP horizon (T) for each SEP solve (funnel method)
+- `sep_order`: Branching order (Lbr) for SEP (funnel method)
+- `sep_nnodes`: Gauss–Hermite nodes per shock dimension (funnel method)
+- `sep_maxit`: SEP max Newton iterations (funnel method)
+- `sep_tol`: SEP convergence tolerance (funnel method)
+- `sep_sparse_tree`: Use fishbone sparse tree (funnel method)
+- `initial_state`: Initial state for SEP funnel baseline (defaults to SSS)
+- `sss_algorithm`: Perturbation order for SSS (`:second_order`, `:third_order`, etc.)
+- `shock_scaling`: `:none` for shock units, `:parameter` to scale by `z_<shock>`
+- `negative_shock`: Apply shock with negative sign when true
+- `silent`: Suppress progress messages
 
 # Returns
-- KeyedArray with IRF paths (Variables × Periods)
+- `KeyedArray` with IRF paths (Variables × Periods)
+
+# Notes
+- `shock_size` is interpreted in shock units (consistent with `get_irf`). Use
+  `shock_scaling=:parameter` to multiply by `z_<shock>` for Dynare-style stderr scaling.
+- When `method=:funnel`, `sep_periods` should be at least `periods` or the IRF will be truncated.
+- `baseline=:steady_state` is the natural choice when comparing to `get_irf`, which returns
+  absolute deviations from the stochastic steady state.
 """
 function get_sep_irf(
     𝓂::ℳ,
@@ -244,8 +549,42 @@ function get_sep_irf(
     periods::Int=40,
     burn_in::Int=100,
     random_seed::Union{Nothing,Int}=nothing,
+    method::Symbol=:simulation,
+    baseline::Symbol=:funnel,
+    sep_periods::Union{Nothing,Int}=nothing,
+    sep_order::Union{Nothing,Int}=nothing,
+    sep_nnodes::Union{Nothing,Int}=nothing,
+    sep_maxit::Int=80,
+    sep_tol::Float64=1e-7,
+    sep_sparse_tree::Union{Nothing,Bool}=nothing,
+    initial_state::Union{Nothing,Vector{Float64}}=nothing,
+    sss_algorithm::Symbol=:second_order,
+    shock_scaling::Symbol=:none,
+    negative_shock::Bool=false,
     silent::Bool=true
 )
+    if method == :funnel
+        return get_sep_irf_funnel(
+            𝓂, shock, shock_size;
+            variables = variables,
+            periods = periods,
+            sep_periods = sep_periods,
+            sep_order = sep_order,
+            sep_nnodes = sep_nnodes,
+            sep_maxit = sep_maxit,
+            sep_tol = sep_tol,
+            sep_sparse_tree = sep_sparse_tree,
+            initial_state = initial_state,
+            sss_algorithm = sss_algorithm,
+            baseline = baseline,
+            shock_scaling = shock_scaling,
+            negative_shock = negative_shock,
+            silent = silent
+        )
+    elseif method != :simulation
+        error("Unknown method $method. Use :funnel or :simulation.")
+    end
+
     # Check if SEP solution exists
     sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
     if sep_sol === nothing
@@ -273,6 +612,7 @@ function get_sep_irf(
                                                sep_horizon = sep_sol.periods,
                                                sep_order = sep_sol.order,
                                                sep_nnodes = sep_sol.nnodes,
+                                               shock_scaling = shock_scaling,
                                                random_seed = random_seed,
                                                silent = silent)
 
@@ -297,22 +637,17 @@ function get_sep_irf(
                                     sep_horizon = sep_sol.periods,
                                     sep_order = sep_sol.order,
                                     sep_nnodes = sep_sol.nnodes,
+                                    shock_scaling = shock_scaling,
                                     silent = silent)
 
     # Step 3: From SSS, run shocked simulation (shock applied at t=1)
     !silent && println("\n3. Running shocked simulation...")
 
-    # Get shock standard deviation
-    param_name = Symbol("z_", shock)
-    param_idx = findfirst(==(param_name), 𝓂.parameters)
-    if param_idx === nothing
-        error("Shock parameter $param_name not found in model parameters")
-    end
-    σ_shock = 𝓂.parameter_values[param_idx]
-
     # Create shock matrix: shock at t=1, zeros elsewhere
     shocks_shocked = zeros(nshocks, periods)
-    shocks_shocked[shock_idx, 1] = shock_size * σ_shock
+    shocks_shocked[shock_idx, 1] = sep_irf_shock_scale(𝓂, shock, shock_size;
+                                                       shock_scaling = shock_scaling,
+                                                       negative_shock = negative_shock)
 
     sim_shocked, _ = simulate_sep(𝓂,
                                    periods = periods,
@@ -322,6 +657,7 @@ function get_sep_irf(
                                    sep_horizon = sep_sol.periods,
                                    sep_order = sep_sol.order,
                                    sep_nnodes = sep_sol.nnodes,
+                                   shock_scaling = shock_scaling,
                                    silent = silent)
 
     !silent && println("  ✓ Simulations complete")

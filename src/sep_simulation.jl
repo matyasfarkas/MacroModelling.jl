@@ -2,6 +2,7 @@
 # Sequential simulation using SEP for expectations
 
 using Random
+using LinearAlgebra
 
 """
     simulate_sep(𝓂::ℳ;
@@ -12,9 +13,15 @@ using Random
                  sep_horizon::Int=40,
                  sep_order::Int=1,
                  sep_nnodes::Int=3,
+                 shock_scaling::Symbol=:none,
                  random_seed::Union{Nothing,Int}=nothing)
 
 Perform stochastic simulation using SEP for forward-looking expectations.
+
+Note: This implementation uses a pre-solved SEP tree and maps shocks to the
+nearest Gauss-Hermite node. It is fast but approximate. For a Dynare-style
+extended-path loop that re-solves SEP each period, use
+`simulate_sep_extended_path`.
 
 # Algorithm
 For each period t:
@@ -32,6 +39,7 @@ For each period t:
 - `sep_horizon`: Horizon for each SEP problem (T)
 - `sep_order`: SEP branching order (Lbr)
 - `sep_nnodes`: Number of Gauss-Hermite nodes
+- `shock_scaling`: `:none` for unit shocks, `:parameter` to scale by `z_<shock>`
 - `random_seed`: Random seed for shock generation
 
 # Returns
@@ -47,6 +55,7 @@ function simulate_sep(
     sep_horizon::Int=40,
     sep_order::Int=1,
     sep_nnodes::Int=3,
+    shock_scaling::Symbol=:none,
     random_seed::Union{Nothing,Int}=nothing,
     silent::Bool=true
 )
@@ -78,15 +87,23 @@ function simulate_sep(
     total_periods = periods + burn_in
     if isnothing(shocks)
         # Get shock covariance matrix
+        if shock_scaling != :none && shock_scaling != :parameter
+            error("Unknown shock_scaling=$shock_scaling. Use :none or :parameter.")
+        end
+
         Σ = zeros(nshocks, nshocks)
         for (i, shock_name) in enumerate(𝓂.exo)
-            param_name = Symbol("z_", shock_name)
-            param_idx = findfirst(==(param_name), 𝓂.parameters)
-            if !isnothing(param_idx)
-                σ = params[param_idx]
-                Σ[i, i] = σ^2
+            if shock_scaling == :parameter
+                param_name = Symbol("z_", shock_name)
+                param_idx = findfirst(==(param_name), 𝓂.parameters)
+                if !isnothing(param_idx)
+                    σ = params[param_idx]
+                    Σ[i, i] = σ^2
+                else
+                    @warn "Shock std parameter $param_name not found, using default 1.0"
+                    Σ[i, i] = 1.0
+                end
             else
-                @warn "Shock std parameter $param_name not found, using default 1.0"
                 Σ[i, i] = 1.0
             end
         end
@@ -144,6 +161,181 @@ function simulate_sep(
     result = KeyedArray(Y_final; Variables=𝓂.var, Time=time_labels)
 
     return result, shocks_final
+end
+
+
+"""
+    simulate_sep_extended_path(𝓂::ℳ;
+                               periods::Int=200,
+                               initial_state::Union{Nothing,Vector{Float64}}=nothing,
+                               shocks::Union{Nothing,Matrix{Float64}}=nothing,
+                               burn_in::Int=0,
+                               sep_horizon::Int=40,
+                               sep_order::Int=1,
+                               sep_nnodes::Int=3,
+                               sep_maxit::Int=80,
+                               sep_tol::Float64=1e-7,
+                               sep_sparse_tree::Bool=true,
+                               shock_scaling::Symbol=:none,
+                               random_seed::Union{Nothing,Int}=nothing,
+                               silent::Bool=true)
+
+Run a Dynare-style extended-path simulation by re-solving SEP at each period.
+
+# Arguments
+- `periods`: Total simulation periods (after burn-in)
+- `initial_state`: Starting state (default: deterministic SS)
+- `shocks`: Shock matrix (nshocks × periods+burn_in). If `nothing`, draws N(0,1)
+  shocks for non-OBC shocks. If provided with only non-OBC rows, OBC shocks are
+  padded with zeros.
+- `burn_in`: Number of initial periods to discard
+- `sep_horizon`: SEP horizon (T)
+- `sep_order`: SEP branching order (Lbr)
+- `sep_nnodes`: Gauss-Hermite nodes per shock dimension
+- `sep_maxit`: SEP max Newton iterations
+- `sep_tol`: SEP convergence tolerance
+- `sep_sparse_tree`: Use fishbone sparse tree
+- `shock_scaling`: `:none` for unit shocks, `:parameter` to scale by `z_<shock>`
+- `random_seed`: Random seed for shock generation
+- `silent`: Suppress progress messages
+
+# Returns
+- NamedTuple with fields:
+  - `simulation`: KeyedArray (Variables × Time)
+  - `shocks`: shock matrix used (nshocks × time)
+  - `errorflag`: true if SEP failed in some period
+  - `failure_period`: first period with failure (or `nothing`)
+"""
+function simulate_sep_extended_path(
+    𝓂::ℳ;
+    periods::Int=200,
+    initial_state::Union{Nothing,Vector{Float64}}=nothing,
+    shocks::Union{Nothing,Matrix{Float64}}=nothing,
+    burn_in::Int=0,
+    sep_horizon::Int=40,
+    sep_order::Int=1,
+    sep_nnodes::Int=3,
+    sep_maxit::Int=80,
+    sep_tol::Float64=1e-7,
+    sep_sparse_tree::Bool=true,
+    shock_scaling::Symbol=:none,
+    random_seed::Union{Nothing,Int}=nothing,
+    silent::Bool=true
+)
+    if !isnothing(random_seed)
+        Random.seed!(random_seed)
+    end
+
+    nvars = length(𝓂.var)
+    shock_names = 𝓂.exo
+    nshocks = length(shock_names)
+
+    obc_mask = contains.(string.(shock_names), "ᵒᵇᶜ")
+    structural_idx = findall(!, obc_mask)
+
+    total_periods = periods + burn_in
+
+    # Build shock matrix (full, including OBC shocks)
+    shocks_used = zeros(nshocks, total_periods)
+    if isnothing(shocks)
+        if !isempty(structural_idx)
+            if shock_scaling != :none && shock_scaling != :parameter
+                error("Unknown shock_scaling=$shock_scaling. Use :none or :parameter.")
+            end
+
+            sigmas = ones(length(structural_idx))
+            if shock_scaling == :parameter
+                for (i, idx) in enumerate(structural_idx)
+                    sigmas[i] = sep_irf_shock_std(𝓂, shock_names[idx])
+                end
+            end
+
+            if length(structural_idx) == 1
+                shocks_used[structural_idx[1], :] .= randn(total_periods) .* sigmas[1]
+            else
+                L = Diagonal(sigmas)
+                shocks_used[structural_idx, :] .= L * randn(length(structural_idx), total_periods)
+            end
+        end
+    else
+        @assert size(shocks, 2) >= total_periods "Not enough shock periods"
+        if size(shocks, 1) == nshocks
+            shocks_used .= shocks[:, 1:total_periods]
+        elseif size(shocks, 1) == length(structural_idx)
+            shocks_used[structural_idx, :] .= shocks[:, 1:total_periods]
+        else
+            error("Shock dimension mismatch: expected $nshocks (or $(length(structural_idx)) non-OBC shocks), got $(size(shocks, 1)).")
+        end
+    end
+
+    # Initial state (deterministic SS by default)
+    SS_result = get_steady_state(𝓂, derivatives=false)
+    yss = [Float64(SS_result(var)) for var in 𝓂.var]
+    y0 = isnothing(initial_state) ? copy(yss) : copy(initial_state)
+    @assert length(y0) == nvars "Initial state dimension mismatch"
+
+    # Storage for simulated paths
+    Y_sim = zeros(nvars, total_periods + 1)
+    Y_sim[:, 1] = y0
+
+    shock_sequence = zeros(sep_horizon, nshocks)
+    errorflag = false
+    failure_period = nothing
+
+    !silent && println("Running SEP extended-path simulation...")
+    for t in 1:total_periods
+        if !silent && mod(t, 25) == 0
+            println("  Period $t / $total_periods")
+        end
+
+        fill!(shock_sequence, 0.0)
+        shock_sequence[1, :] .= shocks_used[:, t]
+
+        solve!(𝓂,
+               algorithm = :stochastic_extended_path,
+               sep_periods = sep_horizon,
+               sep_order = sep_order,
+               sep_nnodes = sep_nnodes,
+               sep_maxit = sep_maxit,
+               sep_tol = sep_tol,
+               sep_sparse_tree = sep_sparse_tree,
+               sep_initial_state = Y_sim[:, t],
+               sep_deterministic_shocks = shock_sequence,
+               silent = silent)
+
+        sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
+        if sep_sol === nothing || sep_sol.convergence_flag != 0 || !isfinite(sep_sol.final_error)
+            errorflag = true
+            failure_period = t
+            break
+        end
+
+        layout = sep_sol.layout
+        Y_sim[:, t + 1] = sep_sol.Y[layout.voff[2] .+ (1:layout.ny_)]
+    end
+
+    if errorflag
+        last_ok = failure_period
+        Y_sim = Y_sim[:, 1:last_ok]
+        shocks_used = shocks_used[:, 1:max(last_ok - 1, 0)]
+    end
+
+    if burn_in > 0
+        start_col = min(burn_in + 1, size(Y_sim, 2))
+        Y_final = Y_sim[:, start_col:end]
+        shocks_final = size(shocks_used, 2) >= burn_in ? shocks_used[:, (burn_in + 1):end] : shocks_used[:, 1:0]
+    else
+        Y_final = Y_sim
+        shocks_final = shocks_used
+    end
+
+    time_labels = 0:(size(Y_final, 2) - 1)
+    result = KeyedArray(Y_final; Variables=𝓂.var, Time=time_labels)
+
+    return (simulation = result,
+            shocks = shocks_final,
+            errorflag = errorflag,
+            failure_period = failure_period)
 end
 
 

@@ -212,6 +212,39 @@ function fill_dyn_values!(
     return
 end
 
+function report_nonfinite_residual(
+    𝓂::ℳ,
+    resid_buffer::AbstractVector{Float64},
+    dyn_values::AbstractVector{Float64},
+    params_and_ss::AbstractVector{Float64},
+    vars_raw::Vector{Symbol},
+    parameters_and_SS::Vector{Symbol};
+    t::Int,
+    g::Int
+)
+    bad_idx = findfirst(x -> !isfinite(x), resid_buffer)
+    bad_idx === nothing && return nothing
+
+    eq = 𝓂.dyn_equations[bad_idx]
+    @warn "SEP residual non-finite" t=t g=g idx=bad_idx value=resid_buffer[bad_idx] eq=eq
+
+    dyn_map = Dict{Symbol,Float64}(vars_raw[i] => dyn_values[i] for i in 1:length(vars_raw))
+    par_map = Dict{Symbol,Float64}(parameters_and_SS[i] => params_and_ss[i] for i in 1:length(parameters_and_SS))
+    eq_syms = collect(get_symbols(eq))
+    sort!(eq_syms, by=string)
+
+    println("  Values in non-finite equation:")
+    for sym in eq_syms
+        if haskey(dyn_map, sym)
+            println("    ", sym, " = ", dyn_map[sym])
+        elseif haskey(par_map, sym)
+            println("    ", sym, " = ", par_map[sym])
+        end
+    end
+
+    return bad_idx
+end
+
 function build_dyn_var_maps(𝓂::ℳ, vars_raw::Vector{Symbol})
     var_index_map = Dict{Symbol,Int}(v => i for (i, v) in enumerate(𝓂.var))
     shock_index_map = Dict{Symbol,Int}(v => i for (i, v) in enumerate(𝓂.exo))
@@ -617,6 +650,7 @@ function solve_deterministic_path(
     vals = Vector{Float64}(undef, nnz_est)
     R = zeros(neq)  # Declare outside loop so it's available after loop ends
     err = Inf  # Initialize error
+    nonfinite_reported = false
 
     for it in 1:opts.maxit
         fill!(R, 0.0)  # Reuse R vector
@@ -636,6 +670,22 @@ function solve_deterministic_path(
 
             # Nonlinear residual and Jacobian
             dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+            if has_nonfinite(resid_buffer)
+                if opts.verbose && !nonfinite_reported
+                    report_nonfinite_residual(
+                        𝓂,
+                        resid_buffer,
+                        dyn_values,
+                        params_and_ss,
+                        vars_raw,
+                        parameters_and_SS;
+                        t = t,
+                        g = 1
+                    )
+                    nonfinite_reported = true
+                end
+                return (flag=2, Y=Y, layout=layout, err=Inf)
+            end
             dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
 
             # Store residual
@@ -744,10 +794,14 @@ function sep_solve_mm!(
 )
     # Get model dimensions
     ny_ = length(𝓂.var)
-    dε = length(𝓂.exo)
+    shock_names = 𝓂.exo
+    obc_mask = contains.(string.(shock_names), "ᵒᵇᶜ")
+    stochastic_idx = findall(x -> !x, obc_mask)
+    n_exo = length(shock_names)
+    dε = length(stochastic_idx)
 
     # Get steady state
-    SS_result = get_steady_state(𝓂; parameters=parameters, return_variables_only=true, derivatives=false)
+    SS_result = get_steady_state(𝓂; parameters=parameters, return_variables_only=false, derivatives=false)
 
     # Get available keys from SS_result (may not include auxiliary variables)
     ss_keys = try
@@ -758,13 +812,12 @@ function sep_solve_mm!(
 
     # Build yss vector - use steady state for available vars, or their definitions for auxiliary
     yss = Float64[]
-    for var in 𝓂.var
+    for (i, var) in enumerate(𝓂.var)
         if var ∈ ss_keys
             push!(yss, Float64(SS_result(var)))
         else
-            # For auxiliary variables not in SS_result, initialize to zero
-            # They will be computed from the equilibrium conditions
-            push!(yss, 0.0)
+            # Fall back to NSSS for auxiliary variables not in SS_result.
+            push!(yss, Float64(SS[i]))
         end
     end
 
@@ -837,7 +890,8 @@ function sep_solve_mm!(
     # Get shock covariance from model parameters
     # MacroModelling stores shock std devs as parameters named "z_{shock_name}"
     Σ = zeros(dε, dε)
-    for (i, shock_name) in enumerate(𝓂.exo)
+    for (i, shock_pos) in enumerate(stochastic_idx)
+        shock_name = shock_names[shock_pos]
         # Look for parameter z_{shock_name}
         param_name = Symbol("z_", shock_name)
         param_idx = findfirst(==(param_name), 𝓂.parameters)
@@ -986,8 +1040,9 @@ function sep_solve_mm!(
     r_sum = zeros(ny_)
     J_lag = zeros(ny_, ny_)
     J_cur = zeros(ny_, ny_)
-    ε_det = isnothing(opts.deterministic_shocks) ? nothing : zeros(dε)
-    ε_tmp = zeros(dε)
+    eps_det = isnothing(opts.deterministic_shocks) ? nothing : zeros(n_exo)
+    eps_full = zeros(n_exo)
+    nonfinite_reported = false
 
     # Helper to get state
     function get_y(t, g)
@@ -1050,21 +1105,38 @@ function sep_solve_mm!(
                             wk = W[kidx]
                         end
 
-                        # Dynare convention: at t=1 use deterministic shock only; at t>=2 use node shocks
-                        if t == 1
-                            if ε_det !== nothing
-                                ε_det .= view(opts.deterministic_shocks, t, :)
-                                ε_curr = ε_det
-                            else
-                                fill!(ε_tmp, 0.0)
-                                ε_curr = ε_tmp
-                            end
+                        # Dynare convention: at t=1 use deterministic shocks only; at t>=2 use node shocks
+                        if eps_det !== nothing
+                            eps_det .= view(opts.deterministic_shocks, t, :)
+                            eps_full .= eps_det
                         else
-                            ε_curr = ε_to_child
+                            fill!(eps_full, 0.0)
                         end
+
+                        if t > 1 && dε > 0
+                            eps_full[stochastic_idx] .= ε_to_child
+                        end
+
+                        ε_curr = eps_full
 
                         fill_dyn_values!(dyn_values, var_kind, var_idx, yl, yc, yl1, ε_curr)
                         dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+                        if has_nonfinite(resid_buffer)
+                            if opts.verbose && !nonfinite_reported
+                                report_nonfinite_residual(
+                                    𝓂,
+                                    resid_buffer,
+                                    dyn_values,
+                                    params_and_ss,
+                                    vars_raw,
+                                    parameters_and_SS;
+                                    t = t,
+                                    g = g
+                                )
+                                nonfinite_reported = true
+                            end
+                            return (flag=2, Y=Y, layout=layout, err=Inf)
+                        end
                         dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
 
                         r_sum .+= wk .* resid_buffer
@@ -1136,29 +1208,53 @@ function sep_solve_mm!(
                     if layout.sparse && g > 1
                         info = branch_info_sparse(layout, g)
                         if !isnothing(info) && t == info[1]
-                            ε_curr = view(X, :, info[2])
-                        else
-                            if ε_det !== nothing
-                                ε_det .= view(opts.deterministic_shocks, t, :)
-                                ε_curr = ε_det
+                            if eps_det !== nothing
+                                eps_det .= view(opts.deterministic_shocks, t, :)
+                                eps_full .= eps_det
                             else
-                                fill!(ε_tmp, 0.0)
-                                ε_curr = ε_tmp
+                                fill!(eps_full, 0.0)
+                            end
+                            if dε > 0
+                                eps_full[stochastic_idx] .= view(X, :, info[2])
+                            end
+                        else
+                            if eps_det !== nothing
+                                eps_det .= view(opts.deterministic_shocks, t, :)
+                                eps_full .= eps_det
+                            else
+                                fill!(eps_full, 0.0)
                             end
                         end
                     else
                         # Full tree non-branching or sparse trunk after branching period
-                        if ε_det !== nothing
-                            ε_det .= view(opts.deterministic_shocks, t, :)
-                            ε_curr = ε_det
+                        if eps_det !== nothing
+                            eps_det .= view(opts.deterministic_shocks, t, :)
+                            eps_full .= eps_det
                         else
-                            fill!(ε_tmp, 0.0)
-                            ε_curr = ε_tmp
+                            fill!(eps_full, 0.0)
                         end
                     end
 
+                    ε_curr = eps_full
+
                     fill_dyn_values!(dyn_values, var_kind, var_idx, yl, yc, yl1, ε_curr)
                     dyn_resid_func(resid_buffer, params_and_ss, dyn_values)
+                    if has_nonfinite(resid_buffer)
+                        if opts.verbose && !nonfinite_reported
+                            report_nonfinite_residual(
+                                𝓂,
+                                resid_buffer,
+                                dyn_values,
+                                params_and_ss,
+                                vars_raw,
+                                parameters_and_SS;
+                                t = t,
+                                g = g
+                            )
+                            nonfinite_reported = true
+                        end
+                        return (flag=2, Y=Y, layout=layout, err=Inf)
+                    end
                     dyn_jac_func(jac_buffer, params_and_ss, dyn_values)
 
                     rr = row_range(layout, t, g)
