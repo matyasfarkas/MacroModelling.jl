@@ -312,6 +312,9 @@ This method:
 Set `baseline=:steady_state` to return tt deviations from the initial state
 instead of the funnel baseline.
 
+Set `baseline=:zero_shock` to return tt minus the SEP path computed with
+the same settings and zero deterministic shocks (shocked minus unshocked).
+
 `shock_scaling=:none` interprets `shock_size` in shock units (consistent with
 `get_irf`); use `shock_scaling=:parameter` to multiply by `z_<shock>`.
 """
@@ -404,6 +407,24 @@ function get_sep_irf_funnel(
 
     if baseline == :steady_state
         irf = tt_path .- initial_state[var_indices]
+    elseif baseline == :zero_shock
+        shock_sequence = zeros(sep_periods, nshocks)
+
+        solve!(𝓂,
+               algorithm = :stochastic_extended_path,
+               sep_periods = sep_periods,
+               sep_order = sep_order,
+               sep_nnodes = sep_nnodes,
+               sep_maxit = sep_maxit,
+               sep_tol = sep_tol,
+               sep_sparse_tree = sep_sparse_tree,
+               sep_initial_state = initial_state,
+               sep_deterministic_shocks = shock_sequence,
+               silent = silent)
+
+        sep_sol = 𝓂.solution.perturbation.stochastic_extended_path
+        zero_path = sep_irf_extract_path(sep_sol, var_indices, periods)
+        irf = tt_path .- zero_path
     elseif baseline == :funnel
         ts_path = zeros(length(var_indices), periods + 1)
         ts_path[:, 1] = initial_state[var_indices]
@@ -472,7 +493,7 @@ function get_sep_irf_funnel(
 
         irf = tt_path .- ts_path
     else
-        error("Unknown baseline $baseline. Use :funnel or :steady_state.")
+        error("Unknown baseline $baseline. Use :funnel, :steady_state, or :zero_shock.")
     end
 
     time_labels = 0:periods
@@ -519,6 +540,7 @@ from stochastic simulations (legacy behavior).
 - `baseline`: For `method=:funnel`:
     - `:funnel` returns IRF = tt − ts (Dynare SEP funnel baseline)
     - `:steady_state` returns tt − initial_state (absolute deviation from SSS)
+    - `:zero_shock` returns tt − zero_shock_path (shock vs unshocked SEP path)
 - `sep_periods`: SEP horizon (T) for each SEP solve (funnel method)
 - `sep_order`: Branching order (Lbr) for SEP (funnel method)
 - `sep_nnodes`: Gauss–Hermite nodes per shock dimension (funnel method)
@@ -538,8 +560,8 @@ from stochastic simulations (legacy behavior).
 - `shock_size` is interpreted in shock units (consistent with `get_irf`). Use
   `shock_scaling=:parameter` to multiply by `z_<shock>` for Dynare-style stderr scaling.
 - When `method=:funnel`, `sep_periods` should be at least `periods` or the IRF will be truncated.
-- `baseline=:steady_state` is the natural choice when comparing to `get_irf`, which returns
-  absolute deviations from the stochastic steady state.
+- `baseline=:zero_shock` is recommended when comparing to `get_irf`, which returns
+  deviations from an unshocked baseline path.
 """
 function get_sep_irf(
     𝓂::ℳ,
@@ -607,8 +629,8 @@ function get_sep_irf(
     # Step 1: Run burn-in to reach stochastic steady state
     !silent && println("\n1. Running burn-in simulation to reach SSS...")
     sim_burnin, shocks_burnin = simulate_sep(𝓂,
-                                               periods = burn_in,
-                                               burn_in = 0,
+                                               periods = periods,
+                                               burn_in = burn_in,
                                                sep_horizon = sep_sol.periods,
                                                sep_order = sep_sol.order,
                                                sep_nnodes = sep_sol.nnodes,
