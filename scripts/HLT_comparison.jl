@@ -24,9 +24,9 @@ irf_p3 = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm
 println("✓ Perturbation IRFs computed")
 
 sep_periods = max(periods, 40)
-sep_order = 5
+sep_order = 1
 sep_nnodes = 3
-sep_tol = 5e-3
+sep_tol = 5e-5
 
 println("\n2. Computing SEP IRF (funnel baseline)...")
 irf_sep = get_sep_irf(m, shock, shock_size;

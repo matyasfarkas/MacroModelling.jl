@@ -293,6 +293,11 @@ end
                        sep_maxit::Int=80,
                        sep_tol::Float64=1e-7,
                        sep_sparse_tree::Union{Nothing,Bool}=nothing,
+                       sep_linear_solver::Symbol=:normal_equations,
+                       sep_fallback_solver::Union{Symbol,Nothing}=nothing,
+                       sep_stall_iters::Int=25,
+                       sep_stall_rel_tol::Float64=1e-4,
+                       sep_stall_abs_tol::Float64=1e-10,
                        initial_state::Union{Nothing,Vector{Float64}}=nothing,
                        sss_algorithm::Symbol=:second_order,
                        baseline::Symbol=:zero_shock,
@@ -330,6 +335,11 @@ function get_sep_irf_funnel(
     sep_maxit::Int=80,
     sep_tol::Float64=1e-7,
     sep_sparse_tree::Union{Nothing,Bool}=nothing,
+    sep_linear_solver::Symbol=:normal_equations,
+    sep_fallback_solver::Union{Symbol,Nothing}=nothing,
+    sep_stall_iters::Int=25,
+    sep_stall_rel_tol::Float64=1e-4,
+    sep_stall_abs_tol::Float64=1e-10,
     initial_state::Union{Nothing,Vector{Float64}}=nothing,
     sss_algorithm::Symbol=:second_order,
     baseline::Symbol=:zero_shock,
@@ -398,6 +408,11 @@ function get_sep_irf_funnel(
            sep_maxit = sep_maxit,
            sep_tol = sep_tol,
            sep_sparse_tree = sep_sparse_tree,
+           sep_linear_solver = sep_linear_solver,
+           sep_fallback_solver = sep_fallback_solver,
+           sep_stall_iters = sep_stall_iters,
+           sep_stall_rel_tol = sep_stall_rel_tol,
+           sep_stall_abs_tol = sep_stall_abs_tol,
            sep_initial_state = initial_state,
            sep_deterministic_shocks = shock_sequence,
            silent = silent)
@@ -418,6 +433,11 @@ function get_sep_irf_funnel(
                sep_maxit = sep_maxit,
                sep_tol = sep_tol,
                sep_sparse_tree = sep_sparse_tree,
+               sep_linear_solver = sep_linear_solver,
+               sep_fallback_solver = sep_fallback_solver,
+               sep_stall_iters = sep_stall_iters,
+               sep_stall_rel_tol = sep_stall_rel_tol,
+               sep_stall_abs_tol = sep_stall_abs_tol,
                sep_initial_state = initial_state,
                sep_deterministic_shocks = shock_sequence,
                silent = silent)
@@ -459,6 +479,11 @@ function get_sep_irf_funnel(
                    sep_maxit = sep_maxit,
                    sep_tol = sep_tol,
                    sep_sparse_tree = sep_sparse_tree,
+                   sep_linear_solver = sep_linear_solver,
+                   sep_fallback_solver = sep_fallback_solver,
+                   sep_stall_iters = sep_stall_iters,
+                   sep_stall_rel_tol = sep_stall_rel_tol,
+                   sep_stall_abs_tol = sep_stall_abs_tol,
                    sep_initial_guess = initial_guess,
                    sep_initial_state = prev,
                    sep_deterministic_shocks = shock_sequence,
@@ -515,6 +540,11 @@ end
                 sep_maxit::Int=80,
                 sep_tol::Float64=1e-7,
                 sep_sparse_tree::Union{Nothing,Bool}=nothing,
+                sep_linear_solver::Symbol=:normal_equations,
+                sep_fallback_solver::Union{Symbol,Nothing}=nothing,
+                sep_stall_iters::Int=25,
+                sep_stall_rel_tol::Float64=1e-4,
+                sep_stall_abs_tol::Float64=1e-10,
                 initial_state::Union{Nothing,Vector{Float64}}=nothing,
                 sss_algorithm::Symbol=:second_order,
                 shock_scaling::Symbol=:none,
@@ -547,6 +577,11 @@ from stochastic simulations (legacy behavior).
 - `sep_maxit`: SEP max Newton iterations (funnel method)
 - `sep_tol`: SEP convergence tolerance (funnel method)
 - `sep_sparse_tree`: Use fishbone sparse tree (funnel method)
+- `sep_linear_solver`: Linear solver for SEP Newton step (`:normal_equations` or `:qr`)
+- `sep_fallback_solver`: Optional fallback solver used when residuals stall
+- `sep_stall_iters`: Iterations without improvement before switching solvers
+- `sep_stall_rel_tol`: Relative improvement threshold for stall detection
+- `sep_stall_abs_tol`: Absolute improvement threshold for stall detection
 - `initial_state`: Initial state for SEP funnel baseline (defaults to SSS)
 - `sss_algorithm`: Perturbation order for SSS (`:second_order`, `:third_order`, etc.)
 - `shock_scaling`: `:none` for shock units, `:parameter` to scale by `z_<shock>`
@@ -579,6 +614,11 @@ function get_sep_irf(
     sep_maxit::Int=80,
     sep_tol::Float64=1e-7,
     sep_sparse_tree::Union{Nothing,Bool}=nothing,
+    sep_linear_solver::Symbol=:normal_equations,
+    sep_fallback_solver::Union{Symbol,Nothing}=nothing,
+    sep_stall_iters::Int=25,
+    sep_stall_rel_tol::Float64=1e-4,
+    sep_stall_abs_tol::Float64=1e-10,
     initial_state::Union{Nothing,Vector{Float64}}=nothing,
     sss_algorithm::Symbol=:second_order,
     shock_scaling::Symbol=:none,
@@ -596,6 +636,11 @@ function get_sep_irf(
             sep_maxit = sep_maxit,
             sep_tol = sep_tol,
             sep_sparse_tree = sep_sparse_tree,
+            sep_linear_solver = sep_linear_solver,
+            sep_fallback_solver = sep_fallback_solver,
+            sep_stall_iters = sep_stall_iters,
+            sep_stall_rel_tol = sep_stall_rel_tol,
+            sep_stall_abs_tol = sep_stall_abs_tol,
             initial_state = initial_state,
             sss_algorithm = sss_algorithm,
             baseline = baseline,

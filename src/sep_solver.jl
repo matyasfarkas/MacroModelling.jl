@@ -15,6 +15,11 @@ struct SEPSolverOptions
     verbose::Bool        # Print iteration info
     shock_scale::Float64 # Scale factor for GH nodes
     sparse_tree::Bool    # Use fishbone sparse tree (default: false for full tree)
+    linear_solver::Symbol # Linear solve strategy for Newton step
+    fallback_solver::Union{Symbol,Nothing} # Optional fallback solver when stalled
+    stall_iters::Int     # Iterations without improvement before switching solvers
+    stall_rel_tol::Float64 # Relative improvement threshold
+    stall_abs_tol::Float64 # Absolute improvement threshold
     deterministic_shocks::Union{Matrix{Float64}, Nothing}  # NEW: T×dε deterministic shock sequence or nothing
 
     function SEPSolverOptions(;
@@ -26,14 +31,26 @@ struct SEPSolverOptions
         verbose=true,
         shock_scale=1.0,
         sparse_tree=false,
+        linear_solver::Symbol=:normal_equations,
+        fallback_solver::Union{Symbol,Nothing}=nothing,
+        stall_iters::Int=25,
+        stall_rel_tol::Float64=1e-4,
+        stall_abs_tol::Float64=1e-10,
         deterministic_shocks=nothing  # NEW
     )
+        @assert linear_solver ∈ [:normal_equations, :qr] "linear_solver must be :normal_equations or :qr (got $linear_solver)"
+        if !isnothing(fallback_solver)
+            @assert fallback_solver ∈ [:normal_equations, :qr] "fallback_solver must be :normal_equations or :qr (got $fallback_solver)"
+        end
+        @assert stall_iters >= 1 "stall_iters must be >= 1 (got $stall_iters)"
+        @assert stall_rel_tol >= 0 "stall_rel_tol must be >= 0 (got $stall_rel_tol)"
+        @assert stall_abs_tol >= 0 "stall_abs_tol must be >= 0 (got $stall_abs_tol)"
         # Validation
         if !isnothing(deterministic_shocks)
             @assert size(deterministic_shocks, 1) == periods "Deterministic shock sequence must have $periods rows (got $(size(deterministic_shocks, 1)))"
             @assert size(deterministic_shocks, 2) >= 1 "Deterministic shock sequence must have at least 1 column"
         end
-        new(periods, order, nnodes, maxit, tol, verbose, shock_scale, sparse_tree, deterministic_shocks)
+        new(periods, order, nnodes, maxit, tol, verbose, shock_scale, sparse_tree, linear_solver, fallback_solver, stall_iters, stall_rel_tol, stall_abs_tol, deterministic_shocks)
     end
 end
 
@@ -742,7 +759,7 @@ function solve_deterministic_path(
         # Check convergence
         err = maximum(abs, R)
 
-        if it % 5 == 0 || it == 1 || err < opts.tol
+        if it % 10 == 0  || it == 1 || err < opts.tol
             opts.verbose && @info "Deterministic path it=$it/$(opts.maxit)" max_res=err
         end
 
@@ -1043,6 +1060,9 @@ function sep_solve_mm!(
     eps_det = isnothing(opts.deterministic_shocks) ? nothing : zeros(n_exo)
     eps_full = zeros(n_exo)
     nonfinite_reported = false
+    active_solver = opts.linear_solver
+    best_err = Inf
+    stall_count = 0
 
     # Helper to get state
     function get_y(t, g)
@@ -1307,19 +1327,49 @@ function sep_solve_mm!(
         # Check current residual
         err = maximum(abs, R)
 
+        if !isfinite(best_err)
+            best_err = err
+            stall_count = 0
+        else
+            improvement_tol = max(opts.stall_abs_tol, opts.stall_rel_tol * best_err)
+            if err + improvement_tol < best_err
+                best_err = err
+                stall_count = 0
+            else
+                stall_count += 1
+            end
+        end
+
+        if active_solver == :normal_equations &&
+           !isnothing(opts.fallback_solver) &&
+           stall_count >= opts.stall_iters
+            opts.verbose && @info "SEP linear solver switch" from=active_solver to=opts.fallback_solver err=err
+            active_solver = opts.fallback_solver
+            stall_count = 0
+        end
+
         # Solve Newton step with regularization
         λ = 1e-8
-        Δ = (J'*J + λ*I) \ (J'*(-R))
+        if active_solver == :normal_equations
+            Δ = (J'*J + λ*I) \ (J'*(-R))
+        elseif active_solver == :qr
+            Δ = J \ (-R)
+        else
+            error("Unknown SEP linear_solver=$active_solver. Use :normal_equations or :qr.")
+        end
 
         # Adaptive damping based on residual norm
         # Start aggressive, reduce if residual is large
         α = err > 1e-3 ? 0.5 : (err > 1e-5 ? 0.7 : 1.0)
+        if active_solver == :qr
+            α = min(α, 0.2)
+        end
 
         # Apply update with adaptive step size (keep y0 fixed)
         Δ[y0_idx] .= 0.0
         Y .+= α * Δ
         Y[y0_idx] .= y0_fixed
-        if opts.verbose && (it % 5 == 0 || it == 1)
+        if opts.verbose && (it % 10 == 0  || it == 1)
             @info "SEP it=$it/$(opts.maxit)  max|res|=$err  step_norm=$(norm(Δ))"
         end
 

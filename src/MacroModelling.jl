@@ -6672,6 +6672,11 @@ function solve!(𝓂::ℳ;
                 sep_maxit::Int = 80,
                 sep_tol::Float64 = 1e-7,
                 sep_sparse_tree::Bool = true,
+                sep_linear_solver::Symbol = :normal_equations,
+                sep_fallback_solver::Union{Symbol,Nothing} = nothing,
+                sep_stall_iters::Int = 25,
+                sep_stall_rel_tol::Float64 = 1e-4,
+                sep_stall_abs_tol::Float64 = 1e-10,
                 sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing,
                 sep_deterministic_shocks::Union{Nothing,Matrix{Float64}} = nothing,
                 sep_initial_state::Union{Nothing,Vector{Float64}} = nothing) #,
@@ -6939,6 +6944,11 @@ function solve!(𝓂::ℳ;
             tol = sep_tol,
             verbose = !silent,
             sparse_tree = sep_sparse_tree,
+            linear_solver = sep_linear_solver,
+            fallback_solver = sep_fallback_solver,
+            stall_iters = sep_stall_iters,
+            stall_rel_tol = sep_stall_rel_tol,
+            stall_abs_tol = sep_stall_abs_tol,
             deterministic_shocks = sep_deterministic_shocks  # NEW
         )
 
