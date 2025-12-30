@@ -743,7 +743,7 @@ function solve_deterministic_path(
         err = maximum(abs, R)
 
         if it % 5 == 0 || it == 1 || err < opts.tol
-            opts.verbose && @info "Deterministic path it=$it/$opts.maxit" max_res=err
+            opts.verbose && @info "Deterministic path it=$it/$(opts.maxit)" max_res=err
         end
 
         if err < opts.tol
@@ -1320,7 +1320,7 @@ function sep_solve_mm!(
         Y .+= α * Δ
         Y[y0_idx] .= y0_fixed
         if opts.verbose && (it % 5 == 0 || it == 1)
-            @info "SEP it=$it/$opts.maxit  max|res|=$err  step_norm=$(norm(Δ))"
+            @info "SEP it=$it/$(opts.maxit)  max|res|=$err  step_norm=$(norm(Δ))"
         end
 
         if err < opts.tol
