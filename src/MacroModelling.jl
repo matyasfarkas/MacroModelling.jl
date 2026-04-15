@@ -18,6 +18,7 @@ import Accessors
 # import LRUCache: LRU
 
 import Dates
+import Random
 # for find shocks
 # import JuMP
 # import MadNLP
@@ -167,6 +168,9 @@ include("moments.jl")
 include("sep_solver.jl")
 include("sep_irf.jl")
 include("sep_simulation.jl")
+include("homotopy_sep.jl")
+include("hmc_sep.jl")
+include("subdifferential_newton.jl")
 include("perturbation.jl")
 
 include("./algorithms/sylvester.jl")
@@ -177,6 +181,8 @@ include("./algorithms/quadratic_matrix_equation.jl")
 include("./filter/find_shocks.jl")
 include("./filter/inversion.jl")
 include("./filter/kalman.jl")
+include("regime_switching.jl")
+include("particle_filter.jl")
 
 
 # end # DispatchDoctor
@@ -192,6 +198,7 @@ export plot_irfs!, plot_irf!, plot_IRF!, plot_girf!, plot_simulations!, plot_sim
 export Normal, Beta, Cauchy, Gamma, InverseGamma
 
 export get_irfs, get_irf, get_IRF, simulate, get_simulation, get_simulations, get_girf, get_sep_irf, get_sep_simulation, simulate_sep, simulate_sep_extended_path
+export homotopy_sep, solve_sep_at_noise_level, homotopy_chained_trajectory
 export get_conditional_forecast
 export get_solution, get_first_order_solution, get_perturbation_solution, get_second_order_solution, get_third_order_solution
 export get_steady_state, get_SS, get_ss, get_non_stochastic_steady_state, get_stochastic_steady_state, get_SSS, steady_state, SS, SSS, ss, sss
@@ -203,6 +210,15 @@ export calculate_jacobian, calculate_hessian, calculate_third_order_derivatives
 export calculate_first_order_solution, calculate_second_order_solution, calculate_third_order_solution #, calculate_jacobian_manual, calculate_jacobian_sparse, calculate_jacobian_threaded
 export get_shock_decomposition, get_model_estimates, get_estimated_shocks, get_estimated_variables, get_estimated_variable_standard_deviations, get_loglikelihood
 export Tolerances
+export RegimeSwitchConfig, GateCalibrationConfig, GateCalibrationResult, SwitchingLikelihoodConfig, SwitchingLikelihoodResult, SurrogateBundle
+export calibrate_gate, assign_regimes, apply_gate_padding, calibrate_gate_bias, gate_probabilities
+export estimate_observed_shocks_matrix, estimate_observed_variables_matrix, linear_filter_initial_state, linear_filter_full_state_initial, extract_named_parameters, override_named_parameters, parameters_with_theta_mode, compute_linear_gate_stats_from_shocks, compute_linear_gate_stats_from_filter
+export linear_model_loglik_per_period, conditional_loglik_per_period, split_observation_state, predict_from_full, predict_additive_residual, additive_residual_loglik_per_period, rollout_observations, advance_state, linear_reference_loglik_per_period, inversion_step, inversion_loglik_per_period
+export build_shocks_from_eps
+export compute_switching_loglikelihood, mix_loglikelihood, evaluate_switching_vs_fom
+export load_hlt_surrogate_bundle, load_hlt_synthetic_scenario, load_hlt_gate_calibration, load_hlt_chain_payload, load_hlt_chain_summary, hlt_benchmark_chain_summary_path, hlt_benchmark_chain_summary_keys, extract_hlt_benchmark_chain_summary, load_hlt_chain_payload_for_benchmark, load_hlt_dataset_payload, load_hlt_fom_benchmark_payload, validate_hlt_chain_payload, build_chain_checkpoint_payload
+export compute_gate_stats, episode_overlap, summarize_loglik_decomposition, summarize_runtime, chunk_stats, run_chunked_sampling, theta_draws, epsilon_means_from_chain
+export bootstrap_particle_filter
 
 export translate_mod_file, translate_dynare_file, import_model, import_dynare
 export write_mod_file, write_dynare_file, write_to_dynare_file, write_to_dynare, export_dynare, export_to_dynare, export_mod_file, export_model
@@ -3705,7 +3721,8 @@ function write_block_solution!(𝓂,
 
     
     for (i,val) in enumerate(rewritten_eqs)
-        push!(solved_vals, postwalk(x -> x isa Expr ? x.args[1] == :conjugate ? x.args[2] : x : x, val))
+        val_expr = val isa Expr ? val : Expr(:call, :identity, val)
+        push!(solved_vals, postwalk(x -> x isa Expr ? x.args[1] == :conjugate ? x.args[2] : x : x, val_expr))
         # push!(solved_vals_in_place, :(ℰ[$i] = $(postwalk(x -> x isa Expr ? x.args[1] == :conjugate ? x.args[2] : x : x, val))))
     end
 
@@ -4653,7 +4670,9 @@ function solve_steady_state!(𝓂::ℳ, symbolic_SS, Symbolics::symbolics; verbo
                 [push!(atoms_in_equations, a) for a in setdiff(get_symbols(parsed_eq_to_solve_for), get_symbols(minmax_fixed_eqs))]
                 push!(min_max_errors,:(solution_error += abs($parsed_eq_to_solve_for)))
                 push!(SS_solve_func, :(if solution_error > tol.NSSS_acceptance_tol if verbose println("Failed for min max terms in equations with error $solution_error") end; scale = scale * .3 + solved_scale * .7; continue end))
-                eq_to_solve = eval(minmax_fixed_eqs)
+                if !avoid_solve
+                    eq_to_solve = eval(minmax_fixed_eqs)
+                end
             end
             
             if avoid_solve || count_ops(Meta.parse(string(eq_to_solve))) > 15
@@ -5977,6 +5996,49 @@ function block_solver(parameters_and_solved_vars::Vector{T},
     return sol_values, (sol_minimum, total_iters[1])
 end
 
+function block_solver(parameters_and_solved_vars::Vector{Any},
+                        n_block::Int,
+                        SS_solve_block::ss_solve_block,
+                        guess_and_pars_solved_vars::Vector{Vector{Any}},
+                        lbs::Vector{Any},
+                        ubs::Vector{Any},
+                        parameters::Vector{solver_parameters},
+                        fail_fast_solvers_only::Bool,
+                        cold_start::Bool,
+                        verbose::Bool;
+                        tol::Tolerances = Tolerances())
+    pars = Vector{Float64}(undef, length(parameters_and_solved_vars))
+    for (i, x) in enumerate(parameters_and_solved_vars)
+        pars[i] = x isa Real ? float(x) : 0.0
+    end
+    guesses = [Float64.(g) for g in guess_and_pars_solved_vars]
+    lbsf = Float64.(lbs)
+    ubsf = Float64.(ubs)
+    return invoke(block_solver,
+                    Tuple{Vector{Float64}, Int, ss_solve_block, Vector{Vector{Float64}}, Vector{Float64}, Vector{Float64}, Vector{solver_parameters}, Bool, Bool, Bool},
+                    pars, n_block, SS_solve_block, guesses, lbsf, ubsf, parameters, fail_fast_solvers_only, cold_start, verbose; tol = tol)
+end
+
+function block_solver(parameters_and_solved_vars::Vector{Any},
+                        n_block::Int,
+                        SS_solve_block::ss_solve_block,
+                        guess_and_pars_solved_vars::Vector{Vector{T}},
+                        lbs::Vector{T},
+                        ubs::Vector{T},
+                        parameters::Vector{solver_parameters},
+                        fail_fast_solvers_only::Bool,
+                        cold_start::Bool,
+                        verbose::Bool;
+                        tol::Tolerances = Tolerances()) where T <: AbstractFloat
+    pars = Vector{T}(undef, length(parameters_and_solved_vars))
+    for (i, x) in enumerate(parameters_and_solved_vars)
+        pars[i] = x isa Real ? T(x) : T(0)
+    end
+    return invoke(block_solver,
+                    Tuple{Vector{T}, Int, ss_solve_block, Vector{Vector{T}}, Vector{T}, Vector{T}, Vector{solver_parameters}, Bool, Bool, Bool},
+                    pars, n_block, SS_solve_block, guess_and_pars_solved_vars, lbs, ubs, parameters, fail_fast_solvers_only, cold_start, verbose; tol = tol)
+end
+
 
 function calculate_second_order_stochastic_steady_state(parameters::Vector{M}, 
                                                         𝓂::ℳ; 
@@ -6672,14 +6734,39 @@ function solve!(𝓂::ℳ;
                 sep_maxit::Int = 80,
                 sep_tol::Float64 = 1e-7,
                 sep_sparse_tree::Bool = true,
+                sep_shock_scale::Float64 = 1.0,
                 sep_linear_solver::Symbol = :normal_equations,
                 sep_fallback_solver::Union{Symbol,Nothing} = nothing,
                 sep_stall_iters::Int = 25,
                 sep_stall_rel_tol::Float64 = 1e-4,
                 sep_stall_abs_tol::Float64 = 1e-10,
+                sep_line_search::Bool = true,
+                sep_line_search_maxit::Int = 6,
+                sep_line_search_factor::Float64 = 0.5,
+                sep_line_search_min_alpha::Float64 = 1e-4,
+                sep_lm_lambda::Float64 = 1e-8,
+                sep_lm_lambda_scale::Float64 = 10.0,
+                sep_lm_lambda_min::Float64 = 1e-12,
+                sep_lm_lambda_max::Float64 = 1e4,
                 sep_initial_guess::Union{Nothing,Vector{Float64}} = nothing,
                 sep_deterministic_shocks::Union{Nothing,Matrix{Float64}} = nothing,
-                sep_initial_state::Union{Nothing,Vector{Float64}} = nothing) #,
+                sep_initial_state::Union{Nothing,Vector{Float64}} = nothing,
+                sep_yss::Union{Nothing,Vector{Float64}} = nothing,
+                sep_expectation_method::Symbol = :gauss_hermite,
+                hmc_samples::Int = 100,
+                hmc_warmup::Int = 50,
+                hmc_leapfrog_steps::Int = 10,
+                hmc_step_size::Float64 = 0.1,
+                hmc_use_tempering::Bool = false,
+                hmc_temperatures::Vector{Float64} = [1.0, 0.5, 0.25],
+                hmc_verbose::Bool = false,
+                use_subdifferential::Bool = false,
+                subdiff_kink_tol::Float64 = 1e-6,
+                subdiff_alpha_maxit::Int = 20,
+                subdiff_alpha_tol::Float64 = 1e-3,
+                subdiff_verbose::Bool = false,
+                enforce_obc::Bool = false,
+                obc_penalty_weight::Float64 = 1e4) #,
                 # quadratic_matrix_equation_algorithm::Symbol = :schur,
                 # verbose::Bool = false,
                 # timer::TimerOutput = TimerOutput(),
@@ -6917,7 +7004,7 @@ function solve!(𝓂::ℳ;
     end
     
     # SEP (Stochastic Extended Path) algorithm dispatch
-    sep_force = !isnothing(sep_deterministic_shocks) || !isnothing(sep_initial_state)
+    sep_force = !isnothing(sep_deterministic_shocks) || !isnothing(sep_initial_state) || !isnothing(sep_yss)
     sep_needs_update = (:stochastic_extended_path ∈ 𝓂.solution.outdated_algorithms)
     if !sep_needs_update
         prev_sep = 𝓂.solution.perturbation.stochastic_extended_path
@@ -6944,21 +7031,48 @@ function solve!(𝓂::ℳ;
             tol = sep_tol,
             verbose = !silent,
             sparse_tree = sep_sparse_tree,
+            shock_scale = sep_shock_scale,
             linear_solver = sep_linear_solver,
             fallback_solver = sep_fallback_solver,
             stall_iters = sep_stall_iters,
             stall_rel_tol = sep_stall_rel_tol,
             stall_abs_tol = sep_stall_abs_tol,
-            deterministic_shocks = sep_deterministic_shocks  # NEW
+            line_search = sep_line_search,
+            line_search_maxit = sep_line_search_maxit,
+            line_search_factor = sep_line_search_factor,
+            line_search_min_alpha = sep_line_search_min_alpha,
+            lm_lambda = sep_lm_lambda,
+            lm_lambda_scale = sep_lm_lambda_scale,
+            lm_lambda_min = sep_lm_lambda_min,
+            lm_lambda_max = sep_lm_lambda_max,
+            deterministic_shocks = sep_deterministic_shocks,  # NEW
+            sep_expectation_method = sep_expectation_method,
+            hmc_samples = hmc_samples,
+            hmc_warmup = hmc_warmup,
+            hmc_leapfrog_steps = hmc_leapfrog_steps,
+            hmc_step_size = hmc_step_size,
+            hmc_use_tempering = hmc_use_tempering,
+            hmc_temperatures = hmc_temperatures,
+            hmc_verbose = hmc_verbose,
+            use_subdifferential = use_subdifferential,
+            subdiff_kink_tol = subdiff_kink_tol,
+            subdiff_alpha_maxit = subdiff_alpha_maxit,
+            subdiff_alpha_tol = subdiff_alpha_tol,
+            subdiff_verbose = subdiff_verbose,
+            enforce_obc = enforce_obc,
+            obc_penalty_weight = obc_penalty_weight
         )
 
-        # Automatic warm start: use previous solution if compatible
+        # Automatic warm start: use previous solution if compatible and converged
         if isnothing(sep_initial_guess)
             # Check if there's a previous SEP solution we can use
             prev_sep = 𝓂.solution.perturbation.stochastic_extended_path
             if !isnothing(prev_sep)
+                # Only warm-start from a converged (or near-converged) solution
+                prev_ok = (prev_sep.convergence_flag == 0) || (isfinite(prev_sep.final_error) && prev_sep.final_error < 0.1)
                 # Check if parameters match (same tree structure)
-                if prev_sep.periods == sep_periods &&
+                if prev_ok &&
+                   prev_sep.periods == sep_periods &&
                    prev_sep.order == sep_order &&
                    prev_sep.nnodes == sep_nnodes
                     # Use previous solution as warm start
@@ -6968,9 +7082,13 @@ function solve!(𝓂::ℳ;
                     end
                 else
                     if !silent
-                        println("  Previous SEP solution has different parameters - cold start")
-                        println("    (prev: T=$(prev_sep.periods), Lbr=$(prev_sep.order), K=$(prev_sep.nnodes))")
-                        println("    (curr: T=$sep_periods, Lbr=$sep_order, K=$sep_nnodes)")
+                        if !prev_ok
+                            println("  Previous SEP solution did not converge (flag=$(prev_sep.convergence_flag), err=$(prev_sep.final_error)) - cold start")
+                        else
+                            println("  Previous SEP solution has different parameters - cold start")
+                            println("    (prev: T=$(prev_sep.periods), Lbr=$(prev_sep.order), K=$(prev_sep.nnodes))")
+                            println("    (curr: T=$sep_periods, Lbr=$sep_order, K=$sep_nnodes)")
+                        end
                     end
                 end
             end
@@ -6978,7 +7096,7 @@ function solve!(𝓂::ℳ;
 
         # Solve SEP
         t_start = time()
-        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts, initial_guess=sep_initial_guess, initial_state=sep_initial_state)
+        result = sep_solve_mm!(𝓂, 𝓂.parameter_values; opts=sep_opts, initial_guess=sep_initial_guess, initial_state=sep_initial_state, yss_override=sep_yss)
         runtime = time() - t_start
 
         # Extract results from named tuple
@@ -9873,6 +9991,104 @@ function get_relevant_steady_state_and_state_update(::Val{:first_order},
     end
 
     return TT, SS_and_pars, 𝐒₁, [state], solved
+end
+
+function get_relevant_steady_state_and_state_update(::Val{:stochastic_extended_path},
+                                                    parameter_values::Vector{S},
+                                                    𝓂::ℳ;
+                                                    opts::CalculationOptions = merge_calculation_options(),
+                                                    sep_periods::Union{Nothing,Int} = nothing,
+                                                    sep_order::Union{Nothing,Int} = nothing,
+                                                    sep_nnodes::Union{Nothing,Int} = nothing,
+                                                    sep_sparse_tree::Union{Nothing,Bool} = nothing,
+                                                    sep_maxit::Union{Nothing,Int} = nothing,
+                                                    sep_tol::Union{Nothing,Float64} = nothing,
+                                                    sep_accept_tol::Union{Nothing,Float64} = nothing,
+                                                    sep_shock_scale::Union{Nothing,Float64} = nothing,
+                                                    sep_inv_maxit::Union{Nothing,Int} = nothing,
+                                                    sep_inv_step_tol::Union{Nothing,Float64} = nothing,
+                                                    sep_inv_resid_tol::Union{Nothing,Float64} = nothing,
+                                                    sep_inv_lambda::Union{Nothing,Float64} = nothing) where S <: Real
+                                                    # timer::TimerOutput = TimerOutput(),
+    SS_and_pars, (solution_error, iters) = get_NSSS_and_parameters(𝓂, parameter_values, opts = opts)
+
+    TT = 𝓂.timings
+    state0 = zeros(Float64, TT.nVars)
+
+    if solution_error > opts.tol.NSSS_acceptance_tol || !isfinite(solution_error)
+        return TT, SS_and_pars, (;), [state0], false
+    end
+
+    nsss_labels = vcat(sort(union(𝓂.exo_present, 𝓂.var)), 𝓂.calibration_equations_parameters)
+    yss_idx_any = indexin(𝓂.var, nsss_labels)
+    if any(isnothing, yss_idx_any)
+        if opts.verbose
+            println("Failed to construct SEP inversion context: could not map steady-state labels to model variables.")
+        end
+        return TT, SS_and_pars, (;), [state0], false
+    end
+
+    yss_idx = Int.(yss_idx_any)
+    yss = Float64.(SS_and_pars[yss_idx])
+
+    sep_defaults = SEPSolverOptions(verbose = false)
+    cached_sep = 𝓂.solution.perturbation.stochastic_extended_path
+    sep_periods_final = isnothing(sep_periods) ? (isnothing(cached_sep) ? sep_defaults.periods : cached_sep.periods) : sep_periods
+    sep_order_final = isnothing(sep_order) ? (isnothing(cached_sep) ? sep_defaults.order : cached_sep.order) : sep_order
+    sep_nnodes_final = isnothing(sep_nnodes) ? (isnothing(cached_sep) ? sep_defaults.nnodes : cached_sep.nnodes) : sep_nnodes
+    sep_sparse_tree_final = if !isnothing(sep_sparse_tree)
+        sep_sparse_tree
+    elseif isnothing(cached_sep)
+        sep_defaults.sparse_tree
+    elseif hasproperty(cached_sep, :layout) && hasproperty(cached_sep.layout, :sparse)
+        getfield(cached_sep.layout, :sparse)
+    else
+        sep_defaults.sparse_tree
+    end
+    sep_maxit_final = isnothing(sep_maxit) ? sep_defaults.maxit : sep_maxit
+    sep_tol_final = isnothing(sep_tol) ? sep_defaults.tol : sep_tol
+    sep_accept_tol_final = isnothing(sep_accept_tol) ? 0.25 : sep_accept_tol
+    sep_shock_scale_final = isnothing(sep_shock_scale) ? sep_defaults.shock_scale : sep_shock_scale
+    sep_inv_maxit_final = isnothing(sep_inv_maxit) ? 8 : sep_inv_maxit
+    sep_inv_step_tol_final = isnothing(sep_inv_step_tol) ? 1e-6 : sep_inv_step_tol
+    sep_inv_resid_tol_final = isnothing(sep_inv_resid_tol) ? 1e-6 : sep_inv_resid_tol
+    sep_inv_lambda_final = isnothing(sep_inv_lambda) ? 1e-4 : sep_inv_lambda
+
+    if sep_periods_final <= 0 || sep_order_final < 0 || sep_nnodes_final <= 0 || sep_maxit_final <= 0 ||
+       !(sep_tol_final > 0) || !(sep_accept_tol_final > 0) || !(sep_shock_scale_final >= 0) ||
+       sep_inv_maxit_final <= 0 || !(sep_inv_step_tol_final > 0) || !(sep_inv_resid_tol_final > 0) ||
+       !(sep_inv_lambda_final >= 0)
+        if opts.verbose
+            println("Invalid SEP inversion settings: " *
+                    "periods=$(sep_periods_final), order=$(sep_order_final), nnodes=$(sep_nnodes_final), " *
+                    "maxit=$(sep_maxit_final), tol=$(sep_tol_final), accept_tol=$(sep_accept_tol_final), " *
+                    "shock_scale=$(sep_shock_scale_final), inv_maxit=$(sep_inv_maxit_final), " *
+                    "inv_step_tol=$(sep_inv_step_tol_final), inv_resid_tol=$(sep_inv_resid_tol_final), " *
+                    "inv_lambda=$(sep_inv_lambda_final)")
+        end
+        return TT, SS_and_pars, (;), [state0], false
+    end
+
+    sep_ctx = (
+        kind = :stochastic_extended_path,
+        model = 𝓂,
+        parameters = Float64.(parameter_values),
+        yss = yss,
+        sep_periods = sep_periods_final,
+        sep_order = sep_order_final,
+        sep_nnodes = sep_nnodes_final,
+        sep_sparse_tree = Bool(sep_sparse_tree_final),
+        sep_maxit = sep_maxit_final,
+        sep_tol = sep_tol_final,
+        sep_accept_tol = sep_accept_tol_final,
+        sep_shock_scale = sep_shock_scale_final,
+        sep_inv_maxit = sep_inv_maxit_final,
+        sep_inv_step_tol = sep_inv_step_tol_final,
+        sep_inv_resid_tol = sep_inv_resid_tol_final,
+        sep_inv_lambda = sep_inv_lambda_final,
+    )
+
+    return TT, SS_and_pars, sep_ctx, [state0], true
 end
 
 end # dispatch_doctor

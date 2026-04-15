@@ -1,0 +1,64 @@
+function [T_order, T] = dynamic_g1_tt(y, x, params, steady_state, T_order, T)
+if T_order >= 1
+    return
+end
+[T_order, T] = QMIPF_stoch.dynamic_resid_tt(y, x, params, steady_state, T_order, T);
+T_order = 1;
+if size(T, 1) < 234
+    T = [T; NaN(234 - size(T, 1), 1)];
+end
+T(181) = getPowerDeriv(y(204)-params(87)*y(12)-params(114)*y(263),T(1),1);
+T(182) = getPowerDeriv(y(205)-params(87)*y(13)-params(114)*y(263),T(1),1);
+T(183) = getPowerDeriv(y(206)-params(88)*y(14)-params(115)*y(264),T(1),1);
+T(184) = getPowerDeriv(y(207)-params(88)*y(15)-params(115)*y(264),T(1),1);
+T(185) = y(200)*params(30)*getPowerDeriv(y(221),T(43),1);
+T(186) = y(201)*params(30)*getPowerDeriv(y(222),T(43),1);
+T(187) = y(202)*params(31)*getPowerDeriv(y(223),T(57),1);
+T(188) = y(335)*y(291)*(-y(217))/(y(223)*y(223));
+T(189) = y(203)*params(31)*getPowerDeriv(y(224),T(57),1);
+T(190) = y(215)*params(33)*getPowerDeriv(y(229),T(45),1);
+T(191) = y(215)*params(33)*getPowerDeriv(y(230),T(45),1);
+T(192) = y(216)*params(34)*getPowerDeriv(y(231),T(60),1);
+T(193) = y(216)*params(34)*getPowerDeriv(y(232),T(60),1);
+T(194) = 1/y(279);
+T(195) = getPowerDeriv(y(259),1+params(7),1);
+T(196) = getPowerDeriv(y(259)*y(340),1-params(1),1);
+T(197) = getPowerDeriv(y(340)*y(260),1-params(1),1);
+T(198) = getPowerDeriv(y(261),1+params(7),1);
+T(199) = getPowerDeriv(y(261)*y(369),1-params(1),1);
+T(200) = getPowerDeriv(y(369)*y(262),1-params(1),1);
+T(201) = getPowerDeriv(T(178),params(16),1);
+T(202) = getPowerDeriv(T(17)*T(179),params(27)*params(20),1);
+T(203) = getPowerDeriv(T(14),T(12),1);
+T(204) = getPowerDeriv(T(18),T(9),1);
+T(205) = getPowerDeriv(T(8),T(9),1);
+T(206) = getPowerDeriv(T(8),T(12),1);
+T(207) = getPowerDeriv(T(85),T(12),1);
+T(208) = getPowerDeriv(T(89),T(9),1);
+T(209) = getPowerDeriv(T(81),T(9),1);
+T(210) = getPowerDeriv(T(81),T(12),1);
+T(211) = getPowerDeriv(T(38)*y(155),T(37),1);
+T(212) = getPowerDeriv(T(38)*y(159),T(32),1);
+T(213) = getPowerDeriv(T(29),(1+params(36))*T(30),1);
+T(214) = getPowerDeriv(T(29),T(32),1);
+T(215) = getPowerDeriv(T(106)*y(156),T(105),1);
+T(216) = getPowerDeriv(T(106)*y(160),T(100),1);
+T(217) = getPowerDeriv(T(98),T(30)*(1+params(45)),1);
+T(218) = getPowerDeriv(T(98),T(100),1);
+T(219) = getPowerDeriv(T(110)*y(172),T(109),1);
+T(220) = getPowerDeriv(T(110)*y(176),T(119),1);
+T(221) = getPowerDeriv(T(116),T(30)*(1+params(40)),1);
+T(222) = getPowerDeriv(T(116),T(119),1);
+T(223) = getPowerDeriv(T(42)*y(171),T(41),1);
+T(224) = getPowerDeriv(T(42)*y(175),T(52),1);
+T(225) = getPowerDeriv(T(50),T(30)*(1+params(39)),1);
+T(226) = getPowerDeriv(T(50),T(52),1);
+T(227) = getPowerDeriv(y(312),T(24)*(1+params(36)),1);
+T(228) = getPowerDeriv(y(313),T(24)*(1+params(39)),1);
+T(229) = getPowerDeriv(y(314),T(24)*(1+params(40)),1);
+T(230) = getPowerDeriv(y(315),T(24)*(1+params(45)),1);
+T(231) = getPowerDeriv(y(324)/y(318),T(9),1);
+T(232) = getPowerDeriv(y(325)/y(320),T(9),1);
+T(233) = (-(getPowerDeriv(y(340),1-params(1),1)))/(T(22)*T(22));
+T(234) = (-(getPowerDeriv(y(369),1-params(1),1)))/(T(92)*T(92));
+end

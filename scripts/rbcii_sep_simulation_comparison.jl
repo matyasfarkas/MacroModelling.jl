@@ -12,7 +12,18 @@ using Statistics
 
 include("../models/RBCII_Dynare.jl")
 
-const DATA_DIR = joinpath(@__DIR__, "..", "tests", "sep_validation", "sep_simulation_data", "accuracy-sc")
+function sep_validation_root()
+    candidates = (
+        joinpath(@__DIR__, "..", "test", "fixtures", "sep_validation"),
+        joinpath(@__DIR__, "..", "tests", "sep_validation"),
+    )
+    for path in candidates
+        isdir(path) && return path
+    end
+    return first(candidates)
+end
+
+const DATA_DIR = joinpath(sep_validation_root(), "sep_simulation_data", "accuracy-sc")
 
 struct DynareDSeries
     names::Vector{String}

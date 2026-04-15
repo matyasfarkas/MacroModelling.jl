@@ -1,5 +1,8 @@
 @stable default_mode = "disable" begin
 
+# FIX M-01: Use symbolic constant for log(2π) instead of hardcoded literal
+const LOG_2PI = log(2π)  # ≈ 1.8378770664093453
+
 # Specialization for :kalman filter
 function calculate_loglikelihood(::Val{:kalman}, 
                                 algorithm, 
@@ -81,6 +84,55 @@ function calculate_kalman_filter_loglikelihood(observables_index::Vector{Int},
 
     return run_kalman_iterations(A, 𝐁, C, P, data_in_deviations, presample_periods = presample_periods, verbose = opts.verbose, on_failure_loglikelihood = on_failure_loglikelihood)
     # timer = timer, 
+end
+
+function calculate_kalman_filter_loglikelihood_per_period(observables::Vector{Symbol},
+                                                            𝐒::Union{Matrix{S},Vector{AbstractMatrix{S}}},
+                                                            data_in_deviations::Matrix{S},
+                                                            T::timings;
+                                                            on_failure_loglikelihood::U = -Inf,
+                                                            presample_periods::Int = 0,
+                                                            initial_covariance::Symbol = :theoretical,
+                                                            opts::CalculationOptions = merge_calculation_options())::Vector{S} where {S <: Real, U <: AbstractFloat}
+    obs_idx = @ignore_derivatives convert(Vector{Int}, indexin(observables, sort(union(T.aux, T.var, T.exo_present))))
+
+    calculate_kalman_filter_loglikelihood_per_period(obs_idx, 𝐒, data_in_deviations, T, presample_periods = presample_periods, initial_covariance = initial_covariance, opts = opts, on_failure_loglikelihood = on_failure_loglikelihood)
+end
+
+function calculate_kalman_filter_loglikelihood_per_period(observables::Vector{String},
+                                                            𝐒::Union{Matrix{S},Vector{AbstractMatrix{S}}},
+                                                            data_in_deviations::Matrix{S},
+                                                            T::timings;
+                                                            presample_periods::Int = 0,
+                                                            on_failure_loglikelihood::U = -Inf,
+                                                            initial_covariance::Symbol = :theoretical,
+                                                            opts::CalculationOptions = merge_calculation_options())::Vector{S} where {S <: Real, U <: AbstractFloat}
+    obs_idx = @ignore_derivatives convert(Vector{Int}, indexin(observables, sort(union(T.aux, T.var, T.exo_present))))
+
+    calculate_kalman_filter_loglikelihood_per_period(obs_idx, 𝐒, data_in_deviations, T, presample_periods = presample_periods, initial_covariance = initial_covariance, opts = opts, on_failure_loglikelihood = on_failure_loglikelihood)
+end
+
+function calculate_kalman_filter_loglikelihood_per_period(observables_index::Vector{Int},
+                                                            𝐒::Union{Matrix{S},Vector{AbstractMatrix{S}}},
+                                                            data_in_deviations::Matrix{S},
+                                                            T::timings;
+                                                            presample_periods::Int = 0,
+                                                            initial_covariance::Symbol = :theoretical,
+                                                            lyapunov_algorithm::Symbol = :doubling,
+                                                            on_failure_loglikelihood::U = -Inf,
+                                                            opts::CalculationOptions = merge_calculation_options())::Vector{S} where {S <: Real, U <: AbstractFloat}
+    observables_and_states = @ignore_derivatives sort(union(T.past_not_future_and_mixed_idx, observables_index))
+
+    A = 𝐒[observables_and_states, 1:T.nPast_not_future_and_mixed] * ℒ.diagm(ones(S, length(observables_and_states)))[@ignore_derivatives(indexin(T.past_not_future_and_mixed_idx, observables_and_states)), :]
+    B = 𝐒[observables_and_states, T.nPast_not_future_and_mixed + 1:end]
+
+    C = ℒ.diagm(ones(length(observables_and_states)))[@ignore_derivatives(indexin(sort(observables_index), observables_and_states)), :]
+
+    𝐁 = B * B'
+
+    P = get_initial_covariance(Val(initial_covariance), A, 𝐁, opts = opts)
+
+    return run_kalman_iterations_per_period(A, 𝐁, C, P, data_in_deviations, presample_periods = presample_periods, verbose = opts.verbose, on_failure_loglikelihood = on_failure_loglikelihood)
 end
 
 # Specialization for :theoretical
@@ -215,7 +267,88 @@ function run_kalman_iterations(A::Matrix{S},
     # end # timeit_debug
     # end # timeit_debug
 
-    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * log(2 * 3.141592653589793)) / 2 
+    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * LOG_2PI) / 2 
+end
+
+function run_kalman_iterations_per_period(A::Matrix{S},
+                                            𝐁::Matrix{S},
+                                            C::Matrix{Float64},
+                                            P::Matrix{S},
+                                            data_in_deviations::Matrix{S};
+                                            presample_periods::Int = 0,
+                                            on_failure_loglikelihood::U = -Inf,
+                                            verbose::Bool = false)::Vector{S} where {S <: Float64, U <: AbstractFloat}
+    u = zeros(S, size(C, 2))
+
+    z = C * u
+
+    ztmp = similar(z)
+
+    utmp = similar(u)
+
+    Ctmp = similar(C)
+
+    F = similar(C * C')
+
+    K = similar(C')
+
+    tmp = similar(P)
+    Ptmp = similar(P)
+
+    T = size(data_in_deviations, 2)
+    n_obs = size(data_in_deviations, 1)
+    loglik = zeros(S, T)
+    const_term = -0.5 * n_obs * LOG_2PI
+
+    for t in 1:T
+        if !all(isfinite.(z))
+            if verbose println("KF not finite at step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, T)
+        end
+
+        ℒ.axpby!(1, data_in_deviations[:, t], -1, z)
+
+        ℒ.mul!(Ctmp, C, P)
+        ℒ.mul!(F, Ctmp, C')
+
+        luF = RF.lu!(F, check = false)
+
+        if !ℒ.issuccess(luF)
+            if verbose println("KF factorisation failed step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, T)
+        end
+
+        Fdet = ℒ.det(luF)
+
+        if Fdet < eps(Float64)
+            if verbose println("KF factorisation failed step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, T)
+        end
+
+        if t > presample_periods
+            ℒ.ldiv!(ztmp, luF, z)
+            loglik[t] = -0.5 * (log(Fdet) + ℒ.dot(z', ztmp)) + const_term
+        end
+
+        ℒ.mul!(K, P, C')
+        ℒ.rdiv!(K, luF)
+
+        ℒ.mul!(tmp, K, C)
+        ℒ.mul!(Ptmp, tmp, P)
+        ℒ.axpy!(-1, Ptmp, P)
+
+        ℒ.mul!(Ptmp, A, P)
+        ℒ.mul!(P, Ptmp, A')
+        ℒ.axpy!(1, 𝐁, P)
+
+        ℒ.mul!(u, K, z, 1, 1)
+        ℒ.mul!(utmp, A, u)
+        u .= utmp
+
+        ℒ.mul!(z, C, u)
+    end
+
+    return loglik
 end
 
 
@@ -282,7 +415,70 @@ function run_kalman_iterations(A::Matrix{S},
 
     # end # timeit_debug
 
-    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * log(2 * 3.141592653589793)) / 2 
+    return -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * LOG_2PI) / 2 
+end
+
+function run_kalman_iterations_per_period(A::Matrix{S},
+                                            𝐁::Matrix{S},
+                                            C::Matrix{Float64},
+                                            P::Matrix{S},
+                                            data_in_deviations::Matrix{S};
+                                            presample_periods::Int = 0,
+                                            on_failure_loglikelihood::U = -Inf,
+                                            verbose::Bool = false)::Vector{S} where {S <: ℱ.Dual, U <: AbstractFloat}
+    u = zeros(S, size(C, 2))
+
+    z = C * u
+
+    nT = size(data_in_deviations, 2)
+    n_obs = size(data_in_deviations, 1)
+    loglik = zeros(S, nT)
+    const_term = -0.5 * n_obs * LOG_2PI
+
+    F = similar(C * C')
+
+    K = similar(C')
+
+    for t in 1:nT
+        if !all(isfinite.(z))
+            if verbose println("KF not finite at step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, nT)
+        end
+
+        v = data_in_deviations[:, t] - z
+
+        F = C * P * C'
+
+        luF = ℒ.lu(F, check = false)
+
+        if !ℒ.issuccess(luF)
+            if verbose println("KF factorisation failed step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, nT)
+        end
+
+        Fdet = ℒ.det(luF)
+
+        if Fdet < eps(Float64)
+            if verbose println("KF factorisation failed step $t") end
+            return fill(zero(S) + on_failure_loglikelihood, nT)
+        end
+
+        invF = inv(luF)
+
+        if t > presample_periods
+            loglik[t] = -0.5 * (log(Fdet) + ℒ.dot(v, invF, v)) + const_term
+        end
+
+        K = P * C' * invF
+
+        P = A * (P - K * C * P) * A' + 𝐁
+
+        u = A * (u + K * v)
+
+        z = C * u
+    end
+
+    return loglik
 end
 
 end # dispatch_doctor
@@ -388,7 +584,7 @@ function rrule(::typeof(run_kalman_iterations),
         ℒ.mul!(z, C, ū)
     end
 
-    llh = -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * log(2 * 3.141592653589793)) / 2 
+    llh = -(loglik + ((size(data_in_deviations, 2) - presample_periods) * size(data_in_deviations, 1)) * LOG_2PI) / 2 
 
     # initialise derivative variables
     ∂A = zero(A)

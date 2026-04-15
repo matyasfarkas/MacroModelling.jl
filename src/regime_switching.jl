@@ -1,0 +1,5 @@
+include("./regime_switching/types.jl")
+include("./regime_switching/gating.jl")
+include("./regime_switching/likelihood.jl")
+include("./regime_switching/diagnostics.jl")
+include("./regime_switching/io.jl")

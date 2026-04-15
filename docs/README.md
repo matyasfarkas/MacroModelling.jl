@@ -1,16 +1,43 @@
 # MacroModelling.jl Documentation
 
-Documentation for the SEP deterministic shocks implementation.
+Comprehensive documentation for MacroModelling.jl features, including SEP solver and regime-switching estimation.
 
-## Quick Links
+## Features Documentation
 
-- **[Implementation Summary](SEP_IMPLEMENTATION_SUMMARY.md)** - Executive summary of implementation
-- **[Methodology Guide](DETERMINISTIC_SHOCKS_AND_IRF_METHODOLOGY.md)** - Comprehensive technical documentation
-- **[Status Tracking](../DETERMINISTIC_SHOCKS_STATUS.md)** - Development log and status
+### ⭐ NEW: Regime-Switching Estimation with Neural Network Surrogates
+
+- **[Regime-Switching Estimation](regime_switching_estimation/README.md)** - Complete framework documentation
+  - Neural network surrogate-based estimation
+  - Hard-gate regime switching for OBC models
+  - Inversion filter and filter-free sampling
+  - Performance optimizations (1.5-2x speedup)
+  - **Status**: Production-ready ✅
+
+### Stochastic Extended Path (SEP) Solver
+
+- **[SEP Implementation Summary](SEP_IMPLEMENTATION_SUMMARY.md)** - Executive summary
+- **[SEP Methodology Guide](DETERMINISTIC_SHOCKS_AND_IRF_METHODOLOGY.md)** - Technical documentation
+- **Status**: Validated against Adjemian & Juillard (2025) ✅
+
+## Quick Links by Feature
+
+### Regime-Switching Estimation (NEW!)
+
+1. **[Overview & Quick Start](regime_switching_estimation/README.md)** - Feature overview
+2. **[Quick Start Tutorial](regime_switching_estimation/QUICKSTART.md)** - 15-minute tutorial
+3. **[Methodology](regime_switching_estimation/methodology/OVERVIEW.md)** - Academic documentation
+4. **[Pipeline Guide](regime_switching_estimation/PIPELINE_GUIDE.md)** - Complete workflow
+5. **[Performance Optimizations](regime_switching_estimation/PERFORMANCE_OPTIMIZATIONS.md)** - Speed improvements
+
+### SEP Solver
+
+1. **[Implementation Summary](SEP_IMPLEMENTATION_SUMMARY.md)** - What was implemented
+2. **[Methodology Guide](DETERMINISTIC_SHOCKS_AND_IRF_METHODOLOGY.md)** - Technical details
+3. **[Status Tracking](../DETERMINISTIC_SHOCKS_STATUS.md)** - Development log
 
 ## Overview
 
-MacroModelling.jl supports deterministic shock sequences for the Stochastic Extended Path (SEP) solver, matching the methodology of Adjemian & Juillard (2025).
+MacroModelling.jl provides advanced tools for nonlinear DSGE modeling:
 
 ### Quick Start
 

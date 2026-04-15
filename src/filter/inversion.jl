@@ -1,5 +1,22 @@
 @stable default_mode = "disable" begin
 
+const _SEP_INVERSION_LAST_DIAGNOSTICS = Ref{Any}(nothing)
+
+function reset_sep_inversion_last_diagnostics!()
+    _SEP_INVERSION_LAST_DIAGNOSTICS[] = nothing
+    return nothing
+end
+
+function get_sep_inversion_last_diagnostics()
+    diag = _SEP_INVERSION_LAST_DIAGNOSTICS[]
+    return diag === nothing ? nothing : deepcopy(diag)
+end
+
+function _set_sep_inversion_last_diagnostics!(diag)
+    _SEP_INVERSION_LAST_DIAGNOSTICS[] = diag
+    return nothing
+end
+
 # Specialization for :inversion filter
 function calculate_loglikelihood(::Val{:inversion}, 
                                 algorithm, observables, 
@@ -148,6 +165,524 @@ function calculate_inversion_filter_loglikelihood(::Val{:first_order},
 
     return -(logabsdets + shocks² + (length(observables) * (warmup_iterations + n_obs - presample_periods)) * log(2 * 3.141592653589793)) / 2
     # return -(logabsdets + (length(observables) * (warmup_iterations + n_obs - presample_periods)) * log(2 * 3.141592653589793)) / 2
+end
+
+end # dispatch_doctor
+
+
+function calculate_inversion_filter_loglikelihood_per_period(::Val{:first_order},
+                                                               state::Vector{Vector{R}},
+                                                               𝐒::Matrix{R},
+                                                               data_in_deviations::Matrix{R},
+                                                               observables::Union{Vector{String}, Vector{Symbol}},
+                                                               T::timings;
+                                                               warmup_iterations::Int = 0,
+                                                               presample_periods::Int = 0,
+                                                               on_failure_loglikelihood::U = -Inf,
+                                                               opts::CalculationOptions = merge_calculation_options(),
+                                                               filter_algorithm::Symbol = :LagrangeNewton)::Vector{R} where {R <: AbstractFloat,U <: AbstractFloat}
+    # Per-period version of inversion filter
+    state = copy(state[1])
+    n_obs = size(data_in_deviations,2)
+    cond_var_idx = indexin(observables,sort(union(T.aux,T.var,T.exo_present)))
+
+    # Compute Jacobian
+    jac = 𝐒[cond_var_idx,end-T.nExo+1:end]
+
+    if T.nExo == length(observables)
+        jacdecomp = ℒ.lu(jac, check = false)
+        if !ℒ.issuccess(jacdecomp)
+            return fill(on_failure_loglikelihood, n_obs)
+        end
+        logabsdet_jac = ℒ.logabsdet(jac)[1]
+        invjac = inv(jacdecomp)
+    else
+        jacdecomp = try ℒ.svd(jac)
+        catch
+            return fill(on_failure_loglikelihood, n_obs)
+        end
+        logabsdet_jac = sum(x -> log(abs(x)), ℒ.svdvals(jac))
+        invjac = try ℒ.pinv(jac)
+        catch
+            return fill(on_failure_loglikelihood, n_obs)
+        end
+    end
+
+    if !isfinite(logabsdet_jac)
+        return fill(on_failure_loglikelihood, n_obs)
+    end
+
+    𝐒obs = 𝐒[cond_var_idx,1:end-T.nExo]
+    y = zeros(length(cond_var_idx))
+    x = zeros(T.nExo)
+
+    # Per-period log-likelihood contributions
+    ll_per_period = zeros(R, n_obs)
+    const_term = -0.5 * length(observables) * log(2 * 3.141592653589793)
+
+    for i in axes(data_in_deviations,2)
+        @views ℒ.mul!(y, 𝐒obs, state[T.past_not_future_and_mixed_idx])
+        @views ℒ.axpby!(1, data_in_deviations[:,i], -1, y)
+        ℒ.mul!(x, invjac, y)
+
+        # Per-period likelihood: -0.5 * (log|det(J)| + ||ε||² + n*log(2π))
+        if i > presample_periods
+            shocks_sq = sum(abs2, x)
+            if !isfinite(shocks_sq)
+                return fill(on_failure_loglikelihood, n_obs)
+            end
+            ll_per_period[i] = -0.5 * (logabsdet_jac + shocks_sq) + const_term
+        else
+            ll_per_period[i] = 0.0  # Presample periods don't contribute
+        end
+
+        ℒ.mul!(state, 𝐒, vcat(state[T.past_not_future_and_mixed_idx], x))
+    end
+
+    return ll_per_period
+end
+
+
+function _sep_inv_observable_indices(𝓂::ℳ, observables::Union{Vector{String},Vector{Symbol}})
+    obs_syms = Symbol.(observables)
+    idx_any = indexin(obs_syms, 𝓂.var)
+    any(isnothing, idx_any) && error("SEP inversion filter expects observables to map to model variables. Missing: $(obs_syms[findall(isnothing, idx_any)])")
+    return Int.(idx_any)
+end
+
+function _sep_inv_shock_sigmas(𝓂::ℳ, parameter_values::AbstractVector{<:Real})
+    sigmas = zeros(Float64, length(𝓂.exo))
+    for (i, shock_name) in enumerate(𝓂.exo)
+        if contains(string(shock_name), "ᵒᵇᶜ")
+            sigmas[i] = 0.0
+            continue
+        end
+        pidx = findfirst(==(Symbol("z_", shock_name)), 𝓂.parameters)
+        sigmas[i] = pidx === nothing ? 1.0 : abs(Float64(parameter_values[pidx]))
+    end
+    return sigmas
+end
+
+function _sep_inv_logabsdet(J::AbstractMatrix{<:Real})
+    if size(J, 1) == size(J, 2)
+        try
+            return ℒ.logabsdet(Matrix{Float64}(J))[1]
+        catch
+            return NaN
+        end
+    end
+    sv = try
+        ℒ.svdvals(Matrix{Float64}(J))
+    catch
+        return NaN
+    end
+    sv_tol = sqrt(eps(Float64))
+    sv = sv[sv .> sv_tol]
+    isempty(sv) && return NaN
+    return sum(log, sv)
+end
+
+function _sep_inv_predict_step(sep_ctx::NamedTuple,
+                               state_dev::AbstractVector{<:Real},
+                               shocks_full::AbstractVector{<:Real},
+                               obs_var_idx::AbstractVector{Int};
+                               initial_guess::Union{Nothing,Vector{Float64}} = nothing)
+    𝓂 = sep_ctx.model
+    n_exo = length(𝓂.exo)
+    length(shocks_full) == n_exo || error("SEP inversion shock length mismatch: expected $n_exo, got $(length(shocks_full)).")
+
+    shock_sequence = zeros(Float64, sep_ctx.sep_periods, n_exo)
+    shock_sequence[1, :] .= Float64.(shocks_full)
+
+    sep_opts = SEPSolverOptions(
+        periods = sep_ctx.sep_periods,
+        order = sep_ctx.sep_order,
+        nnodes = sep_ctx.sep_nnodes,
+        maxit = sep_ctx.sep_maxit,
+        tol = sep_ctx.sep_tol,
+        verbose = false,
+        shock_scale = sep_ctx.sep_shock_scale,
+        sparse_tree = sep_ctx.sep_sparse_tree,
+        deterministic_shocks = shock_sequence,
+    )
+
+    y_current = sep_ctx.yss .+ Float64.(state_dev)
+    result = sep_solve_mm!(𝓂, sep_ctx.parameters;
+                           opts = sep_opts,
+                           initial_guess = initial_guess,
+                           initial_state = y_current,
+                           yss_override = sep_ctx.yss)
+
+    ok = (result.flag == 0) || (isfinite(result.err) && result.err <= sep_ctx.sep_accept_tol)
+    if !ok || !isfinite(result.err)
+        return (ok = false,
+                obs_dev = zeros(Float64, length(obs_var_idx)),
+                state_next_dev = zeros(Float64, length(sep_ctx.yss)),
+                Y_guess = nothing,
+                sep_flag = result.flag,
+                sep_err = result.err)
+    end
+
+    layout = result.layout
+    if length(layout.voff) < 2
+        return (ok = false,
+                obs_dev = zeros(Float64, length(obs_var_idx)),
+                state_next_dev = zeros(Float64, length(sep_ctx.yss)),
+                Y_guess = nothing,
+                sep_flag = result.flag,
+                sep_err = result.err)
+    end
+
+    y_next = result.Y[layout.voff[2] .+ (1:layout.ny_)]
+    y_next_dev = y_next .- sep_ctx.yss
+    obs_dev = y_next_dev[obs_var_idx]
+
+    return (ok = true,
+            obs_dev = obs_dev,
+            state_next_dev = y_next_dev,
+            Y_guess = result.Y,
+            sep_flag = result.flag,
+            sep_err = result.err)
+end
+
+function _sep_inv_fd_jacobian(sep_ctx::NamedTuple,
+                              state_dev::AbstractVector{<:Real},
+                              eps_struct::AbstractVector{<:Real},
+                              structural_idx::AbstractVector{Int},
+                              obs_var_idx::AbstractVector{Int},
+                              base_guess::Union{Nothing,Vector{Float64}})
+    n_obs = length(obs_var_idx)
+    n_struct = length(structural_idx)
+    d_eps = length(sep_ctx.shock_sigmas)
+
+    J = zeros(Float64, n_obs, n_struct)
+    base_full = zeros(Float64, d_eps)
+    base_full[structural_idx] .= Float64.(eps_struct)
+    base_eval = _sep_inv_predict_step(sep_ctx, state_dev, base_full, obs_var_idx; initial_guess = base_guess)
+    if !base_eval.ok
+        return (ok = false, J = J, base = base_eval)
+    end
+
+    for j in 1:n_struct
+        step_scale = max(1.0, abs(Float64(eps_struct[j])), sep_ctx.shock_sigmas[structural_idx[j]])
+        h = cbrt(eps(Float64)) * step_scale
+        h = max(h, 1e-6)
+        pert = collect(Float64.(eps_struct))
+        pert[j] += h
+
+        eps_full = zeros(Float64, d_eps)
+        eps_full[structural_idx] .= pert
+        eval_p = _sep_inv_predict_step(sep_ctx, state_dev, eps_full, obs_var_idx; initial_guess = base_eval.Y_guess)
+        if !eval_p.ok
+            return (ok = false, J = J, base = base_eval)
+        end
+        J[:, j] .= (eval_p.obs_dev .- base_eval.obs_dev) ./ h
+    end
+
+    return (ok = true, J = J, base = base_eval)
+end
+
+@stable default_mode = "disable" begin
+
+function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_path},
+                                                  state::Vector{Vector{R}},
+                                                  sep_ctx::NamedTuple,
+                                                  data_in_deviations::Matrix{R},
+                                                  observables::Union{Vector{String}, Vector{Symbol}},
+                                                  T::timings;
+                                                  warmup_iterations::Int = 0,
+                                                  presample_periods::Int = 0,
+                                                  on_failure_loglikelihood::U = -Inf,
+                                                  opts::CalculationOptions = merge_calculation_options(),
+                                                  filter_algorithm::Symbol = :LagrangeNewton) where {R <: AbstractFloat, U <: AbstractFloat}
+    reset_sep_inversion_last_diagnostics!()
+    haskey(sep_ctx, :kind) && sep_ctx.kind == :stochastic_extended_path ||
+        error("Invalid SEP inversion context supplied to stochastic_extended_path inversion filter.")
+
+    warmup_iterations > 0 && opts.verbose && @warn "SEP inversion filter does not implement warmup_iterations; ignoring warmup_iterations=$warmup_iterations."
+    _ = filter_algorithm
+    _ = T
+
+    obs_var_idx = _sep_inv_observable_indices(sep_ctx.model, observables)
+    n_obs = length(obs_var_idx)
+    n_periods = size(data_in_deviations, 2)
+    if n_periods == 0
+        _set_sep_inversion_last_diagnostics!(Dict{String,Any}(
+            "kind" => "sep_inversion_filter",
+            "status" => "ok",
+            "reason" => "empty_sample",
+            "n_periods" => 0,
+            "presample_periods" => presample_periods,
+            "ll_total" => 0.0,
+        ))
+        return zero(R)
+    end
+
+    sep_ctx = merge(sep_ctx, (shock_sigmas = _sep_inv_shock_sigmas(sep_ctx.model, sep_ctx.parameters),))
+    shock_sigmas = sep_ctx.shock_sigmas
+    structural_idx = findall(shock_sigmas .> 0)
+    n_struct = length(structural_idx)
+
+    state_dev = Float64.(copy(state[1]))
+    ll_total = 0.0
+    eps_struct = zeros(Float64, n_struct)
+    twoπ_log = log(2 * 3.141592653589793)
+
+    maxit = get(sep_ctx, :sep_inv_maxit, 8)
+    step_tol = get(sep_ctx, :sep_inv_step_tol, 1e-6)
+    resid_tol = get(sep_ctx, :sep_inv_resid_tol, 1e-6)
+    lambda = get(sep_ctx, :sep_inv_lambda, 1e-4)
+
+    function fail_sep_inversion!(code::String;
+                                 t_idx::Int = 0,
+                                 iter::Int = 0,
+                                 pred = nothing,
+                                 resid = nothing,
+                                 step = nothing,
+                                 J = nothing,
+                                 logabsdet = nothing,
+                                 shocks2 = nothing,
+                                 msg::Union{Nothing,String} = nothing)
+        d = Dict{String,Any}(
+            "kind" => "sep_inversion_filter",
+            "status" => "failure",
+            "failure_code" => code,
+            "period_index" => t_idx,
+            "iteration" => iter,
+            "n_periods" => n_periods,
+            "presample_periods" => presample_periods,
+            "n_obs" => n_obs,
+            "n_struct" => n_struct,
+            "sep_periods" => get(sep_ctx, :sep_periods, nothing),
+            "sep_order" => get(sep_ctx, :sep_order, nothing),
+            "sep_nnodes" => get(sep_ctx, :sep_nnodes, nothing),
+            "sep_sparse_tree" => get(sep_ctx, :sep_sparse_tree, nothing),
+            "sep_maxit" => get(sep_ctx, :sep_maxit, nothing),
+            "sep_tol" => get(sep_ctx, :sep_tol, nothing),
+            "sep_accept_tol" => get(sep_ctx, :sep_accept_tol, nothing),
+            "sep_shock_scale" => get(sep_ctx, :sep_shock_scale, nothing),
+            "sep_inv_maxit" => maxit,
+            "sep_inv_step_tol" => step_tol,
+            "sep_inv_resid_tol" => resid_tol,
+            "sep_inv_lambda" => lambda,
+        )
+        if msg !== nothing
+            d["message"] = msg
+        end
+        if pred !== nothing
+            if hasproperty(pred, :sep_flag)
+                d["sep_flag"] = getproperty(pred, :sep_flag)
+            end
+            if hasproperty(pred, :sep_err)
+                d["sep_err"] = getproperty(pred, :sep_err)
+            end
+        end
+        if resid !== nothing
+            resid_norm = try
+                ℒ.norm(resid)
+            catch
+                NaN
+            end
+            d["resid_norm"] = resid_norm
+            d["resid_finite"] = all(isfinite, resid)
+        end
+        if step !== nothing
+            step_norm = try
+                ℒ.norm(step)
+            catch
+                NaN
+            end
+            d["step_norm"] = step_norm
+            d["step_finite"] = all(isfinite, step)
+        end
+        if J !== nothing
+            d["jacobian_finite"] = all(isfinite, J)
+            d["jacobian_size"] = collect(size(J))
+        end
+        if logabsdet !== nothing
+            d["logabsdet"] = logabsdet
+        end
+        if shocks2 !== nothing
+            d["shocks2"] = shocks2
+        end
+        _set_sep_inversion_last_diagnostics!(d)
+        return on_failure_loglikelihood
+    end
+
+    for t_idx in 1:n_periods
+        y_obs = Float64.(data_in_deviations[:, t_idx])
+        base_guess = nothing
+        final_eval = nothing
+        final_J = nothing
+
+        if n_struct == 0
+            eps_full = zeros(Float64, length(shock_sigmas))
+            pred = _sep_inv_predict_step(sep_ctx, state_dev, eps_full, obs_var_idx; initial_guess = base_guess)
+            if !pred.ok
+                opts.verbose && println("SEP inversion filter failed at period $t_idx (no structural shocks): flag=$(pred.sep_flag), err=$(pred.sep_err)")
+                return fail_sep_inversion!("predict_no_struct";
+                                           t_idx = t_idx,
+                                           pred = pred,
+                                           msg = "SEP predict step failed with no structural shocks.")
+            end
+            resid = y_obs .- pred.obs_dev
+            if t_idx > presample_periods
+                ll_total += -(sum(abs2, resid) + n_obs * twoπ_log) / 2
+            end
+            state_dev .= pred.state_next_dev
+            continue
+        end
+
+        last_iter = 0
+        for _iter in 1:maxit
+            last_iter = _iter
+            jac_eval = _sep_inv_fd_jacobian(sep_ctx, state_dev, eps_struct, structural_idx, obs_var_idx, base_guess)
+            if !jac_eval.ok
+                opts.verbose && println("SEP inversion filter failed at period $t_idx while computing finite-difference Jacobian.")
+                return fail_sep_inversion!("fd_jacobian_failed";
+                                           t_idx = t_idx,
+                                           iter = _iter,
+                                           pred = jac_eval.base,
+                                           msg = "Finite-difference Jacobian construction failed.")
+            end
+
+            pred = jac_eval.base
+            J = jac_eval.J
+            resid = y_obs .- pred.obs_dev
+            final_eval = pred
+            final_J = J
+            base_guess = pred.Y_guess
+
+            if !all(isfinite, resid) || !all(isfinite, J)
+                return fail_sep_inversion!("nonfinite_resid_or_jacobian";
+                                           t_idx = t_idx,
+                                           iter = _iter,
+                                           pred = pred,
+                                           resid = resid,
+                                           J = J,
+                                           msg = "Non-finite residual or Jacobian.")
+            end
+            if ℒ.norm(resid) <= resid_tol
+                break
+            end
+
+            lhs = J' * J
+            rhs = J' * resid
+            @inbounds for d in 1:n_struct
+                lhs[d, d] += lambda
+            end
+            step = try
+                lhs \ rhs
+            catch err_lhs
+                try
+                    ℒ.pinv(J) * resid
+                catch err_pinv
+                    return fail_sep_inversion!("linear_solve_failed";
+                                               t_idx = t_idx,
+                                               iter = _iter,
+                                               pred = pred,
+                                               resid = resid,
+                                               J = J,
+                                               msg = "Failed solving LM step. lhs\\\\rhs: $(sprint(showerror, err_lhs)); pinv fallback: $(sprint(showerror, err_pinv))")
+                end
+            end
+            if !all(isfinite, step)
+                return fail_sep_inversion!("nonfinite_step";
+                                           t_idx = t_idx,
+                                           iter = _iter,
+                                           pred = pred,
+                                           resid = resid,
+                                           J = J,
+                                           step = step,
+                                           msg = "LM step contains non-finite values.")
+            end
+            eps_struct .+= step
+            if ℒ.norm(step) <= step_tol * (1 + ℒ.norm(eps_struct))
+                break
+            end
+        end
+
+        if final_eval === nothing || final_J === nothing
+            return fail_sep_inversion!("missing_final_eval";
+                                       t_idx = t_idx,
+                                       iter = last_iter,
+                                       msg = "No final prediction/Jacobian was produced.")
+        end
+
+        resid = y_obs .- final_eval.obs_dev
+        if !all(isfinite, resid)
+            return fail_sep_inversion!("nonfinite_residual_postsolve";
+                                       t_idx = t_idx,
+                                       iter = last_iter,
+                                       pred = final_eval,
+                                       resid = resid,
+                                       J = final_J,
+                                       msg = "Residual became non-finite after inversion iterations.")
+        end
+
+        if t_idx > presample_periods
+            J_std = final_J .* reshape(shock_sigmas[structural_idx], 1, :)
+            logabsdet = _sep_inv_logabsdet(J_std)
+            if !isfinite(logabsdet)
+                return fail_sep_inversion!("invalid_logabsdet";
+                                           t_idx = t_idx,
+                                           iter = last_iter,
+                                           pred = final_eval,
+                                           resid = resid,
+                                           J = final_J,
+                                           logabsdet = logabsdet,
+                                           msg = "Jacobian logabsdet is non-finite.")
+            end
+            z = eps_struct ./ shock_sigmas[structural_idx]
+            shocks2 = sum(abs2, z)
+            if !isfinite(shocks2)
+                return fail_sep_inversion!("invalid_shocks2";
+                                           t_idx = t_idx,
+                                           iter = last_iter,
+                                           pred = final_eval,
+                                           resid = resid,
+                                           J = final_J,
+                                           shocks2 = shocks2,
+                                           msg = "Standardized shock norm is non-finite.")
+            end
+            ll_total += -(logabsdet + shocks2 + n_obs * twoπ_log) / 2
+        end
+
+        state_dev .= final_eval.state_next_dev
+        if !all(isfinite, state_dev)
+            return fail_sep_inversion!("nonfinite_state_update";
+                                       t_idx = t_idx,
+                                       iter = last_iter,
+                                       pred = final_eval,
+                                       resid = resid,
+                                       J = final_J,
+                                       msg = "State update produced non-finite values.")
+        end
+    end
+
+    _set_sep_inversion_last_diagnostics!(Dict{String,Any}(
+        "kind" => "sep_inversion_filter",
+        "status" => "ok",
+        "n_periods" => n_periods,
+        "presample_periods" => presample_periods,
+        "n_obs" => n_obs,
+        "n_struct" => n_struct,
+        "sep_periods" => get(sep_ctx, :sep_periods, nothing),
+        "sep_order" => get(sep_ctx, :sep_order, nothing),
+        "sep_nnodes" => get(sep_ctx, :sep_nnodes, nothing),
+        "sep_sparse_tree" => get(sep_ctx, :sep_sparse_tree, nothing),
+        "sep_maxit" => get(sep_ctx, :sep_maxit, nothing),
+        "sep_tol" => get(sep_ctx, :sep_tol, nothing),
+        "sep_accept_tol" => get(sep_ctx, :sep_accept_tol, nothing),
+        "sep_shock_scale" => get(sep_ctx, :sep_shock_scale, nothing),
+        "sep_inv_maxit" => maxit,
+        "sep_inv_step_tol" => step_tol,
+        "sep_inv_resid_tol" => resid_tol,
+        "sep_inv_lambda" => lambda,
+        "ll_total" => ll_total,
+        "final_state_finite" => all(isfinite, state_dev),
+    ))
+    return R(ll_total)
 end
 
 end # dispatch_doctor

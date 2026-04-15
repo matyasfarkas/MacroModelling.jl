@@ -52,6 +52,61 @@ if test_set == "3rd_order_estimation"
     include("test_3rd_order_estimation.jl")
 end
 
+if test_set == "sep_solver"
+    include("test_sep_solver.jl")
+end
+
+if test_set == "sep_benchmarks"
+    include("test_sep_benchmarks.jl")
+end
+
+if test_set == "sep_stochastic"
+    include("test_sep_stochastic.jl")
+end
+
+if test_set == "sep_integration"
+    include("test_sep_integration.jl")
+end
+
+if test_set == "sep_subdiff_robustness"
+    include("test_sep_subdiff_robustness.jl")
+end
+
+if test_set == "sep_hmc_gh_convergence"
+    include("test_sep_hmc_gh_convergence.jl")
+end
+
+if test_set == "sep_inversion_likelihood"
+    include("test_sep_inversion_filter_likelihood.jl")
+end
+
+if test_set == "nn_surrogate"
+    include("test_nn_surrogate.jl")
+end
+
+if test_set == "regime_switching"
+    include("test_regime_switching.jl")
+end
+
+if test_set == "regime_switching_api"
+    include("test_regime_switching_api.jl")
+end
+
+if test_set == "inversion_filter"
+    include("test_inversion_filter.jl")
+end
+
+if test_set == "estimation_pipeline"
+    include("test_estimation_pipeline.jl")
+end
+
+if test_set == "hlt_validation_harness"
+    include("test_hlt_validation_harness.jl")
+end
+
+if test_set == "hlt_acceptance_smoke"
+    include("test_hlt_acceptance_smoke.jl")
+end
 
 if test_set == "higher_order"
     plots = true

@@ -1,10 +1,11 @@
 using MacroModelling, StatsPlots, Printf, AxisKeys
 
-include("../models/Smets_Wouters_2007_HLT.jl")
-m = Smets_Wouters_2007_HLT
+include(joinpath(@__DIR__, "hlt_surrogate", "hlt_model_loader_utils.jl"))
+skip_sep = "--skip-sep" in ARGS
+m = load_hlt_model(normpath(joinpath(@__DIR__, "..")), "Smets_Wouters_2007_HLT"; mod = @__MODULE__)
 
 shock = :epinf
-shock_size = 1.0
+shock_size = 4.0
 periods = 20
 
 key_vars = [:y, :c, :inve, :pinfobs, :r, :w, :lab]
@@ -22,6 +23,11 @@ irf_so = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm
 irf_p3 = get_irf(m; shocks=shock, variables=key_vars, periods=periods, algorithm=:pruned_third_order)
 
 println("✓ Perturbation IRFs computed")
+
+if skip_sep
+    println("Skipping SEP IRF comparison (--skip-sep).")
+    exit(0)
+end
 
 sep_periods = max(periods, 40)
 sep_order = 1
@@ -88,6 +94,6 @@ for (i, var) in enumerate(key_vars)
     plot!(p[i], title=string(var))
 end
 
-pdf_path = joinpath(@__DIR__, "HLT_comparison_sep_irf.pdf")
+pdf_path = joinpath(@__DIR__, "HLT_comparison_sep_irf_shock_size_$(shock_size).pdf")
 savefig(p, pdf_path)
 println("✓ Saved: $(pdf_path)")

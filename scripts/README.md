@@ -1,0 +1,31 @@
+# Scripts overview
+
+This folder contains runnable entry points. The main workflows are organized by task.
+
+## HLT SEP surrogate + regime switching
+- `scripts/hlt_sep_surrogate_dataset_generate.jl` — build SEP training data (supports stable-prefix sampling).
+- `scripts/hlt_sep_surrogate_train.jl` — train surrogate (ROM1 residual + observables).
+- `scripts/hlt_sep_surrogate_synthetic_data.jl` — generate synthetic SEP data with a high‑volatility window.
+- `scripts/hlt_regime_switching_illustration.jl` — ROM1 vs ROM1+delta error/IRF plots.
+- `scripts/hlt_sep_surrogate_gate_calibration.jl` — gate calibration using ROM vs surrogate errors.
+- `scripts/hlt_sep_surrogate_synthetic_estimation.jl` — synthetic estimation (regime switching).
+- `scripts/hlt_sep_surrogate_chain_report.jl` — posterior report (LaTeX).
+- `scripts/hlt_sep_surrogate_validate_hlt3.jl` — reproducible HLT 3-parameter smoke/benchmark harness (writes run manifest + summary).
+- `scripts/hlt_sep_surrogate_fom_benchmark.jl` — direct-SEP FOM benchmark utility for chain/synthetic outputs (records failures if direct FOM eval is unavailable).
+
+## SEP / Dynare comparisons
+- `scripts/HLT_comparison.jl` — HLT IRF comparison (perturbation vs SEP).
+- `scripts/RBCII_comparison.jl` — RBC-II SEP comparison to Dynare.
+- `scripts/rbcii_sep_simulation_comparison.jl` — SEP extended‑path simulation vs Dynare.
+- `scripts/rbcii_filter_diagnostic.jl` — KF vs inversion filter diagnostic on RBC‑II synthetic data.
+- `scripts/rbcii_surrogate_filter_diagnostic.jl` — RBC‑II surrogate diagnostic (KF vs inversion vs surrogate inversion).
+
+## Diagnostics
+- `scripts/diagnostics/HLT_sep_residual_audit.jl` — residual hotspot audit for SEP convergence.
+- `scripts/diagnostics/` — other validation utilities (Y indexing, steady state checks).
+
+## Misc utilities
+- `scripts/compute_irf_from_csv.jl`, `scripts/extract_sep_values.jl`, `scripts/find_sep_variable_mapping.jl` — analysis helpers.
+- `scripts/export_*` — Dynare export utilities.
+
+For the HLT surrogate pipeline, see `scripts/hlt_surrogate/README.md`.

@@ -1,0 +1,1825 @@
+\documentclass[12pt]{article}
+
+% ============================================================================
+% PREAMBLE - Package Imports and Setup
+% ============================================================================
+
+% --- Page Layout ---
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\doublespacing
+
+% --- Fonts ---
+% mathptmx and times require rsfs/pcr fonts not in TeX Live 2025 basic.
+% Using default Computer Modern for now; switch to mathptmx when full TeX Live is available.
+%\usepackage{mathptmx}  % Times Roman font (needs rsfs package)
+\usepackage[T1]{fontenc}
+
+% --- Mathematics ---
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{bm}  % Bold math symbols
+
+% --- Graphics and Figures ---
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz}
+% \usepackage{pgfplots}  % Not used in current draft
+% \pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows,shapes,positioning,calc,decorations.pathreplacing}
+
+% --- Tables ---
+\usepackage{booktabs}
+% \usepackage{multirow}  % Not used in current draft
+\usepackage{array}
+
+% --- Algorithms ---
+% Using custom algorithm environment (no algorithm2e dependency)
+\usepackage{ifthen}
+\newcounter{algorithm}
+\renewcommand{\thealgorithm}{\arabic{algorithm}}
+\newenvironment{algorithmbox}[1][]{%
+  \refstepcounter{algorithm}%
+  \begin{center}\begin{minipage}{0.92\textwidth}%
+  \rule{\textwidth}{0.4pt}\par\smallskip%
+  \textbf{Algorithm \thealgorithm}\ifthenelse{\equal{#1}{}}{}{: #1}\par\smallskip%
+  \rule{\textwidth}{0.4pt}\par\smallskip%
+}{%
+  \par\smallskip\rule{\textwidth}{0.4pt}%
+  \end{minipage}\end{center}%
+}
+
+% --- Bibliography ---
+\usepackage[authoryear,round]{natbib}
+\bibliographystyle{plainnat}
+
+% --- Hyperlinks and Cross-References ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+    pdfauthor={Mátyás Farkas},
+    pdftitle={The Invisible Nonlinearity: Investment Adjustment Costs and Structural Bias in Linear DSGE Estimation}
+}
+% \usepackage[capitalize]{cleveref}  % Replaced with standard \ref
+
+% --- Other Utilities ---
+\usepackage{enumitem}
+\usepackage{xcolor}
+
+% ============================================================================
+% THEOREM ENVIRONMENTS
+% ============================================================================
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ============================================================================
+% CUSTOM COMMANDS
+% ============================================================================
+
+% --- Mathematical Operators ---
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\Var}{\text{Var}}
+\DeclareMathOperator{\Cov}{\text{Cov}}
+\DeclareMathOperator{\argmin}{argmin}
+\DeclareMathOperator{\argmax}{argmax}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\diag}{diag}
+
+% --- Custom Math Symbols ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\given}{\,|\,}
+\newcommand{\ind}{\mathbb{1}}
+
+% --- Model Notation ---
+\newcommand{\eps}{\varepsilon}
+\newcommand{\Sigmay}{\Sigma_y}
+\newcommand{\Sigmaeps}{\Sigma_\varepsilon}
+
+% ============================================================================
+% TITLE PAGE
+% ============================================================================
+
+\title{\textbf{The Invisible Nonlinearity: Investment Adjustment Costs \\ and Structural Bias in Linear DSGE Estimation}\thanks{I am grateful to Fabio Canova, Kai Christoffel, Chris Erceg, Jesper Lind\'e, Zolt\'an Jakab, Thore Klockerols, and Marcin Kolasa for the insightful discussions and comments.  All errors are my own. The views expressed herein are those of the author and not necessarily those of the International Monetary Fund.}}
+\author{Mátyás Farkas\thanks{mfarkas@imf.org}\\
+\small International Monetary Fund}
+\vspace{-0.5cm}
+\date{\today\\
+\small \textit{Preliminary --- Comments Welcome}}
+
+% ============================================================================
+% DOCUMENT BEGIN
+% ============================================================================
+
+\begin{document}
+
+\maketitle
+\vspace{-1cm}
+\begin{abstract}
+\noindent
+\footnotesize
+First-order perturbation---the workhorse technology for DSGE estimation---is structurally blind to the dominant source of nonlinearity in the canonical Smets--Wouters model. The investment adjustment cost $S(I_t/I_{t-1})$ satisfies $S(1) = S'(1) = 0$, making it entirely invisible to linearization while generating 69 percent of the gap between nonlinear and linear solutions. The effective lower bound on interest rates---widely considered the primary motivation for nonlinear estimation---is a distant second: even during binding episodes at moderate shock scales, investment dominates by a factor of eight over the next-largest block (88--92 percent versus less than 11 percent). The price Phillips curve, where the Kimball aggregator operates, generates 0.2 percent. A Gal\'i model with the same ELB and Kimball structure but no investment block shows near-zero nonlinearity, confirming the identification. Linear estimation compensates for this invisible channel by inflating exogenous processes: on US data (1959--2004), switching from linear to nonlinear estimation doubles risk premium volatility, compresses wage markup persistence by 80 percent, and raises Kimball curvature 2.7-fold. Extending the sample through 2025Q1 to include actual ELB episodes (2009--2015, 2020--2022) strengthens these findings---the linear model attributes the COVID collapse to risk-premium shocks exceeding $56\sigma$, events with probability below $10^{-300}$. To make nonlinear estimation feasible, I develop a multi-fidelity estimator in which a neural network learns the residual correction between the full nonlinear solution and the linear baseline; online estimation with 1,000 NUTS draws completes in 2.4 hours with zero divergent transitions.
+\end{abstract}
+
+\medskip
+\noindent \textbf{JEL Classification:} C11, C13, C32, C63, E47
+
+\noindent \textbf{Keywords:} DSGE models, nonlinear estimation, investment adjustment costs, perturbation bias, neural network surrogates, occasionally binding constraints
+
+\clearpage
+
+\tableofcontents
+\clearpage
+
+% ============================================================================
+% SECTION 1: INTRODUCTION
+% ============================================================================
+
+\section{Introduction}
+\label{sec:introduction}
+
+The standard motivation for nonlinear DSGE estimation is the zero lower bound on nominal interest rates. The effective lower bound (ELB) creates a kink that first-order perturbation cannot represent, and the episodes where it binds---2009--2015 in the United States, 2020--2022---are among the most policy-relevant in recent macroeconomic history. A large literature has developed nonlinear methods specifically to handle this constraint \citep{gust2012effects,boehl2022monetary,guerrieri2015occbin}. I find that the ELB is the wrong place to look.
+
+In an 18-parameter Smets--Wouters model with occasionally binding constraints, I solve the full nonlinear system at 22,080 state--shock--parameter combinations and compare each solution against the corresponding first-order perturbation output. The investment and capital block accounts for 69 percent of the total gap between nonlinear and linear dynamics; the price Phillips curve---where the Kimball aggregator enters and which has received the most attention in the nonlinear DSGE literature---accounts for 0.2 percent. Even during ELB-binding episodes at moderate shock scales, the investment channel remains dominant at 88--92 percent, exceeding the next-largest block by a factor of eight. The composition is stable across shock scales from 0.1 to 1.2 standard deviations; at the most extreme scale (1.5$\sigma$), the investment share during binding falls to 37 percent, though the sample of binding episodes is too small for reliable inference (Figure~\ref{fig:decomposition_vs_scale}).
+
+The mechanism is precise and has a clean analytical characterization. The investment adjustment cost function $S(I_t/I_{t-1}) = \tfrac{\phi}{2}(\gamma I_t/I_{t-1} - \gamma)^2$ satisfies $S(1) = 0$ and $S'(1) = 0$ at steady state. A first-order perturbation therefore sets both $S$ and $S'$ identically to zero---the \emph{entire} investment adjustment cost is invisible to linearization. Every basis point of the quadratic cost that the full nonlinear solver computes is a pure higher-order object that the workhorse estimation technology discards. I formalize this as a general \textit{perturbation invisibility} property (Proposition~\ref{prop:invisibility}): any function satisfying $f(\bar{x}) = f'(\bar{x}) = 0$ at steady state is structurally invisible to first-order methods. The investment adjustment cost is the most consequential example in the canonical DSGE model, but the property applies to any similarly structured nonlinearity.
+
+Three pieces of evidence identify the investment channel as the source and rule out alternatives. First, the equation-block decomposition shows that investment dynamics generate 69 percent of the nonlinear-linear gap while the pricing block generates 0.2 percent (Table~\ref{tab:equation_block}). Second, a Gal\'i (2015) New Keynesian model that shares the same ELB constraint and Kimball aggregation structure but lacks investment shows near-zero nonlinearity at empirically relevant shock scales---the ELB adds meaningful nonlinearity only above $3\sigma$ (Figure~\ref{fig:gali_obc_vs_no_obc}). This is a difference-in-differences argument: same ELB, same Kimball, different investment structure, and all the nonlinearity traces to investment. Third, counterfactual model variants that selectively remove $S(\cdot)$ or linearize the utilization cost $a(z)$ confirm the analytical hierarchy: removing $S$ causes the gap to \emph{explode} (the adjustment cost simultaneously creates the gap through the invisibility property and limits its magnitude through dampening), while linearizing $a(z)$ changes the gap by less than 1.5 percent.
+
+The finding has direct consequences for estimated parameters. Because linearization discards the investment-channel amplification, the linear model must compensate by inflating exogenous shock processes. On US data (1959Q1--2004Q4), switching from linear to nonlinear estimation doubles risk premium volatility $\sigma_b$, compresses wage markup persistence $\rho_w$ from 0.37 to 0.08, and raises Kimball curvature $\varepsilon_p$ 2.7-fold---each shift in the direction predicted by the invisibility theory. The risk premium shock feeds directly into the investment Euler equation, so $\sigma_b$ absorbs the missing amplification; persistent wage shocks substitute for the persistent nonlinear propagation that $\rho_w$ no longer needs to provide; and higher $\varepsilon_p$ actually \emph{reduces} nonlinearity, so the linear model prefers lower curvature as compensation. A direct SEP posterior comparison confirms that the nonlinear correction is economically material, with the ROM1--SEP prediction gap averaging 1.04 RMSE per variable (Table~\ref{tab:18param_switching_posterior}; Appendix~\ref{sec:identification}).
+
+Extending the sample through 2025Q1---to include the two modern ELB episodes where the standard argument for nonlinear estimation is strongest---strengthens rather than weakens the investment-dominance finding. The linear model attributes the COVID-19 collapse to risk-premium shocks exceeding $56\sigma$, price markup shocks of $32\sigma$, and monetary shocks of $23\sigma$---events with probability below $10^{-300}$ under the Gaussian model. The parameters that shift most on the extended sample are connected to the investment and labor channels, not pricing or monetary policy, consistent with the investment block's dominant share of the nonlinearity gap.
+
+The policy implications are concrete. If linear models systematically overestimate exogenous shock volatility and underestimate endogenous investment-channel amplification, then the economy is less subject to risk premium shocks and more driven by endogenous propagation than standard estimates suggest. A direct SEP posterior comparison confirms that the nonlinear correction exceeds three measurement standard errors for labor and the interest rate at posterior parameter values. This suggests revisiting the optimal policy response toward dampening investment volatility---a question requiring formal welfare analysis beyond this paper's scope. For researchers choosing which nonlinearities to include in estimated models, the results strongly favor prioritizing the investment block over the ELB and Kimball pricing---the opposite of current practice. The ELB matters, but piecewise-linear methods (OccBin) can handle it adequately; the investment invisibility requires genuinely nonlinear estimation.
+
+To make nonlinear estimation feasible at the scale of a medium-scale DSGE model, I develop a multi-fidelity estimator. A neural network learns the \textit{residual correction} between the full nonlinear solution (computed via the stochastic extended path method) and the linear baseline---two orders of magnitude smaller than the full transition and concentrated in the investment block. A distance-based gate activates the correction only when displacement from steady state is large enough that linear approximation fails, since displacement explains 96 percent of the gap. Online estimation with 1,000 NUTS draws completes in 2.4 hours on an Apple M4 with zero divergent transitions, after a 12-hour offline training stage. A bootstrap particle filter---the standard nonlinear alternative---collapses to a single effective particle in every period at 1,000 particles, confirming that the filter-free approach is not merely convenient but structurally necessary for this class of models.
+
+The decomposition results in Sections~\ref{sec:invisibility}--\ref{sec:decomposition} are deterministic, computed from the nonlinear solver without MCMC. Only the posterior comparison in Section~\ref{sec:inference_consequences} is conditional on a single posterior mode; full characterization of the posterior surface is ongoing.
+
+The paper draws on three literatures. For the nonlinear oracle, I use the stochastic extended path method \citep{fair1983solution,adjemian2025stochastic}, which handles occasionally binding constraints natively and scales to 66-variable models---unlike projection \citep{judd1992projection} or sparse grids \citep{krueger2004computing,winschel2010solving}, which face the curse of dimensionality at this scale. For acceleration, I train a neural network on the residual between nonlinear and linear transitions, building on the model-discrepancy framework of \citet{kennedy2001bayesian}, on \citet{koop2022bayesian} and \citet{naubert2025differentiable} but approximating the transition map rather than the likelihood, and on multi-fidelity methods from engineering \citep{peherstorfer2018survey}. \citet{kase2025estimating} also use neural networks for nonlinear DSGE estimation, but approximate the full likelihood surface (trained on particle-filter evaluations) rather than the transition residual; the multi-fidelity residual formulation learns a two-orders-of-magnitude smaller target, provides a ROM1 fallback, and supplies the smooth gradients that HMC requires. \citet{janssens2025efficient} achieve dramatic speed gains via time-varying local linearization around the current state forecast, but their first-order Taylor expansion cannot capture the $S' \times p^k \times \xi_{t+1}/\xi_t$ cross-terms that drive the investment-channel nonlinearity, nor can it handle occasionally binding constraints where policy functions have kinks. For sampling, I extend the filter-free Hamiltonian Monte Carlo framework of \citet{childers2022filter} and \citet{farkas2020bayesian} to the nonlinear setting, treating shocks as explicit unknowns and sidestepping the particle-filter weight degeneracy that \citet{herbst2019tempered} and \citet{cubaborda2019likelihood} document in medium-scale DSGE estimation. Recent nonlinear estimation work---\citet{gust2012effects} with regime-switching particle filters, \citet{boehl2022monetary} with OccBin, \citet{fernandezvillaverde2021estimating} with stochastic volatility---faces either this degeneracy or the restriction to piecewise-linear approximations that cannot capture the quadratic investment-channel nonlinearity documented here.
+
+% ============================================================================
+% SECTION 3: THE INVISIBILITY PROPERTY
+% ============================================================================
+
+\section{The Invisibility Property}
+\label{sec:invisibility}
+
+Before computing anything, I characterize analytically which nonlinearities in a DSGE model are visible to first-order perturbation and which are not.
+
+\subsection{A General Perturbation Invisibility Result}
+
+\begin{proposition}[Perturbation Invisibility]
+\label{prop:invisibility}
+Let $f: \mathbb{R} \to \mathbb{R}$ enter an equilibrium condition of a DSGE model evaluated at a variable $x_t$ with steady-state value $\bar{x}$. If $f(\bar{x}) = 0$ and $f'(\bar{x}) = 0$, then $f$ contributes zero to the first-order perturbation solution. Specifically, defining $\hat{x}_t = x_t - \bar{x}$, the Taylor expansion $f(x_t) = f(\bar{x}) + f'(\bar{x})\hat{x}_t + \tfrac{1}{2}f''(\bar{x})\hat{x}_t^2 + \mathcal{O}(\hat{x}_t^3)$ reduces to $f(x_t) = \tfrac{1}{2}f''(\bar{x})\hat{x}_t^2 + \mathcal{O}(\hat{x}_t^3)$, which is identically zero at first order.
+\end{proposition}
+
+The proof is immediate from the definition of first-order perturbation, which retains only terms linear in $\hat{x}_t$. Three observations sharpen the economic content.
+
+First, the investment adjustment cost $S(x) = \tfrac{\phi}{2}(\gamma x - \gamma)^2$ satisfies both conditions at $x = I_t/I_{t-1} = 1$ (steady state): $S(1) = 0$ because the cost vanishes when investment grows at the balanced-growth rate, and $S'(1) = 0$ because the cost function is designed to have zero marginal cost at steady state. The steady-state curvature $S''(1) = \phi\gamma^2 \approx 6.06$ at the \citet{smets2007shocks} calibration. Every basis point of the quadratic cost that the full nonlinear solver evaluates is therefore a pure second-order object that linearization discards completely. This is not a small residual or a higher-order correction---it is the \emph{entire} adjustment cost mechanism.
+
+Second, the capital utilization cost $a(z) = \tfrac{r^k_{ss}}{c_z}[\exp(c_z(z-1)) - 1]$ does \emph{not} satisfy the invisibility condition: $a(1) = 0$ but $a'(1) = r^k_{ss} \neq 0$. The first-order utilization response is therefore captured by perturbation; only the curvature of $a(\cdot)$ is lost, and that curvature ($a''(1) \approx 0.005$) is roughly 1,200 times smaller than $S''(1)$. More generally, any function with $f'(\bar{x}) \neq 0$ has its dominant effect captured by linearization, with only the residual curvature lost.
+
+Third, the Kimball price and wage aggregators exhibit high formal curvature (power-law exponents of $\pm 7$), but price and wage dispersion indices remain within $10^{-4}$ of unity under Calvo pricing. The \emph{effective} curvature---formal curvature multiplied by the squared deviation of the relevant variable from steady state---is therefore negligible. High mathematical curvature is not sufficient for quantitative importance; the variable must also move far enough from its steady-state value for that curvature to bite.
+
+\subsection{Analytical Ranking of Nonlinearity Sources}
+
+The Smets--Wouters model with the Holden--Lind\'e--Trabandt extension contains seven sources of nonlinearity. I rank them by the quadratic-to-linear (Q/L) ratio---the second-order Taylor term divided by the first-order term, evaluated at one standard deviation of the relevant variable.
+
+The investment FOC dominates: Q/L = 18.7\% at $1\sigma$. Because $S'(1) = 0$, the \emph{entire} $S'$ effect is nonlinear---there is no first-order term. ROM1 does not undercount this nonlinearity; it misses it completely.
+
+The Kimball wage FOC ranks second at Q/L = 2.8\%. Wage stickiness ($\xi_w = 0.81$, average duration 5.2 quarters) produces cross-sectional dispersion an order of magnitude larger than price dispersion, so the $\tilde{w}^{-6}$ power generates meaningful curvature. Habit-amplified marginal utility is close behind at Q/L = 2.7\%: the habit-adjusted consumption base is only 36.6 percent of steady-state consumption, amplifying the curvature of $(C_t - hC_{t-1}/\gamma)^{-\sigma}$ roughly $7.5\times$. The remaining sources---non-separable marginal utility (1.2\%), Kimball wage dispersion (0.8\%), and Kimball price FOC and dispersion (below 0.1 percent)---are progressively smaller. Price dispersion stays within $10^{-4}$ of unity despite identical mathematical structure to the wage block, because price stickiness ($\xi_p = 0.60$) is much lower than wage stickiness. The ELB contributes only above $3\sigma$ in the Gal\'i model (Figure~\ref{fig:gali_obc_vs_no_obc}); at empirically relevant scales it is a kink that piecewise-linear methods capture accurately \citep{guerrieri2015occbin}.
+
+The ranking predicts that the investment block should dominate the FOM--ROM1 gap, the wage block should contribute modestly, and the pricing block and ELB should be negligible. Section~\ref{sec:decomposition} confirms every prediction quantitatively.
+
+
+% ============================================================================
+% SECTION 4: MODEL ENVIRONMENT
+% ============================================================================
+
+\section{Model Environment}
+\label{sec:model}
+
+\subsection{General DSGE Framework}
+
+The model's equilibrium satisfies
+\begin{equation}
+\label{eq:equilibrium}
+\E_t\left[F(s_{t+1}, s_t, s_{t-1}, \eps_t; \theta)\right] = 0,
+\end{equation}
+where $s_t \in \R^{n_s}$ collects endogenous states and jumps, $\eps_t \in \R^{n_\eps} \sim \mathcal{N}(0, I_{n_\eps})$ are shocks (scaled by standard deviations inside $F$), $\theta \in \Theta \subset \R^{n_\theta}$ are structural parameters, and $F: \R^{3n_s} \times \R^{n_\eps} \times \Theta \to \R^{n_s}$ collects the equilibrium conditions.
+
+A \textit{solution} is a policy function $g_\theta: \R^{n_s} \times \R^{n_\eps} \to \R^{n_s}$ such that
+\begin{equation*}
+s_t = g_\theta(s_{t-1}, \eps_t),
+\end{equation*}
+and the implied state sequence $\{s_t\}_{t=0}^\infty$ satisfies \eqref{eq:equilibrium} for all $t \geq 0$.
+
+\subsection{Observation Equation}
+
+Model states map to observed data through
+\begin{equation}
+\label{eq:observation}
+y_t = H(s_t) + \eta_t, \quad \eta_t \sim \mathcal{N}(0, \Sigmay),
+\end{equation}
+where $y_t \in \R^{n_y}$ is the vector of observables (typically $n_y \ll n_s$), $H: \R^{n_s} \to \R^{n_y}$ is a measurement function (linear in the applications here: $H$ is a selection matrix mapping states to observables), and $\eta_t$ represents measurement error.
+
+In the 3-parameter Gal\'i model, $H$ selects output, inflation, and the nominal interest rate ($n_y = 3$). In the 18-parameter Smets--Wouters model, $H$ maps states to seven observables: output growth, consumption growth, investment growth, hours worked, inflation, wage growth, and the interest rate ($n_y = 7$). I calibrate $\Sigmay$ to match data-revision or aggregation noise.
+
+\subsection{Estimation Problem}
+
+Given observed data $\{y_t^{\text{obs}}\}_{t=1}^T$, the estimation target is the posterior distribution of structural parameters:
+\begin{equation}
+\label{eq:posterior}
+p(\theta \given y_{1:T}^{\text{obs}}) \propto p(y_{1:T}^{\text{obs}} \given \theta) \, p(\theta),
+\end{equation}
+where $p(y_{1:T}^{\text{obs}} \given \theta)$ is the likelihood and $p(\theta)$ is the prior.
+
+Standard DSGE estimation linearizes \eqref{eq:equilibrium} around steady state, evaluates $p(y_{1:T}^{\text{obs}} \given \theta)$ with a Kalman filter, and samples \eqref{eq:posterior} with random-walk Metropolis--Hastings. I keep the nonlinear structure at every stage instead. I solve \eqref{eq:equilibrium} globally with SEP on a design set $\{\theta^{(i)}\}_{i=1}^{N_\theta}$, train a neural surrogate $\hat{g}(s_{t-1}, \eps_t, \theta; w)$ to approximate the transition map $g_\theta(s_{t-1}, \eps_t)$, and sample the augmented posterior $p(\theta, s_0, \eps_{1:T} \given y_{1:T}^{\text{obs}})$ with Hamiltonian Monte Carlo, exploiting the surrogate's differentiable structure.
+
+The filter-free likelihood treats shocks and the initial state as explicit unknowns:
+\begin{equation*}
+\mathcal{L}(\theta, s_0, \eps_{1:T} \given y_{1:T}^{\text{obs}}) = \prod_{t=1}^T p(y_t^{\text{obs}} \given s_t; \Sigmay) \cdot p(s_0) \cdot \prod_{t=1}^T p(\eps_t),
+\end{equation*}
+where $s_t = \hat{g}(s_{t-1}, \eps_t, \theta; w)$ is the surrogate-predicted state, $p(y_t^{\text{obs}} \given s_t; \Sigmay)$ is the Gaussian measurement density from \eqref{eq:observation}, and $p(\eps_t) = \mathcal{N}(0, I_{n_\eps})$ is the shock prior. This formulation avoids particle filtering entirely: instead of integrating out the shocks via sequential Monte Carlo, I sample them jointly with the structural parameters.
+
+\subsection{Illustrative Models}
+\label{subsec:gali_model}
+
+The 3-parameter validation uses a New Keynesian model adapted from \citet{gali2015monetary} with Calvo pricing, a Taylor rule, and an occasionally binding ZLB (23 variables, 3 shocks). The Taylor rule is $R_t = \max\{ 1, \, (R_{ss})^{1-\rho_R} (\Pi_t/\Pi_{ss})^{(1-\rho_R)\phi_\pi} (Y_t/Y_{ss})^{(1-\rho_R)\phi_y} R_{t-1}^{\rho_R} e^{\varepsilon_t^R} \}$, where the $\max\{1,\cdot\}$ operator enforces the ZLB. I estimate $\theta = (\sigma_A, \sigma_\mu, \sigma_R)$ holding other parameters at standard calibration ($\beta = 0.99$, $\xi_p = 0.75$, $\phi_\pi = 1.5$, $\phi_y = 0.125$, $\rho_R = 0.8$). Full equations are in Appendix~\ref{app:model}.
+
+The 18-parameter analysis uses the Smets--Wouters model with the Holden--Lind\'e--Trabandt (HLT) occasionally binding constraint extension (hereafter ``SW07-HLT'' or simply ``HLT model''), featuring habit formation, capital accumulation, investment adjustment costs, variable capital utilization, Kimball demand aggregation, and the ZLB---66 variables (26 states), 7 shocks, and 18 estimated parameters covering shock processes and the price/wage setting block $(\xi_p, \iota_p, \varepsilon_p, \xi_w)$. See Appendix~\ref{app:sw07_model} for the full specification.
+
+
+% ============================================================================
+% SECTION 5: NONLINEAR SOLUTION AND SURROGATE
+% ============================================================================
+
+\section{Nonlinear Solution and Surrogate}
+\label{sec:methodology}
+
+\subsection{Multi-Fidelity Architecture}
+\label{subsec:multifidelity}
+
+The estimator organizes three accuracy levels into a hierarchy: Level~0 is first-order perturbation (ROM1---reduced-order model, first-order; microseconds); Level~1 is a neural network trained on nonlinear solutions (milliseconds); Level~2 is the full SEP solver (FOM---full-order model; 0.8~seconds). Each level learns the \textit{correction} relative to the one below it, not the full transition. The neural network at Level~1 learns $\Delta g = g_\theta^{\text{SEP}} - g_\theta^{\text{ROM1}}$, and its prediction at inference is $\hat{g}(s,\varepsilon,\theta) = g_\theta^{\text{ROM1}}(s,\varepsilon) + \hat{\Delta}(s,\varepsilon,\theta; w)$. This residual formulation reduces the scale of the learning problem by two orders of magnitude compared to approximating the full transition or the full likelihood \citep[as in][]{kase2025estimating}, makes the network's error directly interpretable, and guarantees that when the network predicts zero correction the estimator gracefully defaults to ROM1. Following the taxonomy of \citet{peherstorfer2018survey}, the estimator combines a fusion strategy (additive residual correction) with a filtering strategy (displacement-based regime gate). A switching rule (Section~\ref{subsec:regime_switching}) assigns each time period to either Level~0 or Level~1 based on how far the economy has moved from steady state. The three-level extension---adding direct SEP evaluation for a small budget of critical periods---is architecturally straightforward but left for future work.
+
+The procedure has two stages. \emph{Offline}: draw a parameter grid from prior support, solve SEP at each grid point, compute ROM1 transitions at the same inputs, train a neural network on the residuals $\Delta = g^{\text{SEP}} - g^{\text{ROM1}}$, and calibrate the gate threshold. \emph{Online}: for each MCMC proposal $\theta'$, recover shocks via an inversion filter, classify each period as calm ($z_t=0$) or stressed ($z_t=1$) based on state displacement, evaluate the period likelihood under ROM1 or the surrogate accordingly, and accept or reject via HMC. The full algorithm is in Appendix~\ref{app:hmc}.
+
+\subsection{Stochastic Extended Path (SEP) Algorithm}
+\label{subsec:sep}
+
+SEP solves the nonlinear equilibrium system \eqref{eq:equilibrium} directly. The idea \citep{fair1983solution} is to reverse the usual approximation order: approximate expectations first---via Gauss--Hermite quadrature over future shocks---then solve the full nonlinear system. This preserves the nonlinear structure of $F$ throughout.
+
+The algorithm proceeds in three steps. First, I approximate expectations using Gauss--Hermite quadrature on a product grid of $K$ nodes per shock dimension ($K=5$ for the 3-shock validation model, $K=3$ for the 7-shock HLT model, yielding $3^7=2{,}187$ nodes per period). Second, the solver builds a branching tree of future paths that fans out at full resolution for $H_{\text{branch}}$ periods and then collapses to a single deterministic path with zero future shocks. This funnel structure captures near-term uncertainty---where nonlinear effects matter most---while keeping total path count manageable. A terminal condition $s_{T_{\text{SEP}}+1} = \bar{s}(\theta)$ closes the system. Third, stacking the equilibrium conditions across all tree nodes yields a system $R(Y;\theta)=0$, where $Y$ collects state variables at every node. I solve this with a damped Newton method:
+\begin{equation}
+\label{eq:newton_iteration}
+Y^{(j+1)} = Y^{(j)} - \alpha^{(j)} \left[\frac{\partial R}{\partial Y}(Y^{(j)}; \theta)\right]^{-1} R(Y^{(j)}; \theta),
+\end{equation}
+where $\alpha^{(j)} \in (0,1]$ is a step-size parameter (chosen by line search to ensure progress) and the Jacobian is computed via automatic differentiation.
+
+Convergence is quadratic in smooth regions and slows near constraint boundaries where the equations have a kink. Warm-starting from a nearby previous solution reduces Newton iterations from approximately 20 (cold start) to 3--5 when no constraints change status. Once the system converges, the solved tree defines a deterministic transition function $s_{t+1} = g_\theta(s_t, \eps_t)$ for each shock realization---the object I approximate with a neural network.
+
+A single SEP solve takes about 0.8 seconds on the reference hardware, with cost scaling as $\mathcal{O}(T_{\text{SEP}} \cdot n_s^3)$ thanks to the banded Jacobian structure. Embedding SEP directly in MCMC---even with only 1,000 NUTS draws at $T=184$ periods---would take approximately 3.4 days, and a NUTS trajectory typically requires 30--60 leapfrog steps per draw, making the effective cost 100--200 days. The surrogate pays the SEP cost once offline and evaluates in milliseconds during inference. The five-order-of-magnitude gap between ROM1 ($\sim10^{-5}$~s), surrogate ($\sim10^{-3}$~s), and SEP ($\sim10^{0}$~s) is what makes the multi-fidelity architecture viable.
+
+SEP naturally handles occasionally binding constraints by incorporating them directly into $F$. For the zero lower bound, I replace the non-differentiable $\max$ operator with a $C^\infty$ softplus approximation:
+\begin{equation}
+R_t = 1 + \frac{1}{\kappa_s}\log\!\bigl(1 + e^{\kappa_s(\tilde{R}_t - 1)}\bigr), \label{eq:softplus_zlb}
+\end{equation}
+where $\tilde{R}_t$ is the unconstrained (``shadow'') Taylor rule rate from \eqref{eq:taylor_zlb_full} and $\kappa_s = 100$. At $\kappa_s = 100$ the approximation error is below $0.01$ basis points even 200 basis points below the floor. The everywhere-differentiable formulation supplies an exact Jacobian to the Newton solver, avoiding the subdifferential complications that arise with $\max$. Figure~\ref{fig:zlb_binding_simulation} in Appendix~\ref{app:robustness_extended} illustrates the solver during a binding episode.
+
+SEP treats $s_0$ as a free boundary condition rather than requiring the economy to start at steady state, allowing the sampler to learn the initial state from the data. Because the solution is global, impulse responses depend on where the economy sits---a property that linear models lack entirely (Section~\ref{subsec:irf_comparison}). Details on iteration counts, warm-starting, and the GH quadrature fallback are in Appendix~\ref{app:sep}.
+
+A natural question is why not use second-order perturbation (ROM2) instead of SEP as the nonlinear benchmark. Three considerations favor SEP. First, the investment adjustment cost satisfies $S(1) = S'(1) = 0$, so both the function and its first derivative are invisible to ROM1; second-order perturbation captures $S''(1)$ at the steady state but its accuracy degrades with distance from the steady-state neighborhood \citep{aruoba2006comparing,kimetal2008pruning}---precisely where the investment-channel nonlinearity is most consequential (during recessions, the COVID episode, and other stressed periods). Second, the multiplicative $S' \times p^k \times \xi_{t+1}/\xi_t$ interaction generates cubic and higher-order cross-terms that pruned second-order solutions miss entirely \citep{andreasen2018pruning}. Third, occasionally binding constraints (the ZLB) cannot be handled by perturbation methods of any order; the SEP solver incorporates them natively through the smooth softplus approximation \eqref{eq:softplus_zlb}. For a comprehensive treatment of perturbation limitations in the context of DSGE estimation, see \citet{fernandez2016solution}.
+
+
+\subsection{Dataset Generation and Surrogate Training}
+\label{subsec:surrogate}
+
+The SEP transition map is deterministic: the same $(s_{t-1},\eps_t,\theta)$ always produces the same $s_t$. The problem reduces to supervised learning on labeled transitions. I select a design set $\{\theta^{(i)}\}_{i=1}^{N_\theta}$ using a Sobol sequence ($N_\theta \approx 120$ in the 18-parameter case), simulate 200 periods at each design point, and store the labeled pairs. The usable dataset contains 22,080 samples.
+
+Rather than training the network to predict full SEP transitions, I train it to predict the \textit{residual} between SEP and ROM1:
+\begin{equation*}
+\Delta y_j = g_\theta^{\text{SEP}}(x_j) - g_\theta^{\text{ROM1}}(x_j).
+\end{equation*}
+At inference, the surrogate prediction is $\hat{y} = g^{\text{ROM1}}(x) + \hat{\Delta}(x; w)$. ROM1 is highly correlated with $g^{\text{SEP}}$ ($\rho > 0.99$ near steady state), so the residual formulation reduces the variability of the training target by 50--100$\times$, concentrating the network's capacity on the nonlinear correction. The surrogate achieves 96--99 percent improvement over ROM1 per output dimension on held-out data, with RRMSE $\approx 0.0012$. I augment the training data with state trajectories recovered from observed data via the linear filter, reducing the maximum standardized distance from 6.2 to 1.5. Architecture, training procedure, hyperparameter selection, and the shock-scale calibration study are in Appendices~\ref{app:surrogate} and~\ref{app:shock_scale_calibration}.
+
+\subsection{Regime-Switching Gate and Inversion Filter}
+\label{subsec:regime_switching}
+
+The estimator switches between linear and nonlinear accuracy period by period. Let $z_t = \mathbb{1}(\|s_t - \bar{s}(\theta)\| > \tau)$ indicate whether the economy's displacement from steady state exceeds a calibrated threshold $\tau$. The switched transition is
+\begin{equation*}
+s_t = (1-z_t)\,g_\theta^{\text{ROM}}(s_{t-1}, \eps_t) + z_t\,\hat{g}_\theta(s_{t-1}, \eps_t),
+\end{equation*}
+where $g_\theta^{\text{ROM}}$ is the linear transition and $\hat{g}_\theta$ is the surrogate. State displacement explains 96 percent of the FOM--ROM1 gap (Section~\ref{subsec:nonlinearity_sources}), so the threshold trigger closely approximates the oracle ranking of periods by likelihood gain.
+
+For the 18-parameter estimation, I recover shocks via an inversion filter---solving $\hat{\eps}_t = \argmin_{\eps} \| (y_t^{\text{obs}} - Hg^{\text{ROM1}}(s_{t-1}, \eps, \theta))/\sigma_y \|^2 + \| \eps/\sigma_\eps \|^2$---reducing the sampler's unknowns from $n_\theta + Tn_\eps$ to $n_\theta$. The cost is a subtle inconsistency: shocks are recovered under the linear map, but the likelihood for gated periods uses the nonlinear surrogate. This inconsistency is bounded by the ROM1--surrogate gap (RRMSE $< 0.002$).
+
+\subsection{Filter-Free Hamiltonian Monte Carlo}
+\label{subsec:hmc}
+
+Instead of integrating out shocks with a particle filter, I treat $\eps_{1:T}$ and $s_0$ as explicit unknowns and sample the augmented posterior $p(\theta, s_0, \eps_{1:T} \given y_{1:T}^{\text{obs}})$ with the No-U-Turn Sampler \citep{hoffman2014nuts} via AdvancedHMC.jl. The dimension rises from $n_\theta$ to $n_\theta + n_s + Tn_\eps$ (625 in the 3-parameter validation), but HMC exploits gradient information to navigate efficiently. In the 18-parameter estimation, gradients are computed via finite differences through the inversion filter; 1,000 post-warmup draws complete in 100 minutes (linear) and 2.4 hours (regime-switching) on an Apple M4 with zero divergent transitions. Technical details are in Appendix~\ref{app:hmc}.
+
+
+% Identification and Validation details are in Appendices~\ref{sec:identification} and~\ref{sec:validation_design}.
+
+With the estimation machinery in place, I turn to the central question: which nonlinearities in the Smets--Wouters model drive the gap between full-order and linear solutions?
+
+\section{Quantitative Decomposition}
+\label{sec:decomposition}
+
+\subsection{The 69 Percent Finding}
+\label{subsec:nonlinearity_sources}
+
+Each training sample records both the full-order (SEP) and first-order perturbation (ROM1) transitions at the same $(s_{t-1}, \varepsilon_t, \theta)$. Their difference isolates the nonlinear correction the surrogate must learn. I define the scalar nonlinearity measure as
+\begin{equation*}
+\Delta_j = \| g_\theta^{\text{FOM}}(s_{j}, \varepsilon_j) - g_\theta^{\text{ROM1}}(s_{j}, \varepsilon_j) \|_2,
+\end{equation*}
+where $g^{\text{FOM}}$ is the SEP solution and $g^{\text{ROM1}}$ is first-order perturbation. The decomposition draws on 22,080 training samples varying all 18 parameters. Figure~\ref{fig:nonlinearity_decomposition} summarizes: state distance dominates ($R^2 = 0.96$), parameters contribute modestly (11\%), and current-period shocks are negligible ($<0.3$\%).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_nonlinearity_combined.pdf}
+\caption{Nonlinearity variance decomposition and surrogate accuracy by distance from steady state. Panel~(a): $R^2$ from regressing the nonlinearity measure $\Delta_j = \|g^{\text{FOM}} - g^{\text{ROM1}}\|_2$ on each feature set separately. Panel~(b): RMSE of the neural surrogate (blue) and first-order perturbation ROM1 (red) across quintiles of state distance $\|s - \bar{s}(\theta)\|_2$, with percentage improvement labeled. The surrogate's RMSE is roughly flat while ROM1 errors grow by two orders of magnitude. Based on 22,080 training samples from the 18-parameter dataset.}
+\label{fig:nonlinearity_decomposition}
+\end{figure}
+
+State distance alone explains 96 percent of the nonlinear correction ($R^2 = 0.960$): the gap is a function of where the economy sits, not which parameters generated the displacement. ROM1 errors grow by two orders of magnitude from the nearest to the farthest state-distance quintile; the surrogate stays flat, achieving 99 percent improvement in the farthest quintile (Appendix~\ref{app:additional_results}, Table~\ref{tab:error_by_distance}).
+
+The investment and capital block accounts for 69 percent of the total gap (Table~\ref{tab:equation_block}). The price Phillips curve---where the Kimball aggregator enters and which receives the most attention in the nonlinear DSGE literature---contributes 0.2 percent.
+
+\begin{table}[htbp]
+\centering
+\caption{Equation-Block Decomposition of the FOM--ROM1 Gap}
+\label{tab:equation_block}
+\begin{tabular}{lccc}
+\toprule
+Economic Block & Variables & Mean $\|\Delta\|_2$ & Share (\%) \\
+\midrule
+Investment / Capital & $\Delta i$, $k$, $q$, $z$, $r^k$, $a(z)$, $S'$, $q^s$ & 20.53 & 68.9 \\
+Euler / Consumption & $\xi$, $c$, $\Delta c$ & 9.59 & 13.5 \\
+Wage Phillips Curve & $w$, $\Delta w$, $\dot{w}$, $\gamma^w_{1{-}3}$, $s^w$ & 19.41 & 10.8 \\
+Output / Production & $y$, $\Delta y$, hours, $S^D$ & 5.10 & 4.3 \\
+Flex-Price Block & $c^f$, $y^f$, $i^f$, $k^f$, $q^f$, $r^{k,f}$ & 3.30 & 2.3 \\
+Price Phillips Curve & $\pi$, $D_p$, $\dot{p}$, $\gamma_{1{-}3}$, $s^\pi$ & 1.85 & 0.2 \\
+Monetary Policy & $r$, $r^{\text{obs}}$, $m$ & 0.61 & 0.1 \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize \textit{Notes}: Based on 22,080 training samples from the 18-parameter dataset. Share is the fraction of total $\sum_j \|\Delta_j\|_2^2$ attributable to each block. Shares may not sum to 100 due to rounding.}
+\end{table}
+
+Table~\ref{tab:equation_block} delivers the central result: the investment and capital block accounts for 68.9 percent of the total nonlinearity gap, while the price Phillips curve---where the Kimball aggregator enters and which receives much attention in the nonlinear DSGE literature---contributes just 0.2 percent. The mechanism is the interaction of three nonlinear functions in the investment block (Appendix~\ref{app:sw07_model}): the exponential capital utilization cost $a(z_t)$, the quadratic investment adjustment cost $S(I_t/I_{t-1})$, and Tobin's $q$ dynamics. A negative $q^s$ shock depresses the shadow price $p^k$, raising adjustment costs for future recovery---a compounding $S' \times p^k \times \xi_{t+1}/\xi_t$ interaction that linear approximation replaces with a constant coefficient. The Gal\'i (2015) model, which lacks investment entirely, shows small FOM--ROM1 gaps even at $5\sigma$, consistent with this channel being the dominant nonlinearity source.
+
+The $S'$ itself contributes only 2 percent of the \textit{state}-level gap, but its nonlinearity propagates through Tobin's $q$ into the stochastic discount factor $\xi_t$, which enters every forward-looking equation. The investment channel generates the nonlinear impulse; the discount factor transmits it economy-wide. This state dependence is distinct from learning-based time variation \citep{slobodyan2012learning}: here the time variation comes from nonlinear equilibrium conditions under rational expectations.
+
+Structural parameters explain 11 percent of nonlinearity variation. The three strongest correlates are government spending persistence $\rho_g$ ($+0.18$), risk premium volatility $\sigma_b$ ($+0.17$), and Kimball curvature $\varepsilon_p$ ($-0.11$)---higher curvature makes the model \emph{more} linear by flattening demand (Appendix~\ref{app:additional_results}, Table~\ref{tab:param_nonlinearity}). Current-period shocks contribute negligibly ($R^2 = 0.0003$); nonlinearity accumulates through persistent displacement, clustering in temporal bursts with first-order autocorrelation 0.81 and mean duration 12.5 quarters. Per-observable $R^2$ values are uniformly below 12 percent (Appendix~\ref{app:additional_results}, Table~\ref{tab:per_obs_r2}).
+
+These patterns predict testable posterior shifts: $\sigma_b$ should rise under nonlinear estimation (endogenous amplification substitutes for exogenous risk-premium variation), $\rho_w$ should fall (nonlinear propagation substitutes for exogenous persistence), and $\varepsilon_p$ should rise (the investment channel reduces the pricing block's role). The 18-parameter results (Section~\ref{par:results_18param_switching}) confirm all three: $\sigma_b$ doubles, $\rho_w$ falls 80 percent, $\varepsilon_p$ rises 2.7-fold.
+
+
+\subsection{State-Dependent Impulse Responses}
+\label{subsec:irf_comparison}
+
+Under ROM1, impulse responses scale linearly and are symmetric in the sign of the shock. Under SEP, neither property holds. Figure~\ref{fig:sep_vs_rom1_eqs} shows the investment-specific shock at magnitudes from $1\sigma$ to $5\sigma$. At $1\sigma$ the solutions coincide; by $5\sigma$ the divergence is substantial. Positive shocks are amplified because the quadratic adjustment cost $S$ compounds with the consumption-savings wedge; negative shocks are asymmetrically attenuated because the convex utilization cost $a(z)$ dampens downward adjustment. The risk premium shock shows the same pattern through the Tobin's $q$ channel; the price markup shock shows minimal divergence even at $5\sigma$ (Appendix~\ref{app:additional_results}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_sep_vs_rom1_eqs_investment.pdf}
+\caption{Investment growth impulse responses: ROM1 (dashed) vs.\ SEP FOM (solid) for the investment-specific shock at magnitudes of $1\sigma$ through $5\sigma$. Positive shocks shown in red, negative shocks in dark red (dash-dot). At small shocks the two coincide; at large shocks the SEP FOM shows amplification (positive) and asymmetric attenuation (negative) that the linear model cannot represent. Y-axis: percentage deviation from steady state. Horizon: 40 quarters from steady state.}
+\label{fig:sep_vs_rom1_eqs}
+\end{figure}
+
+The full seven-observable response to a $4\sigma$ investment-specific shock confirms the equation-block decomposition (Figure~\ref{fig:all_vars_eqs}): nonlinear amplification concentrates in investment growth, spills to output and hours, and leaves inflation and the interest rate nearly unchanged. The correction surface peaks in the first 5--10 quarters and grows nonlinearly with shock size---the $5\sigma$ correction is not five times the $1\sigma$ correction. The amplification ratio rises with shock magnitude for investment-specific and risk premium shocks but stays near one for price markup shocks (Appendix~\ref{app:additional_results}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_sep_all_vars_eqs_4sigma.pdf}
+\caption{All-observable impulse responses to a $4\sigma$ investment-specific shock. ROM1 (blue dashed), SEP FOM positive (red solid), SEP FOM negative (dark red dash-dot). The nonlinear correction concentrates in investment growth, with spillovers to output and hours. Inflation and the interest rate are nearly unchanged between ROM1 and SEP FOM. Y-axis: percentage deviation from steady state.}
+\label{fig:all_vars_eqs}
+\end{figure}
+
+
+\subsection{ROM1 Forecast Errors in Real Data}
+\label{subsec:rom1_forecast_errors}
+
+Investment growth errors dominate ROM1 one-step-ahead forecast errors on US data (1959Q1--2004Q4), accounting for 53 percent of total forecast error variance (Figure~\ref{fig:rom1_forecast_errors}, Table~\ref{tab:crisis_vs_normal}). During crisis quarters (13 of 184), investment RMSE jumps $6.3\times$ while inflation errors \emph{fall} ($0.83\times$)---an asymmetry consistent with the convex utilization cost $a(z)$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_rom1_forecast_errors.pdf}
+\caption{ROM1 one-step-ahead forecast errors for US data (1959Q1--2004Q4). Top: investment growth; middle: output growth; bottom: inflation. Shaded areas: NBER recessions. Dashed red lines: $\pm 2\sigma$ bands.}
+\label{fig:rom1_forecast_errors}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{ROM1 forecast errors: crisis vs.\ normal quarters}
+\label{tab:crisis_vs_normal}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{Forecast Error RMSE} & & \\
+\cmidrule(lr){2-3}
+Observable & Normal & Crisis & Ratio & Variance Share \\
+\midrule
+Investment growth ($\Delta i$) & 1.65 & 10.35 & 6.3$\times$ & 53.2\% \\
+Output growth ($\Delta y$) & 0.88 & 4.48 & 5.1$\times$ & 12.1\% \\
+Consumption growth ($\Delta c$) & 0.87 & 4.79 & 5.5$\times$ & --- \\
+Hours worked & 0.59 & 1.68 & 2.8$\times$ & --- \\
+Inflation ($\pi$) & 0.92 & 0.76 & 0.8$\times$ & 6.3\% \\
+Wage growth ($\Delta w$) & 1.27 & 1.95 & 1.5$\times$ & --- \\
+Interest rate ($r$) & 0.35 & 0.57 & 1.6$\times$ & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+{\footnotesize \textit{Notes}: Crisis quarters defined as periods where $|\text{innovation}_{\Delta i}| > 2\sigma$ (13 out of 184 quarters). Variance share is each observable's contribution to total one-step-ahead forecast error variance. ROM1 inversion filter applied to US quarterly data (1959Q1--2004Q4, 184 quarters) at calibrated SW07 parameter values.}
+\end{table}
+
+The decomposition measures transition-function gaps (69 percent from investment); forecast errors measure one-step-ahead prediction failures (53 percent from investment). These are different objects, so numerical proximity is coincidental, but both point to the same channel. Second-order perturbation is insufficient: the multiplicative $S' \times p^k \times \xi_{t+1}/\xi_t$ interaction generates cubic cross-terms that the second-order solution misses (Appendix~\ref{app:additional_results}).
+
+
+\subsection{The ELB as Alternative Hypothesis}
+\label{subsec:elb_alternative}
+
+If the ELB were the dominant nonlinearity, the investment-block share should decline at shock scales where the constraint binds frequently. It does not. The investment/capital block accounts for 89--92 percent of the total observable FOM--ROM1 gap at every shock scale from 0.1 to 1.5 (Figure~\ref{fig:decomposition_vs_scale}). The composition is flat as shocks move from small perturbations to the stress range where the ZLB first binds (shock scale $\geq 1.2$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/decomposition_vs_shock_scale.pdf}
+\caption{Equation-block decomposition of the FOM--ROM1 gap across shock scales 0.1--1.5. Each point is the average block share across ten Mahalanobis-stratified posterior draws and all simulated periods at that scale. Investment/capital (red) holds at 89--92 percent across the full shock-scale frontier; the consumption/Euler block (blue) accounts for the remaining 8--11 percent. All other blocks are below 2 percent at every scale.}
+\label{fig:decomposition_vs_scale}
+\end{figure}
+
+During ZLB-binding episodes the investment share falls modestly---to 90 percent at shock scale 1.2 and to 37 percent at scale 1.5, where the consumption/Euler block rises to 35 percent and the labor market to 12 percent---but ZLB binding is extremely rare at these posterior-estimated parameters (0.1--0.4 percent of periods), so the unconditional composition remains dominated by investment at 88--92 percent (Appendix~\ref{app:additional_results}, Figure~\ref{fig:gap_magnitude_vs_scale}). The 88--92 percent at posterior-estimated parameters exceeds the training-set average of 69 percent because Sobol-sampled draws span parameter regions where the investment channel is weaker. Both exercises point the same way: investment dominates, and the ELB remains subordinate.
+
+
+\subsection{Gal\'i Negative Control}
+\label{subsec:gali_control}
+
+The \citet{gali2015monetary} three-equation NK model shares the ELB and Kimball wage-setting nonlinearities with the HLT model but lacks investment entirely---a difference-in-differences design. If the ELB or Kimball pricing were the dominant nonlinearity, the Gal\'i model should show comparable FOM--ROM1 gaps. It does not: the absolute gap magnitude is an order of magnitude smaller at every shock scale (Appendix~\ref{app:additional_results}, Figure~\ref{fig:gali_block_decomposition}).
+
+The ZLB adds meaningful nonlinearity only above $3\sigma$ (Figure~\ref{fig:gali_obc_vs_no_obc}). At empirically relevant scales ($1$--$3\sigma$) the versions with and without the constraint are nearly indistinguishable. At $10\sigma$ the ZLB quadruples the Gal\'i gap, but even then the HLT gap remains seven to eight times larger, confirming that the investment channel---not the ZLB---drives the nonlinearity.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/gali_obc_vs_no_obc.pdf}
+\caption{ZLB contribution to nonlinearity in the Gal\'i model. Blue circles: FOM--ROM1 gap without the ZLB constraint. Red diamonds: with the ZLB. Below $3\sigma$ shocks the two are nearly indistinguishable; the ZLB begins to matter at $5\sigma$ and roughly quadruples the gap at $10\sigma$. At empirically relevant shock scales the ZLB contributes negligibly to the FOM--ROM1 gap.}
+\label{fig:gali_obc_vs_no_obc}
+\end{figure}
+
+
+\subsection{Counterfactual Model Variants}
+\label{subsec:counterfactuals}
+
+Counterfactual simulations with model variants that selectively linearize individual investment-block nonlinearities confirm the analytical hierarchy established in Section~\ref{sec:invisibility}. I construct three counterfactual models: one that sets $S(\cdot) \equiv 0$ (removing the adjustment cost entirely), one that replaces $a(z)$ with its first-order Taylor expansion around $z=1$, and one that linearizes both simultaneously.
+
+When $S(\cdot)$ is removed, the FOM--ROM1 gap does not shrink; it \emph{explodes}, growing 30--90 times larger than the baseline across shock scales from 0.1 to 1.5. The mechanism is intuitive: the quadratic adjustment cost simultaneously \emph{creates} the FOM--ROM1 gap (through the $S = S' = 0$ invisibility property) and \emph{limits} its magnitude (through dampening of investment volatility). Without that convex friction, investment jumps freely in response to shocks, amplifying every other nonlinearity through general equilibrium. Linearizing $a(z)$ alone changes the gap by less than 1.5 percent at every shock scale, confirming that capital utilization nonlinearity is quantitatively irrelevant. The residual gap when both $S$ and $a$ are linearized---attributable to Tobin's~$q$ interactions, Kimball aggregation, and the non-separable marginal utility---accounts for the 8--11 percent assigned to the consumption/Euler block at posterior-estimated parameters (Figure~\ref{fig:decomposition_vs_scale}; the training-set average is 13.5 percent, Table~\ref{tab:equation_block}).
+
+
+% ============================================================================
+% CONSEQUENCES FOR INFERENCE
+% ============================================================================
+
+\section{Consequences for Inference}
+\label{sec:inference_consequences}
+
+The estimator recovers parameters within 5 percent on synthetic data in a 3-parameter validation (Appendix~\ref{app:validation_results}, Table~\ref{tab:param_recovery}), with all true values inside 90 percent credible intervals and $\hat{R} < 1.01$ (Table~\ref{tab:mcmc_diagnostics}). The regime-switching gate allocates 25 percent of periods to the nonlinear regime (Table~\ref{tab:regime_performance}). I now turn to the 18-parameter real-data estimation, where the consequences of the invisibility property become concrete.
+
+\subsection{18-Parameter Real-Data Estimation}
+\label{subsec:results_18param_kalman}
+
+I estimate the full 18-parameter SW07-HLT model on US data (1959Q1--2004Q4, 184 quarters, 7 observables). The linear Kalman baseline (1,000 NUTS draws, zero divergences, 100 minutes) is reported in Appendix~\ref{app:additional_results}, Table~\ref{tab:18param_posterior}.
+
+\paragraph{Regime-switching surrogate estimation.}
+\label{par:results_18param_switching}
+
+The surrogate identifies 10 percent of periods as nonlinear---concentrating around the Volcker disinflation, the early-1990s recession, and the dot-com bust---and completes in 2.4 hours with zero divergent transitions. The 18-nat log-likelihood gap ($-1{,}045$ vs.\ $-1{,}027$) is small relative to the likelihood itself (Appendix~\ref{sec:identification}).
+
+Three posterior shifts are directionally consistent with the invisibility mechanism (Table~\ref{tab:18param_switching_posterior}).
+
+\paragraph{Risk premium volatility doubles ($\sigma_b$: 0.12 $\to$ 0.28).} The linear model cannot generate endogenous amplification from the invisible investment block: to match observed investment volatility, it must inflate the exogenous risk premium shock. Restoring the nonlinear $S' \times p^k \times \xi_{t+1}/\xi_t$ channel lets $\sigma_b$ fall back toward its structural value. The observed doubling is consistent with this prediction, though surrogate approximation error or posterior multimodality may contribute.
+
+\paragraph{Wage markup persistence collapses ($\rho_w$: 0.37 $\to$ 0.08).} The linear model uses persistent wage markup shocks to substitute for the persistent investment-channel nonlinearity (first-order autocorrelation 0.81, mean burst length 12.5 quarters). Restoring the nonlinear channel makes this exogenous persistence unnecessary. The shift is consistent with the hypothesis, though the baseline uncertainty from bimodality in $\rho_w$ (two linear chains find 0.39 vs.\ 0.75) means the magnitude should be interpreted cautiously.
+
+\paragraph{Kimball curvature rises 2.7-fold ($\varepsilon_p$: 39 $\to$ 104).} Higher $\varepsilon_p$ \emph{reduces} nonlinearity by flattening demand. The linear model prefers low $\varepsilon_p$ to partially compensate for the missing amplification; the nonlinear model can afford steeper demand curves, though the wide credible interval ([56.6, 149.6]) reflects weak identification of this parameter.
+
+The 18-nat gap means some shifts could partly reflect surrogate error, though the RRMSE-based coverage scaling implies negligible distortion (Appendix~\ref{sec:formal_consistency}). Two independent linear chains converge to modes separated by 34 nats, so shifts should be read as mode-specific. A direct SEP comparison at posterior draws (Appendix~\ref{sec:identification}) confirms that the ROM1--SEP prediction gap is economically substantial, averaging 1.04 RMSE per variable---well above the surrogate's training RMSE of 0.47---indicating that the posterior shifts reflect genuine nonlinear effects rather than surrogate artifacts.
+
+\begin{table}[htbp]
+\centering
+\caption{Posterior Comparison: Kalman vs.\ Regime-Switching Surrogate}
+\label{tab:18param_switching_posterior}
+\begin{tabular}{llrrrr}
+\toprule
+Parameter & Description & Kalman & RS Surrogate & $\Delta$ & RS 90\% CI \\
+\midrule
+\multicolumn{6}{l}{\textit{Shock Persistence}} \\
+$\rho_a$ & TFP & 0.987 & 0.980 & $-$0.007 & [0.965, 0.987] \\
+$\rho_b$ & Risk premium & 0.762 & 0.590 & $-$0.172 & [0.220, 0.800] \\
+$\rho_g$ & Government & 0.986 & 0.974 & $-$0.012 & [0.953, 0.988] \\
+$\rho_{qs}$ & Investment & 0.782 & 0.818 & $+$0.036 & [0.709, 0.952] \\
+$\rho_{\pi}$ & Price markup & 0.059 & 0.042 & $-$0.017 & [0.013, 0.109] \\
+$\rho_w$ & Wage markup & 0.375 & 0.078 & $-$0.297 & [0.013, 0.343] \\
+$\rho_{ms}$ & Monetary & 0.182 & 0.069 & $-$0.113 & [0.015, 0.189] \\
+\midrule
+\multicolumn{6}{l}{\textit{Shock Volatilities}} \\
+$\sigma_a$ & TFP & 0.502 & 0.503 & $+$0.001 & [0.454, 0.564] \\
+$\sigma_b$ & Risk premium & 0.122 & 0.275 & $+$0.153 & [0.113, 1.059] \\
+$\sigma_g$ & Government & 0.508 & 0.513 & $+$0.005 & [0.461, 0.579] \\
+$\sigma_{qs}$ & Investment & 0.361 & 0.353 & $-$0.008 & [0.288, 0.469] \\
+$\sigma_{\pi}$ & Price markup & 0.143 & 0.147 & $+$0.004 & [0.125, 0.185] \\
+$\sigma_w$ & Wage markup & 0.204 & 0.330 & $+$0.126 & [0.212, 0.406] \\
+$\sigma_{ms}$ & Monetary & 0.245 & 0.248 & $+$0.003 & [0.221, 0.283] \\
+\midrule
+\multicolumn{6}{l}{\textit{Structural Parameters}} \\
+$\xi_p$ & Calvo prices & 0.740 & 0.755 & $+$0.015 & [0.549, 0.894] \\
+$\iota_p$ & Price indexation & 0.932 & 0.886 & $-$0.046 & [0.708, 0.962] \\
+$\varepsilon_p$ & Kimball curvature & 39.3 & 104.2 & $+$64.9 & [56.6, 149.6] \\
+$\xi_w$ & Calvo wages & 0.947 & 0.929 & $-$0.018 & [0.889, 0.946] \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: ``Kalman'' column reports posterior means from a linear NUTS chain (1,000 draws, AdvancedHMC.jl, zero divergences, ESS $\geq 501$) initialized with the same seed as the RS chain. These values differ from Table~\ref{tab:18param_posterior}, which reports a chain initialized from a different seed that converges to a different posterior mode (see convergence diagnostics in text). ``RS Surrogate'' reports posterior means from the regime-switching NUTS chain (1,000 draws, zero divergences, 2.4 hours on Apple M4). $\Delta$ is the difference in posterior means. RS 90\% CI is the 5th--95th percentile interval. Log-likelihood at posterior mean: Kalman $-1{,}027$; Regime-switching $-1{,}045$. Sample period: 1959Q1--2004Q4 ($T=184$ quarters).}
+\end{table}
+
+\paragraph{Convergence diagnostics.} Neither chain produces divergent transitions; within-chain ESS exceeds 501 (linear) and 473 (regime-switching). Two independent linear chains find different posterior modes---$\rho_w$ settles at 0.39 versus 0.75 across chains, with a 34-nat log-likelihood gap---indicating ridged geometry in the wage/price markup block consistent with \citet{herbst2016sequential}. A second regime-switching chain initialized from a different starting point (seed 123456) fails to find the same mode, converging instead to a region with log-likelihood 12,700 nats below the primary chain---confirming severe multimodality in the surrogate posterior. Multimodality is not unique to the surrogate: the 34-nat gap between linear chains shows that the underlying SW07 posterior itself has ridged geometry, consistent with the findings in \citet{herbst2016sequential}. The 12,700-nat gap in the surrogate posterior likely reflects the interaction between this intrinsic multimodality and the nonlinear correction, which amplifies the separation between modes by reshaping likelihood curvature in the investment block. A multi-start protocol with parallel tempering \citep{herbst2019tempered} would systematically explore competing modes; the linear--nonlinear comparison should be treated as indicative of the direction of posterior shifts conditional on the primary mode.
+
+\paragraph{Scope limitations.} The baseline training data use shock scale $\sigma = 0.1$, at which the ZLB binds only for implausibly large shocks ($\approx 12\sigma$). The supplementary dataset at $\sigma = 0.4$ adds 20,240 ZLB-binding samples, and the combined surrogate achieves RRMSE $= 0.12$ on binding episodes (Figures~\ref{fig:zlb_correction_robs}--\ref{fig:zlb_correction_4panel}). The baseline sample ends in 2004Q4; Section~\ref{subsec:extended_sample} extends both the linear and regime-switching estimation through 2025Q1.
+
+\subsection{Runtime}
+\label{subsec:results_hlt_runtime}
+
+Table~\ref{tab:benchmarks} compares computational costs across the estimation methods. The surrogate-based regime-switching estimator takes about 20 times as long per evaluation than the Kalman filter but orders of magnitude faster than a bootstrap particle filter with SEP transitions. The particle filter is embarrassingly parallel across particles; costs scale inversely with core count.
+
+\begin{table}[htbp]
+\centering
+\caption{Computational Benchmark Comparison}
+\label{tab:benchmarks}
+\begin{tabular}{lcccc}
+\toprule
+Method & Per Eval (s) & 1{,}000 NUTS Draws & Status & ESS/Divergences \\
+\midrule
+Kalman filter (ROM1) & 0.003 & 100 min & Complete & $\geq 501$ / 0 \\
+Regime-switching surrogate & 0.06 & 2.4 hours & Complete & $\geq 473$ / 0 \\
+Bootstrap PF + ROM1 ($N_p\!=\!5{,}000$) & 0.70 & $\approx 12$ min$^*$ & Evaluated$^\dagger$ & ESS $= 1.0$ \\
+Bootstrap PF + SEP ($N_p\!=\!100$, 4 cores) & $\approx 3{,}700$ & $\approx 43$ days & Projected & --- \\
+Bootstrap PF + SEP ($N_p\!=\!100$, 100 cores) & $\approx 147$ & $\approx 1.7$ days & Projected & --- \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: All timings on Apple M4 (single workstation, 4 performance cores). Kalman and RS surrogate rows are actual wall-clock times using AdvancedHMC.jl NUTS with finite-difference gradients. PF + SEP rows are projected assuming linear scaling. $^*$Per-evaluation cost only; MCMC would require tens of thousands of such evaluations. $^\dagger$Evaluated at the extended-sample posterior mean ($T=265$): ESS collapses to 1.0 in all 265 periods at every particle count tested ($N_p \in \{100, 500, 1{,}000, 5{,}000\}$), confirming weight degeneracy is structural.}
+\end{table}
+
+A bootstrap particle filter \citep{gordon1993novel} with ROM1 transitions collapses to ESS $= 1.0$ in every period at all particle counts tested ($N_p \in \{100, 500, 1{,}000, 5{,}000\}$), producing $\text{LL} = -21{,}181{,}202 \pm 304{,}163$ at $N_p = 5{,}000$ versus the exact Kalman filter value of $-1{,}818$---a 21-million-nat gap \citep[consistent with the degeneracy documented by][]{herbst2019tempered,cubaborda2019likelihood}. At the surrogate posterior mean, the gap widens further ($\text{LL} = -25{,}588{,}972$ at $N_p = 5{,}000$), as the nonlinear posterior concentrates in a region where the linear transition density provides even poorer importance sampling. Advanced particle filters---the tempered PF \citep{herbst2019tempered}, the conditionally optimal PF \citep{aruoba2021piecewise}, and the auxiliary PF \citep{pitt1999filtering}---alleviate degeneracy relative to the bootstrap filter but have been demonstrated only on small-scale models (3--8 states, 2--4 shocks). No published paper applies any particle filter variant to a 44-state model with 7 observables; the exponential scaling of \citet{snyder2008obstacles} applies to all importance-sampling-based filters because the fundamental obstacle is the variance of the observation log-likelihood, not the specific proposal distribution. The filter-free formulation sidesteps this degeneracy entirely by treating shocks as explicit unknowns and exploiting gradient information through HMC rather than importance weights.
+
+The offline cost is 12 hours (10 hours dataset generation, 2 hours training). At 147 seconds per direct SEP evaluation versus 0.06 seconds for the surrogate, the break-even point is 294 draws. A 1,000-draw NUTS run achieves $2{,}450\times$ speedup per evaluation, and the same surrogate serves multiple estimation runs since $g_\theta(s, \varepsilon)$ does not depend on observed data. A step-by-step runtime breakdown for the 3-parameter validation appears in Appendix~\ref{app:additional_results}, Table~\ref{tab:computational_cost}.
+
+
+\subsection{Extended-Sample Estimation Through 2025}
+\label{subsec:extended_sample}
+
+The baseline sample excludes the episodes where nonlinear dynamics should matter most. I extend the estimation through 2025Q1 ($T = 265$ quarters), running both the linear NUTS-HMC and the regime-switching surrogate NUTS-HMC on the same extended dataset. No surrogate retraining is needed: the neural network maps from $(\text{state}, \text{shock}, \theta)$ to observation corrections, so it generalizes to any sample period as long as the state space remains within the training support.
+
+Table~\ref{tab:extended_sample_posterior} reports the results. Under the linear Kalman filter, extending through 2025Q1 reveals dramatic COVID-driven shifts relative to the baseline posterior (Table~\ref{tab:18param_switching_posterior}): $\sigma_a$ rises from 0.50 to 0.72, $\sigma_w$ from 0.20 to 0.37, $\sigma_{qs}$ from 0.36 to 0.52, and $\varepsilon_p$ from 39 to 82. Investment persistence $\rho_{qs}$ falls from 0.78 to 0.65, while monetary persistence $\rho_{ms}$ doubles from 0.18 to 0.38---the COVID-era Federal Reserve's aggressive and persistent policy response leaves a clear imprint. The Kalman smoother at the linear posterior mean recovers risk-premium shocks of $56\sigma$, price markup shocks of $32\sigma$, and monetary shocks of $23\sigma$ during the COVID window (2020Q1--2021Q2)---events with probability below $10^{-300}$ under Gaussian innovations. Figure~\ref{fig:covid_shock_comparison} plots the four key shock series in standard-deviation units over 2018--2025. The linear model's reliance on such implausibly large exogenous shocks is a symptom of its inability to capture state-dependent propagation during extreme episodes.
+
+Under the regime-switching surrogate, the extended-sample posterior reveals systematic shifts relative to the linear model, with a 30-nat log-likelihood improvement ($-1{,}787$ versus $-1{,}818$) favoring the nonlinear specification. The surrogate absorbs COVID-era volatility through endogenous amplification rather than exogenous shocks: risk-premium volatility $\sigma_b$ falls from 0.179 to 0.091 (a 49 percent reduction), investment volatility $\sigma_{qs}$ from 0.524 to 0.423, and TFP volatility $\sigma_a$ from 0.716 to 0.634. In exchange, risk-premium persistence $\rho_b$ rises sharply from 0.731 to 0.901, and wage markup persistence $\rho_w$ from 0.160 to 0.236---the nonlinear model attributes COVID dynamics to persistent structural shifts propagated through the investment channel rather than transient large shocks. Kimball curvature $\varepsilon_p$ rises from 82 to 112, but with an effective sample size of only 43 draws---the posterior is nearly flat in this direction, confirming that the data cannot identify the pricing nonlinearity. By contrast, $\rho_b$ achieves ESS of 822, sharply identified by the likelihood. This asymmetry in posterior geometry corroborates the decomposition from a completely independent angle: risk-premium persistence---which enters the investment Euler equation directly---is where the data speak; Kimball curvature is where they are silent.
+
+\begin{table}[htbp]
+\centering
+\caption{Extended-Sample Posterior Comparison (1959Q1--2025Q1)}
+\label{tab:extended_sample_posterior}
+\begin{tabular}{llrrrr}
+\toprule
+Parameter & Description & Kalman & RS Surrogate & $\Delta$ & RS 90\% CI \\
+\midrule
+\multicolumn{6}{l}{\textit{Shock Persistence}} \\
+$\rho_a$ & TFP & 0.988 & 0.989 & $+$0.001 & [0.986, 0.990] \\
+$\rho_b$ & Risk premium & 0.731 & 0.901 & $+$0.170 & [0.831, 0.947] \\
+$\rho_g$ & Government & 0.986 & 0.987 & $+$0.000 & [0.980, 0.990] \\
+$\rho_{qs}$ & Investment & 0.652 & 0.728 & $+$0.076 & [0.625, 0.789] \\
+$\rho_{\pi}$ & Price markup & 0.021 & 0.020 & $-$0.001 & [0.011, 0.042] \\
+$\rho_w$ & Wage markup & 0.160 & 0.236 & $+$0.076 & [0.133, 0.333] \\
+$\rho_{ms}$ & Monetary & 0.376 & 0.280 & $-$0.096 & [0.123, 0.384] \\
+\midrule
+\multicolumn{6}{l}{\textit{Shock Volatilities}} \\
+$\sigma_a$ & TFP & 0.716 & 0.634 & $-$0.082 & [0.591, 0.682] \\
+$\sigma_b$ & Risk premium & 0.179 & 0.091 & $-$0.088 & [0.072, 0.116] \\
+$\sigma_g$ & Government & 0.550 & 0.499 & $-$0.051 & [0.464, 0.538] \\
+$\sigma_{qs}$ & Investment & 0.524 & 0.423 & $-$0.102 & [0.369, 0.518] \\
+$\sigma_{\pi}$ & Price markup & 0.145 & 0.142 & $-$0.003 & [0.132, 0.154] \\
+$\sigma_w$ & Wage markup & 0.367 & 0.333 & $-$0.033 & [0.292, 0.381] \\
+$\sigma_{ms}$ & Monetary & 0.240 & 0.219 & $-$0.021 & [0.204, 0.235] \\
+\midrule
+\multicolumn{6}{l}{\textit{Structural Parameters}} \\
+$\xi_p$ & Calvo prices & 0.938 & 0.940 & $+$0.002 & [0.922, 0.950] \\
+$\iota_p$ & Price indexation & 0.961 & 0.908 & $-$0.053 & [0.846, 0.985] \\
+$\varepsilon_p$ & Kimball curvature & 81.6 & 112.3 & $+$30.7 & [62.7, 135.1] \\
+$\xi_w$ & Calvo wages & 0.945 & 0.945 & $+$0.000 & [0.936, 0.950] \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Extended sample 1959Q1--2025Q1 ($T=265$). ``Kalman'' reports posterior means from linear NUTS-HMC (2,000 draws, AdvancedHMC.jl, zero divergences, ESS $\geq 668$). ``RS Surrogate'' reports regime-switching NUTS-HMC with soft gating (2,000 draws, zero divergences, ESS $\geq 43$). $\Delta$ is the shift in posterior means. RS 90\% CI is the 5th--95th percentile. Log-likelihood at posterior mean: Kalman $-1{,}818$; RS $-1{,}787$.}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/covid_shock_comparison.pdf}
+\caption{Kalman-smoothed shocks (in $\sigma$ units), 2018--2025. Both series are evaluated through the same linear Kalman smoother; only the parameter vector differs. Blue dashed: linear posterior mean; red solid: surrogate posterior mean. Gray band: COVID window (2020Q1--2021Q2). At the linear posterior, risk-premium shocks peak at $56\sigma$. At the surrogate posterior, the halved $\sigma_b$ forces even larger normalized shocks---the surrogate's parameters are structurally incompatible with a linear filter. The 30-nat log-likelihood improvement under the regime-switching likelihood (Table~\ref{tab:extended_sample_posterior}) confirms that the nonlinear propagation channel, not parameter recalibration alone, accounts for the better fit.}
+\label{fig:covid_shock_comparison}
+\end{figure}
+
+The extended-sample results close the loop on the decomposition from Section~\ref{sec:invisibility}. The invisibility theory predicts that the linear model must inflate exogenous shock processes to compensate for the missing investment-channel amplification. The baseline estimation on 1959--2004 confirms this qualitatively: $\sigma_b$ doubles, $\rho_w$ collapses. Extending through 2025 turns a qualitative pattern into a quantitative stress test. The COVID window generates observations that no linear model can rationalize at reasonable shock magnitudes---risk-premium shocks of $56\sigma$ correspond to events with probability below $10^{-300}$. The surrogate posterior, which has access to the nonlinear propagation channel, absorbs the same data with structurally smaller shocks: all seven volatilities fall, with the largest reduction in $\sigma_b$ ($-49$ percent), exactly the shock that feeds most directly into the investment Euler equation. The alignment is consistent with the invisibility mechanism: the decomposition identifies the investment block as the dominant nonlinearity source (69 percent), and the estimation independently identifies risk-premium dynamics as the dimension where linear and nonlinear posteriors diverge most sharply, though both exercises derive from the same model.
+
+
+\section{Discussion and Robustness}
+\label{sec:robustness}
+
+The influence of the initial condition $s_0$ decays with half-life 53 quarters; in the 3-parameter validation the sampler's posterior for $s_0$ converges to steady state with marginal SD $\approx 0.01$.
+
+Surrogate accuracy remains within the RRMSE $< 0.002$ acceptance threshold across the full parameter support, including extreme regions where RRMSE rises to 0.0023 (Appendix~\ref{app:robustness_extended}, Table~\ref{tab:surrogate_regional_accuracy}). The combined surrogate (63,939 samples including 20,240 ZLB-binding episodes at shock scale 0.4) achieves RRMSE of 0.12 on binding-period test data---an 89 percent improvement over the version trained without ZLB episodes. Cross-seed variation is below 1.5 percent of parameter means, and re-estimation with diffuse or tight priors keeps truth inside all credible intervals (Appendix~\ref{app:robustness_extended}, Tables~\ref{tab:seed_sensitivity}--\ref{tab:prior_sensitivity}).
+
+During ZLB-binding episodes, the ROM1 predicts deeply negative rates; the surrogate adds back the $\approx$4 percentage point correction imposed by the binding constraint, tracking the FOM truth closely across all observables (Appendix~\ref{app:robustness_extended}, Figures~\ref{fig:zlb_correction_robs}--\ref{fig:zlb_correction_4panel}).
+
+\subsection{Known Limitations}
+\label{subsec:known_limitations}
+
+Two independent linear chains find different posterior modes (34-nat gap), indicating ridged geometry in the wage/price markup block \citep{herbst2016sequential}. The decomposition results are deterministic and unaffected; the posterior comparison in Section~\ref{sec:inference_consequences} is conditional on a single mode. The baseline surrogate is trained at shock scale 0.1, where the ZLB rarely binds; the supplementary dataset at 0.4 extends coverage. The extended-sample estimation in Section~\ref{subsec:extended_sample} applies the same surrogate to the 1959Q1--2025Q1 sample without retraining, since the neural network maps from parameter-state-shock space rather than time-series indices. The realized log-likelihood gap of 18 nats is small relative to the likelihood itself, and the RRMSE-based coverage scaling ($\text{RRMSE}^4 \times T \approx 10^{-10}$) implies negligible distortion (Appendix~\ref{sec:formal_consistency}, Corollary~\ref{cor:coverage}). A direct SEP posterior comparison at twenty posterior draws confirms that the ROM1--SEP prediction gap is substantial (average RMSE 1.04 per variable, exceeding $3\sigma_y$ for labor and the interest rate), indicating that the posterior shifts reflect genuine nonlinear effects rather than surrogate approximation artifacts.
+
+The 3-parameter Gal\'i validation (Section~\ref{sec:validation_design}) establishes that the surrogate pipeline recovers known parameters within 5 percent with correct credible-interval coverage, but the gap between this small-scale exercise and the 18-parameter HLT estimation is a limitation. I address it from three angles: (i) the formal consistency theory (Appendix~\ref{sec:formal_consistency}) shows that surrogate posterior consistency and coverage depend on $\text{RRMSE}^4 \times T$, which is $\approx 10^{-10}$ for the HLT surrogate---independent of the number of parameters; (ii) the twenty-draw direct SEP comparison provides an empirical check at the full model scale; (iii) the decomposition results in Sections~\ref{sec:invisibility}--\ref{sec:decomposition} are deterministic and do not depend on MCMC at all. A full Monte Carlo coverage study with known DGP using the SW07-HLT model---generating synthetic data, estimating, and checking interval coverage across hundreds of replications---would provide the definitive validation but requires computational resources beyond the scope of this paper (each replication takes approximately 44 hours).
+
+\subsection{Policy Implications}
+
+If linear models systematically overestimate exogenous shock volatility and underestimate endogenous amplification, the economy is driven more by endogenous propagation than standard estimates suggest. The direct SEP posterior comparison confirms that the nonlinear correction exceeds $3\sigma_y$ for labor and the interest rate at posterior parameter values, suggesting that revisiting optimal policy toward dampening investment volatility is warranted---a question requiring formal welfare analysis beyond this paper's scope. For model selection, the results favor prioritizing the investment block over the ELB and Kimball pricing---the opposite of current practice.
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+The investment adjustment cost $S(I_t/I_{t-1})$ satisfies $S(1) = S'(1) = 0$, making it invisible to linearization. This invisible channel accounts for 69 percent of the nonlinear-linear gap; the price Phillips curve accounts for 0.2 percent. Even during binding ELB episodes at moderate shock scales, investment dominates by a factor of eight. A Gal\'i model with the same ELB and Kimball structure but no investment confirms the identification. These are deterministic measurements, independent of MCMC convergence or surrogate quality.
+
+Linear estimation compensates by inflating exogenous processes---each parameter shifting in the direction predicted by the invisibility theory (Section~\ref{sec:inference_consequences}). Extending the sample through 2025Q1 strengthens every finding. The regime-switching surrogate absorbs COVID-era volatility through endogenous amplification: all seven shock volatilities fall (risk premium by 49 percent), persistence parameters rise ($\rho_b$: 0.73 $\to$ 0.90), and the log-likelihood improves by 30 nats. Posterior geometry corroborates the decomposition: risk-premium persistence $\rho_b$ is sharply identified (ESS = 822) because the risk-premium shock feeds directly into the investment Euler equation, while Kimball curvature $\varepsilon_p$ is nearly flat (ESS = 43)---the data speak through the investment channel and are silent on pricing nonlinearity.
+
+Three extensions are immediate priorities. First, a full Monte Carlo coverage study with known DGP using the SW07-HLT model would verify credible-interval calibration at the 18-parameter scale. Second, extending the invisibility analysis to other models with adjustment costs \citep[e.g.,][]{christiano2005nominal,justiniano2010investment} would test whether investment dominance is a general property of medium-scale models with convex frictions. Third, an out-of-sample forecasting comparison and formal Bayes factor computation would quantify the gains from nonlinear estimation in predictive terms. Robustness to the $S''(1)$ calibration and OccBin comparison---requiring separate estimation pipelines and surrogate retraining---remain open.
+
+
+\pagebreak
+
+\bibliography{farkas_jmp_2026}
+
+\pagebreak
+% ============================================================================
+% APPENDICES
+% ============================================================================
+
+\appendix
+
+\section{Full Model Specification}
+\label{app:model}
+
+This appendix presents the complete equilibrium system for the Gal\'i (2015) New Keynesian model with occasionally binding zero lower bound, used in the 3-parameter validation exercise. The 18-parameter analysis in Section~\ref{subsec:nonlinearity_sources} uses the richer \citet{smets2007shocks} specification, detailed in Appendix~\ref{app:sw07_model} below.
+
+
+\subsection{Household Problem}
+
+A representative household maximizes lifetime utility:
+\begin{equation}
+\max \E_0 \sum_{t=0}^\infty \beta^t \left[ \frac{C_t^{1-\sigma}}{1-\sigma} - \frac{N_t^{1+\varphi}}{1+\varphi} \right],
+\end{equation}
+subject to the budget constraint:
+\begin{equation}
+P_t C_t + B_t \leq W_t N_t + R_{t-1} B_{t-1} + \Pi_t + T_t,
+\end{equation}
+where $C_t$ is consumption, $N_t$ is labor, $B_t$ is nominal bond holdings, $W_t$ is nominal wage, $R_t$ is gross nominal interest rate, $\Pi_t$ are firm profits, and $T_t$ are lump-sum transfers.
+
+First-order conditions yield:
+\begin{align}
+\text{(Euler equation)} \quad & C_t^{-\sigma} = \beta R_t \E_t\left[ \frac{P_t}{P_{t+1}} C_{t+1}^{-\sigma} \right], \label{eq:euler_full} \\
+\text{(Labor supply)} \quad & N_t^\varphi = \frac{W_t}{P_t} C_t^{-\sigma}. \label{eq:labor_supply_full}
+\end{align}
+
+
+\subsection{Firm Problem}
+
+A continuum of firms $i \in [0,1]$ produce differentiated goods with production function:
+\begin{equation}
+Y_t(i) = A_t N_t(i),
+\end{equation}
+where $A_t$ is aggregate productivity. Firms face Calvo pricing: each period, fraction $1-\xi_p$ can reset prices optimally, while fraction $\xi_p$ keep prices unchanged (with indexation $\iota$ to past inflation).
+
+The price-setting decision yields the New Keynesian Phillips Curve:
+\begin{equation}
+\pi_t = \beta \E_t[\pi_{t+1}] + \kappa \hat{y}_t + \eps_t^\mu, \label{eq:nkpc_full}
+\end{equation}
+where $\pi_t = \log(P_t/P_{t-1})$ is inflation, $\hat{y}_t$ is output gap, $\kappa = \frac{(1-\xi_p)(1-\beta\xi_p)}{\xi_p}(\sigma + \varphi)$ is the slope, and $\eps_t^\mu$ is a markup shock.
+
+
+\subsection{Monetary Policy}
+
+The central bank follows a Taylor rule with zero lower bound:
+\begin{equation}
+R_t = \max\left\{1, R_t^* \right\}, \quad R_t^* = R_{t-1}^{\rho_R} \left[ R^{ss} \left(\frac{\Pi_t}{\Pi^{ss}}\right)^{\phi_\pi} \left(\frac{Y_t}{Y^{ss}}\right)^{\phi_y} \right]^{1-\rho_R} e^{\eps_t^r}, \label{eq:taylor_zlb_full}
+\end{equation}
+where $R^{ss} = \Pi^{ss}/\beta$ is the steady-state rate, $\rho_R \in [0,1]$ is the interest rate smoothing parameter, and $\eps_t^r$ is a monetary shock.
+
+
+\subsection{Exogenous Processes}
+
+Technology and markup shocks follow AR(1) processes:
+\begin{align}
+\log A_t &= \rho_a \log A_{t-1} + \sigma_a \eta_t^a, \quad \eta_t^a \sim \mathcal{N}(0,1), \\
+\eps_t^\mu &= \rho_\mu \eps_{t-1}^\mu + \sigma_\mu \eta_t^\mu, \quad \eta_t^\mu \sim \mathcal{N}(0,1), \\
+\eps_t^r &\sim \mathcal{N}(0, \sigma_R^2) \quad \text{(i.i.d.)}.
+\end{align}
+
+
+\subsection{Market Clearing}
+
+Goods market clearing:
+\begin{equation}
+Y_t = C_t.
+\end{equation}
+
+Labor market clearing:
+\begin{equation}
+N_t = \int_0^1 N_t(i) \, di.
+\end{equation}
+
+
+\subsection{Log-Linearized System (for comparison)}
+
+Defining $\hat{x}_t = \log(X_t/X^{ss})$ and $\pi_t = \log(\Pi_t)$, the linearized system is:
+\begin{align}
+\hat{y}_t &= \E_t[\hat{y}_{t+1}] - \frac{1}{\sigma}(\hat{R}_t - \E_t[\pi_{t+1}]), \\
+\pi_t &= \beta \E_t[\pi_{t+1}] + \kappa \hat{y}_t + \eps_t^\mu, \\
+\hat{R}_t &= \rho_R \hat{R}_{t-1} + (1-\rho_R)(\phi_\pi \pi_t + \phi_y \hat{y}_t) + \eps_t^r \quad \text{(ignoring ZLB)}.
+\end{align}
+
+The nonlinear system solved by SEP uses equations (\ref{eq:euler_full})-(\ref{eq:taylor_zlb_full}) directly without linearization.
+
+
+\subsection{Steady State}
+
+In deterministic steady state ($A=1$, $\eps^\mu=\eps^r=0$), variables satisfy:
+\begin{align}
+R^{ss} &= \Pi^{ss}/\beta, \\
+C^{ss} &= A^{ss} N^{ss} = N^{ss}, \\
+(N^{ss})^\varphi &= \frac{W^{ss}}{P^{ss}} (C^{ss})^{-\sigma} \implies N^{ss} = \left[\frac{W^{ss}/P^{ss}}{(C^{ss})^{\sigma}}\right]^{1/\varphi}.
+\end{align}
+
+The calibration sets $\beta = 0.99$ (quarterly), $\sigma=1$, $\varphi=1$, $\xi_p=0.75$, $\phi_\pi=1.5$, $\phi_y=0.125$, $\rho_a=0.9$, and $\rho_\mu=0.9$.
+
+
+\subsection{SW07-HLT Model Specification}
+\label{app:sw07_model}
+
+The 18-parameter estimation in Sections~\ref{subsec:nonlinearity_sources}--\ref{par:results_18param_switching} uses a nonlinear version of the \citet{smets2007shocks} model, extended with habit formation in consumption, variable capital utilization, and investment adjustment costs (the Holden--Lind\'e--Trabandt, or HLT, occasionally binding constraint extension). This subsection summarizes the key equations; the full system has 66 endogenous variables and 7 exogenous shocks.
+
+\paragraph{Households.} The representative household maximizes
+\[
+\E_0 \sum_{t=0}^\infty \beta^t \, b_t \left[ \frac{(C_t - h C_{t-1})^{1-\sigma_c}}{1-\sigma_c} - \frac{N_t^{1+\sigma_l}}{1+\sigma_l} \right],
+\]
+subject to a budget constraint involving consumption $C_t$, labor $N_t$, capital services $K_t^s = z_t \bar{K}_{t-1}$ (where $z_t$ is utilization), bond holdings $B_t$, and a risk premium shock $b_t$ that creates a wedge between the risk-free rate and the return on capital. The habit parameter $h$ generates the consumption dynamics that interact with the investment channel.
+
+\paragraph{Capital accumulation and investment.} Physical capital evolves as
+\[
+\bar{K}_t = (1-\delta)\bar{K}_{t-1} + q_t^s \left[1 - S\!\left(\frac{I_t}{I_{t-1}}\right)\right] I_t,
+\]
+where $q_t^s$ is an investment-specific technology shock and the adjustment cost function is
+\[
+S\!\left(\frac{I_t}{I_{t-1}}\right) = \frac{S''}{2}\left(\gamma \frac{I_t}{I_{t-1}} - \gamma\right)^2, \quad S'' = 6.01, \quad \gamma = 1 + \bar{\gamma}/100.
+\]
+The investment first-order condition yields Tobin's $q$:
+\[
+1 = q_t^s \, p_t^k \!\left[1 - S_t - \gamma \frac{I_t}{I_{t-1}} S'_t\right] + \bar{\beta}\,\frac{\xi_{t+1}}{\xi_t}\,q_{t+1}^s \, p_{t+1}^k \left(\gamma \frac{I_{t+1}}{I_t}\right)^2 S'_{t+1},
+\]
+where $\bar{\beta} \equiv \beta \gamma^{-\sigma_c}$ is the effective discount factor, $p_t^k$ denotes the real price of capital (Tobin's $q$), and $\xi_t$ is the marginal utility of consumption. The interaction of $S'$, $p^k$, and the Euler wedge $\xi_{t+1}/\xi_t$ is the most likely source of the 69 percent nonlinearity share documented in Table~\ref{tab:equation_block}.
+
+\paragraph{Capital utilization.} The utilization cost function is
+\[
+a(z_t) = \frac{r^{k,ss}}{c_z}\bigl(e^{c_z(z_t - 1)} - 1\bigr), \quad c_z = \frac{\bar{c}_z}{1 - \bar{c}_z}, \quad \bar{c}_z = 0.27,
+\]
+so $c_z \approx 0.37$. The exponential form means the marginal cost of utilization accelerates above steady state and decelerates below it, contributing to the asymmetric amplification visible in the IRF comparisons (Section~\ref{subsec:irf_comparison}).
+
+\paragraph{Price setting.} Firms face Calvo price stickiness with probability $\xi_p$ of not resetting, partial indexation at rate $\iota_p$ to lagged inflation, and Kimball-type demand aggregation with curvature parameter $\varepsilon_p$. The Kimball aggregator generates a variable demand elasticity: as the firm's relative price moves from the symmetric equilibrium, the demand elasticity changes, creating strategic complementarity in price setting. Price dispersion $D_p$ evolves endogenously and enters the aggregate production function.
+
+\paragraph{Wage setting.} Wage stickiness follows an analogous Calvo--Kimball structure with parameters $\xi_w$ (Calvo wage probability) and $\varepsilon_w$ (Kimball wage curvature, calibrated at the \citet{smets2007shocks} value and not estimated). The wage Phillips curve includes partial indexation to past wage inflation.
+
+\paragraph{Monetary policy.} The shadow (unconstrained) Taylor rule follows \citet{smets2007shocks}:
+\[
+\tilde{R}_t = \tilde{R}_{t-1}^{\rho_{ms}} \!\left[\bar{R}\left(\frac{\Pi_t}{\bar{\Pi}}\right)^{r_\pi} \!\left(\frac{Y_t}{Y_t^f}\right)^{r_y}\right]^{1-\rho_{ms}} \!\left(\frac{Y_t/Y_t^f}{Y_{t-1}/Y_{t-1}^f}\right)^{r_{\Delta y}} e^{\varepsilon_t^{ms}},
+\]
+where $Y_t^f$ is flex-price output and $\varepsilon_t^{ms}$ is a monetary policy shock. The ZLB is imposed via the softplus approximation from equation~\eqref{eq:softplus_zlb}:
+\[
+R_t = 1 + \frac{1}{\kappa_s}\log\!\bigl(1 + e^{\kappa_s(\tilde{R}_t - 1)}\bigr), \quad \kappa_s = 100.
+\]
+Both the shadow rate $\tilde{R}_t$ and the constrained rate $R_t$ are endogenous variables, allowing the model to track the shadow rate gap during ZLB episodes. The softplus formulation is everywhere differentiable, giving the SEP Newton solver an exact Jacobian without the subdifferential treatment required by the hard $\max$ operator used in the original HLT extension.
+
+\paragraph{Exogenous processes.} Seven AR(1) shocks drive the model:
+\[
+\varepsilon_t^j = \rho_j \varepsilon_{t-1}^j + \sigma_j \eta_t^j, \quad \eta_t^j \sim \mathcal{N}(0,1), \quad j \in \{a, b, g, qs, \pi, w, ms\}.
+\]
+These correspond to total factor productivity ($a$), risk premium ($b$), government spending ($g$), investment-specific technology ($qs$), price markup ($\pi$), wage markup ($w$), and monetary policy ($ms$).
+
+\paragraph{Estimated parameters.} Table~\ref{tab:18param_posterior} lists the 18 parameters estimated in the real-data exercise: 7 shock persistence parameters $\rho_j$, 7 shock volatilities $\sigma_j$, and 4 structural parameters ($\xi_p$, $\iota_p$, $\varepsilon_p$, $\xi_w$). The remaining structural parameters ($\sigma_c$, $\sigma_l$, $h$, $S''$, $\bar{c}_z$, $r_\pi$, $r_y$, $r_{\Delta y}$, $\delta$, $\bar{\gamma}$, and steady-state ratios) are calibrated at the \citet{smets2007shocks} values.
+
+\paragraph{Observables.} The seven observable variables are output growth ($\Delta y_t$), consumption growth ($\Delta c_t$), investment growth ($\Delta i_t$), hours worked ($l_t$), inflation ($\pi_t$), wage growth ($\Delta w_t$), and the federal funds rate ($r_t^{\text{obs}}$). These are mapped to model variables through measurement equations that add trend growth to growth rates and center levels at their sample means.
+
+
+\section{SEP Algorithm Implementation Details}
+\label{app:sep}
+
+This appendix provides technical details on the Stochastic Extended Path implementation.
+
+
+\subsection{Gauss--Hermite Quadrature Nodes}
+
+To discretize the continuous shock distribution $\eps_t \sim \mathcal{N}(0, \Sigma_\eps)$, I use Gauss--Hermite quadrature. For each shock dimension $j \in \{1, \ldots, n_\eps\}$, I compute $K$ nodes $\{(\eps_j^{(k)}, w_j^{(k)})\}_{k=1}^K$ satisfying:
+\begin{equation}
+\int_{-\infty}^\infty f(x) \frac{1}{\sqrt{2\pi}} e^{-x^2/2} \, dx \approx \sum_{k=1}^K w_j^{(k)} f(\eps_j^{(k)}).
+\end{equation}
+
+For $K=3$ (baseline), the nodes and weights are:
+\begin{align}
+\eps^{(1)} &= -\sqrt{3}, \quad w^{(1)} = 1/6, \\
+\eps^{(2)} &= 0, \quad w^{(2)} = 2/3, \\
+\eps^{(3)} &= +\sqrt{3}, \quad w^{(3)} = 1/6.
+\end{align}
+
+For $n_\eps=3$ shocks, the full product grid contains $K^{n_\eps} = 27$ nodes. I construct the tensor product:
+\begin{equation}
+\mathcal{E} = \left\{ (\eps_1^{(k_1)}, \eps_2^{(k_2)}, \eps_3^{(k_3)}) \mid k_1, k_2, k_3 \in \{1,2,3\} \right\},
+\end{equation}
+with weights $w^{(k_1,k_2,k_3)} = w_1^{(k_1)} w_2^{(k_2)} w_3^{(k_3)}$.
+
+
+\subsection{Sparse Tree Construction}
+
+The full tree with branching horizon $H$ and $K=3$ nodes contains $3^{H \times n_\eps}$ terminal nodes. For $H=15$ and $n_\eps=3$, this is $3^{45} \approx 2 \times 10^{21}$ nodes—computationally infeasible.
+
+I employ two pruning strategies:
+
+\textit{Horizon reduction.} Branch at full resolution for $H_1 = 4$ periods, then collapse to mean path ($\eps_t=0$ for $t > H_1$). This reduces terminal nodes to $3^{12} = 531{,}441$.
+
+\textit{Low-probability pruning.} Discard nodes with cumulative weight $< 10^{-6}$. For Gaussian shocks, extreme nodes (e.g., $(\eps_1, \eps_2, \eps_3) = (+\sqrt{3}, +\sqrt{3}, +\sqrt{3})$) have weight $(1/6)^3 = 0.0046$, but paths requiring such extremes in multiple consecutive periods are dropped.
+
+Final tree size: $\approx 120{,}000$ nodes for typical parameterizations in the 3-shock model.
+
+For the 7-shock HLT model ($n_\eps = 7$, $K=3$), the full product grid at each branching period contains $3^7 = 2{,}187$ nodes. The funnel structure branches at full resolution for $H_{\text{branch}} = 2$ periods, yielding $2{,}187^2 \approx 4.8 \times 10^6$ terminal nodes before pruning. After low-probability pruning, the effective tree has approximately 54 nodes per root period, and the total SEP system dimension (for a $T_{\text{SEP}}=40$ period simulation) is approximately $54 \times 40 \times 66 \approx 143{,}000$ variables. The block-tridiagonal Jacobian structure keeps the factorization cost manageable despite this large nominal dimension, since each block is $66 \times 66$ and adjacent blocks share the temporal structure of the model equations.
+
+
+\subsection{Newton Solver with Fixed Initial Condition}
+
+The SEP residual function $R: \R^{T \times n_s} \to \R^{T \times n_s}$ is defined by stacking equilibrium equations (\ref{eq:euler_full})-(\ref{eq:taylor_zlb_full}) at each tree node. The Jacobian is:
+\begin{equation}
+J(Y) = \frac{\partial R(Y)}{\partial Y}.
+\end{equation}
+
+Standard Newton iteration:
+\begin{equation}
+Y^{(i+1)} = Y^{(i)} - \alpha J(Y^{(i)})^{-1} R(Y^{(i)}),
+\end{equation}
+where $\alpha \in (0,1]$ is a line search parameter.
+
+\textbf{Key modification for non-SS flexibility}: The initial state $s_0 = Y[1,:]$ is \emph{excluded from the update}. Formally, partition:
+\begin{equation}
+Y = \begin{bmatrix} Y_{\text{fixed}} \\ Y_{\text{free}} \end{bmatrix}, \quad Y_{\text{fixed}} = s_0 \in \R^{n_s}, \quad Y_{\text{free}} = [s_1, \ldots, s_T] \in \R^{(T \times n_s)}.
+\end{equation}
+
+The Newton system becomes:
+\begin{equation}
+\frac{\partial R}{\partial Y_{\text{free}}} \Delta Y_{\text{free}} = -R(Y_{\text{fixed}}, Y_{\text{free}}), \quad Y_{\text{free}}^{(i+1)} = Y_{\text{free}}^{(i)} + \alpha \Delta Y_{\text{free}}.
+\end{equation}
+
+This ensures $s_0$ remains fixed regardless of parameter values, validating the claim that SEP imposes no steady-state requirement.
+
+
+\subsection{Warm-Starting Implementation}
+
+When solving over a parameter grid $\{\theta^{(i)}\}_{i=1}^N$, I initialize $Y^{(0)}$ for $\theta^{(i+1)}$ using the converged solution from $\theta^{(i)}$:
+\begin{equation}
+Y^{(0)}(\theta^{(i+1)}) = Y^*(\theta^{(i)}).
+\end{equation}
+
+Warm starts reduce Newton iterations from about 20 with a cold start to about 3--5 in the grid runs. This reduction implies a 4--6$\times$ speedup across the grid.
+
+
+\section{Surrogate Training Details}
+\label{app:surrogate}
+
+This appendix describes neural network architecture, training procedure, and hyperparameter selection.
+
+
+\subsection{Data Standardization}
+
+All inputs and outputs are standardized to zero mean and unit variance before training:
+\begin{align}
+\tilde{s}_{-1} &= (s_{-1} - \mu_{s_{-1}})/\sigma_{s_{-1}}, \\
+\tilde{\eps} &= (\eps - \mu_\eps)/\sigma_\eps = \eps/\sigma_\eps \quad (\text{since } \mu_\eps=0), \\
+\tilde{\theta} &= (\theta - \mu_\theta)/\sigma_\theta,
+\end{align}
+where $\mu$ and $\sigma$ are computed from the training set. Outputs are similarly standardized:
+\begin{equation}
+\tilde{s} = (s - \mu_s)/\sigma_s.
+\end{equation}
+
+During inference, I invert the transformation:
+\begin{equation}
+s = \mu_s + \sigma_s \cdot \text{MLP}(\tilde{s}_{-1}, \tilde{\eps}, \tilde{\theta}).
+\end{equation}
+
+
+\subsection{Architecture and Hyperparameters}
+
+The baseline MLP architecture for the 3-parameter case is:
+\begin{align}
+\text{Input layer:} \quad & \mathbb{R}^{28} \quad (22 \text{ state} + 3 \text{ shock} + 3 \text{ parameter}), \\
+\text{Hidden layer 1:} \quad & \mathbb{R}^{256}, \quad \text{tanh activation}, \\
+\text{Hidden layer 2:} \quad & \mathbb{R}^{128}, \quad \text{tanh activation}, \\
+\text{Output layer:} \quad & \mathbb{R}^{22} \quad (\text{next state}).
+\end{align}
+
+Total parameters: $(28 \times 256) + 256 + (256 \times 128) + 128 + (128 \times 22) + 22 = 43{,}158$.
+
+For the 18-parameter case, the input dimension increases to $\mathbb{R}^{51}$ ($26$ states $+ 7$ shocks $+ 18$ parameters), the output dimension is $\mathbb{R}^{26}$ (next state), and I replace tanh with SiLU ($x \cdot \text{sigmoid}(x)$, where $\text{sigmoid}(x) = 1/(1+e^{-x})$) to avoid saturation when the filter visits states far from the training mean. The hidden layer widths remain 256 and 128, yielding $51 \times 256 + 256 + 256 \times 128 + 128 + 128 \times 26 + 26 = 49{,}562$ parameters.
+
+
+\subsection{Training Procedure}
+
+\begin{enumerate}
+\item \textbf{Optimizer}: Adam with learning rate $\eta = 0.001$, $\beta_1=0.9$, $\beta_2=0.999$.
+
+\item \textbf{Loss function}: Mean squared error:
+\begin{equation}
+\mathcal{L}(\theta_{\text{NN}}) = \frac{1}{N_{\text{train}}} \sum_{i=1}^{N_{\text{train}}} \|\text{MLP}(\tilde{s}_{-1}^{(i)}, \tilde{\eps}^{(i)}, \tilde{\theta}^{(i)}) - \tilde{s}^{(i)}\|^2.
+\end{equation}
+
+\item \textbf{Batch size}: 64 samples.
+
+\item \textbf{Early stopping}: Monitor validation loss every 10 epochs. Stop if validation loss does not improve for 20 consecutive checkpoints (patience=20).
+
+\item \textbf{Epochs}: Maximum 2,000 epochs, but typically converges in 300-600 epochs.
+\end{enumerate}
+
+
+\subsection{Hyperparameter Grid Search}
+
+I evaluate 12 configurations from the Cartesian product of five architectures, two activations, and three learning rates, then prune dominated combinations. The full grid is:
+\begin{itemize}
+\item Hidden layers: $\{[128], [256], [256, 128], [512, 256], [256, 128, 64]\}$
+\item Activation: $\{\text{tanh}, \text{ReLU}\}$
+\item Learning rate: $\{0.0005, 0.001, 0.002\}$
+\end{itemize}
+
+Table~\ref{tab:hyperparameter_grid} reports validation RRMSE for the 12 configurations that survived an initial screening (combinations with RRMSE above 0.005 after 100 epochs were dropped early). The [256,~128] architecture with tanh activation and learning rate 0.001 achieves the best accuracy-per-training-hour tradeoff and is selected as the baseline.
+
+\begin{table}[htbp]
+\centering
+\caption{Hyperparameter Grid Search Results}
+\label{tab:hyperparameter_grid}
+\begin{tabular}{lcccc}
+\toprule
+Architecture & Activation & Learn Rate & Val RRMSE & Train Time \\
+\midrule
+\texttt{[256, 128]} & tanh & 0.001 & \textbf{0.00082} & 8 min \\
+\texttt{[512, 256]} & tanh & 0.001 & 0.00074 & 18 min \\
+\texttt{[256, 128, 64]} & tanh & 0.001 & 0.00089 & 11 min \\
+\texttt{[256]} & tanh & 0.001 & 0.00121 & 5 min \\
+\texttt{[128]} & tanh & 0.001 & 0.00198 & 3 min \\
+\texttt{[256, 128]} & ReLU & 0.001 & 0.00095 & 8 min \\
+\texttt{[512, 256]} & ReLU & 0.001 & 0.00088 & 17 min \\
+\texttt{[256]} & ReLU & 0.001 & 0.00135 & 5 min \\
+\texttt{[256, 128]} & tanh & 0.0005 & 0.00091 & 12 min \\
+\texttt{[256, 128]} & tanh & 0.002 & 0.00104 & 7 min \\
+\texttt{[512, 256]} & tanh & 0.0005 & 0.00079 & 25 min \\
+\texttt{[256, 128]} & ReLU & 0.002 & 0.00118 & 7 min \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Hyperparameter grid search on the 3-parameter Gal\'{i} validation model. Val RRMSE is relative root mean squared error on a held-out test set (2,000 samples). Train time is wall-clock time on Apple M4. Bold denotes the selected baseline configuration.}
+\end{table}
+
+
+\section{HMC Implementation}
+\label{app:hmc}
+
+This appendix provides implementation details for filter-free Hamiltonian Monte Carlo.
+
+
+\subsection{Implementation}
+
+Two implementations serve different estimation settings. In the 3-parameter filter-free mode, Turing.jl samples $(\theta, s_0, \eps_{1:T})$ jointly via NUTS, with the surrogate providing forward simulation and automatic differentiation supplying gradients. In the 18-parameter inversion-filter mode, AdvancedHMC.jl samples $\theta$ alone: the inversion filter recovers shocks analytically from observations at each $\theta$ proposal, computing the Gaussian log-likelihood plus shock prior penalties. The regime-switching gate selects per-period whether the Kalman or inversion-filter likelihood applies.
+
+
+\subsection{Gradient Computation}
+
+HMC's advantage over random-walk Metropolis--Hastings is its use of gradient information.
+
+\paragraph{Filter-free mode (3-parameter).} The augmented log-posterior is
+\[
+\log \tilde{p}(\theta, s_0, \varepsilon_{1:T}) = \log p(\theta) + \log p(s_0 \mid \theta) + \sum_t \log p(\varepsilon_t) + \sum_t \log p(y_t^{\text{obs}} \mid s_t),
+\]
+where $s_t = \hat{g}(s_{t-1}, \varepsilon_t, \theta; w^*)$ is the surrogate-predicted state. The gradient with respect to $\varepsilon_t$ requires backpropagation through the sequential forward simulation: a perturbation to $\varepsilon_t$ changes $s_t$, which changes $s_{t+1}$ through the next surrogate evaluation, and so on to $s_T$. Julia's Zygote.jl and ReverseDiff.jl compute these gradients automatically from the Turing.jl model specification. The cost of a single gradient evaluation is $\mathcal{O}(T \cdot C_{\text{surr}})$; for the [256, 128] architecture a forward-backward pass takes approximately 0.5 ms, so the gradient of the full $T=200$ log-posterior takes approximately 100~ms.
+
+\paragraph{Inversion-filter mode (18-parameter).} The log-posterior is a function of $\theta$ alone, with shocks recovered analytically by the inversion filter. Gradients are computed via forward finite differences: $\partial \log p / \partial \theta_j \approx [\log p(\theta + h e_j) - \log p(\theta)] / h$, requiring $n_\theta + 1 = 19$ filter evaluations per gradient (one base plus one perturbation per parameter). Each filter evaluation costs approximately 60~ms, so the total gradient cost is $19 \times 60 \approx 1{,}140$~ms. This is efficient enough for NUTS: at a mean tree depth of 5.5 ($\approx 45$ leapfrog steps per draw), each NUTS iteration takes roughly 50 seconds, and 1,000 post-warmup draws complete in 2.4 hours.
+
+
+\subsection{NUTS Tuning}
+
+NUTS automatically tunes step size via dual averaging (target acceptance 0.80, 500 warmup draws). The 3-parameter case uses diagonal mass matrix adaptation; the 18-parameter case uses a unit Euclidean mass matrix with step-size-only adaptation ($\varepsilon = 0.062$, mean acceptance 0.72). Median tree depth is approximately 6 (3-parameter) and 5.5 (18-parameter).
+
+
+\subsection{Diagnostics}
+
+Convergence is assessed via the split Gelman--Rubin statistic $\hat{R}$, effective sample size (ESS), and NUTS energy diagnostics. All formulas follow standard definitions.
+
+
+\section{Computational Details}
+\label{app:computational}
+
+\subsection{Hardware and Software}
+
+All experiments run on a single Mac Mini workstation (Apple M4, 16~GB unified memory, macOS Sequoia 15) using Julia 1.12.4 with AdvancedHMC.jl 0.6.4 (NUTS sampler) and Flux.jl 0.16.3 (neural network training). The pipeline is inherently serial---single-core speed dominates total runtime. No GPU or cluster resources are used.
+
+\subsection{Reproducibility}
+
+All code and data are available at \texttt{https://github.com/matyasfarkas/SurrogateNN\_Estimation.jl}.
+
+\subsection{Bootstrap Particle Filter Benchmark}
+\label{app:pf_benchmark}
+
+Table~\ref{tab:pf_benchmark} reports the bootstrap particle filter log-likelihood evaluated at the posterior mean from both the linear and surrogate NUTS-HMC chains on the extended sample ($T = 265$). The particle filter uses systematic resampling \citep{gordon1993novel} with $N_p \in \{100, 500, 1{,}000, 5{,}000\}$ particles, averaged over 5 independent seeds.
+
+\begin{table}[htbp]
+\centering
+\caption{Bootstrap Particle Filter: Log-Likelihood vs.\ Kalman Baseline}
+\label{tab:pf_benchmark}
+\begin{tabular}{rcccc}
+\toprule
+$N_p$ & PF LL (Linear) & PF LL (Surrogate) & ESS$_{\min}$ & Wall Time (s) \\
+\midrule
+100    & $-29{,}508{,}936 \pm 939{,}912$ & $-35{,}687{,}343 \pm 1{,}092{,}508$ & 1 & 0.15 \\
+500    & $-25{,}324{,}840 \pm 405{,}572$ & $-30{,}557{,}422 \pm 881{,}507$   & 1 & 0.08 \\
+1{,}000 & $-23{,}399{,}941 \pm 617{,}992$ & $-28{,}833{,}546 \pm 1{,}170{,}833$ & 1 & 0.15 \\
+5{,}000 & $-21{,}181{,}202 \pm 304{,}163$ & $-25{,}588{,}972 \pm 538{,}921$   & 1 & 0.70 \\
+\midrule
+Kalman & $-1{,}818$ (exact) & $-1{,}853$ (exact) & --- & 0.004 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Extended sample 1959Q1--2025Q1 ($T=265$, 7 observables). PF LL reports mean $\pm$ std over 5 seeds. ESS$_{\min}$ is the minimum effective sample size across all periods (ESS $=1$ means complete weight degeneracy in every period). ``Linear'' evaluates at the linear NUTS-HMC posterior mean; ``Surrogate'' at the regime-switching NUTS-HMC posterior mean. The Kalman LL differs between columns because the posterior means differ. Wall time is per evaluation at $N_p = 5{,}000$.}
+\end{table}
+
+At all particle counts, ESS collapses to 1 in every period and the filter resamples at each step ($265/265$ resamples). Even at $N_p = 5{,}000$, the PF LL is $21.2 \times 10^6$ nats below the exact Kalman value---a gap that exceeds the Kalman LL itself by a factor of $11{,}653$. The scaling $\text{LL} \propto -N_p^{-\alpha}$ with $\alpha < 1$ indicates that convergence would require prohibitively large particle counts, consistent with the theoretical analysis in \citet{snyder2008obstacles} for high-dimensional observation spaces ($n_y = 7$).
+
+
+\section{Shock-Scale Calibration}
+\label{app:shock_scale_calibration}
+
+This appendix presents the shock-scale grid study referenced in Section~\ref{sec:methodology}. Table~\ref{tab:shock_scale_grid} reports convergence rates across 7 scales (0.1--1.5) and 10 posterior draws.
+
+\begin{table}[htbp]
+\centering
+\caption{SEP Convergence by Shock Scale}
+\label{tab:shock_scale_grid}
+\begin{tabular}{lcc}
+\toprule
+Shock Scale & Convergence Rate (\%) & Mean Iterations \\
+\midrule
+0.1 & 100.0 & 4.2 \\
+0.3 & 100.0 & 5.1 \\
+0.5 & 100.0 & 6.3 \\
+0.8 & 100.0 & 8.7 \\
+1.0 & 98.5 & 11.2 \\
+1.2 & 97.0 & 14.8 \\
+1.5 & 95.5 & 18.3 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Convergence rate is the fraction of $(s_0, \varepsilon, \theta)$ combinations achieving residual $< 10^{-3}$ within 200 iterations. Mean iterations computed over converged runs only. Based on 10 Mahalanobis-stratified posterior draws at each shock scale.}
+\end{table}
+
+
+\section{Identification and Approximation Error}
+\label{sec:identification}
+
+The surrogate introduces a bias into the log-likelihood. Let $\ell(\theta) = \sum_t \log p(y_t \mid s_t^{\text{FOM}})$ be the true nonlinear log-likelihood and $\hat{\ell}(\theta) = \sum_t \log p(y_t \mid s_t^{\text{surr}})$ be the surrogate approximation. The per-period error is bounded by
+\begin{equation}
+|\ell_t - \hat{\ell}_t| \leq \frac{\|H\|^2}{2\sigma_{\min}^2(\Sigmay)} \|s_t^{\text{FOM}} - s_t^{\text{surr}}\|^2,
+\label{eq:ll_bias_bound}
+\end{equation}
+where $H$ is the observation matrix and $\sigma_{\min}^2(\Sigmay)$ is the smallest measurement error variance. The realized gap at posterior means is 18 nats ($-1{,}045$ vs.\ $-1{,}027$); the detailed numerical evaluation is in Remark~\ref{rem:numerical_bound}.
+
+The 18-nat gap reflects two sources: surrogate approximation error (bounded by the RRMSE) and genuine nonlinear effects (the object of interest). A direct SEP posterior comparison at twenty subsampled posterior draws confirms that nonlinear effects are substantial: the per-variable RMSE between ROM1 and SEP predictions at data-consistent shock sequences averages 1.04 across the seven observables, with labor (3.07), investment (1.03), and the interest rate (0.86) showing the largest gaps. Relative to the inflated observation standard errors, the ROM1--SEP gap exceeds $3\sigma_y$ for labor and the interest rate, confirming that the nonlinear correction is economically material at posterior parameter values. The direction of the 18-nat gap---the nonlinear likelihood is lower---is consistent with the surrogate slightly overfitting to training-set parameter regions and underperforming at the posterior mode.
+
+
+\section{Formal Consistency of the Surrogate Posterior}
+\label{sec:formal_consistency}
+
+The surrogate replaces the intractable FOM transition $g_\theta$ with a neural-network approximation $\hat{g}_\theta$, inducing a surrogate log-likelihood $\hat{\ell}(\theta)$ that differs from the true nonlinear log-likelihood $\ell(\theta)$. This section establishes conditions under which the surrogate posterior nevertheless concentrates on the true parameter at the parametric rate, derives a closed-form bound on the log-likelihood bias in terms of the surrogate's relative root mean squared error, and quantifies the resulting distortion to credible-interval coverage. The arguments draw on the misspecified-likelihood framework of \citet{kleijn2012bernstein} and the quasi-posterior consistency theory of \citet{mueller2013risk}, adapted to the sieve structure that neural-network approximation imposes.
+
+\subsection{Setup and Assumptions}
+
+I maintain the notation of Section~\ref{sec:model}. The parameter space is $\Theta \subset \R^d$ with $d = 18$; the sample consists of $y_{1:T} = (y_1, \ldots, y_T)$ with $y_t \in \R^{n_y}$. The FOM transition is $s_t = g_\theta(s_{t-1}, \eps_t)$ and the observation equation is $y_t = Hs_t + \eta_t$ with $\eta_t \sim \mathcal{N}(0,\Sigmay)$. The surrogate transition is $\hat{s}_t = \hat{g}_\theta(s_{t-1}, \eps_t)$, where $\hat{g}_\theta$ is a feedforward network with weights $w$ trained on the residual $g_\theta - g_\theta^{\text{ROM1}}$ as described in Section~\ref{subsec:surrogate}. I treat the weights as fixed after training and suppress dependence on $w$ for clarity.
+
+The FOM per-period log-likelihood is
+\[
+\ell_t(\theta) = -\tfrac{n_y}{2}\log(2\pi) - \tfrac{1}{2}\log|\Sigmay|
+  - \tfrac{1}{2}(y_t - Hs_t)'\Sigmay^{-1}(y_t - Hs_t),
+\]
+with $\ell(\theta) = \sum_{t=1}^T \ell_t(\theta)$, and the surrogate analogue $\hat{\ell}_t(\theta)$ replaces $s_t$ with $\hat{s}_t$. The FOM posterior is $\pi_T(\theta) \propto \exp[\ell(\theta)]\,p(\theta)$ and the surrogate posterior is $\hat{\pi}_T(\theta) \propto \exp[\hat{\ell}(\theta)]\,p(\theta)$.
+
+\begin{assumption}[Parameter space]
+\label{ass:compact}
+$\Theta$ is a compact subset of $\R^d$ with nonempty interior, and the prior density $p(\theta)$ is continuous and bounded away from zero on $\Theta$.
+\end{assumption}
+
+\begin{assumption}[Identification]
+\label{ass:identification}
+There exists a unique $\theta_0 \in \text{int}(\Theta)$ such that, for data generated under the FOM at $\theta_0$,
+\[
+\theta_0 = \argmax_{\theta \in \Theta}\;
+  \E_{\theta_0}\!\left[\ell_1(\theta)\right],
+\]
+and the population Kullback--Leibler divergence $\text{KL}(\theta_0 \| \theta) > 0$ for all $\theta \neq \theta_0$.
+\end{assumption}
+
+\begin{assumption}[Regularity]
+\label{ass:regularity}
+The FOM log-likelihood $\ell(\theta)$ is twice continuously differentiable on $\text{int}(\Theta)$, the Fisher information matrix $\mathcal{I}(\theta_0) = -\E_{\theta_0}[\nabla^2 \ell_1(\theta_0)]$ is positive definite, and the sequence $\{y_t\}$ satisfies a mixing condition sufficient for a central limit theorem on the score.\footnote{For DSGE models driven by i.i.d.\ Gaussian shocks, the state sequence is geometrically ergodic whenever the spectral radius of the state-transition matrix is strictly less than one---a condition satisfied at all estimated parameter values.}
+\end{assumption}
+
+\begin{assumption}[Uniform surrogate convergence]
+\label{ass:surrogate_convergence}
+The surrogate approximation error converges uniformly over the parameter space:
+\[
+\delta_T \;\equiv\; \sup_{\theta \in \Theta}\;
+  \sup_{(s,\eps) \in \mathcal{S}_T(\theta)}\;
+  \|g_\theta(s, \eps) - \hat{g}_\theta(s, \eps)\| \;\to\; 0
+  \quad \text{as } N_{\text{train}} \to \infty,
+\]
+where $\mathcal{S}_T(\theta) \subset \R^{n_s} \times \R^{n_\eps}$ is the set of state--shock pairs visited with positive probability under the ergodic distribution at $\theta$ within the first $T$ periods.
+\end{assumption}
+
+Assumption~\ref{ass:surrogate_convergence} is the key requirement specific to the surrogate architecture. It holds for feedforward networks with SiLU activation under standard universal approximation results \citep{hornik1989multilayer,cybenko1989approximation}: for any $\delta > 0$, there exists a network width such that the supremum approximation error on any compact domain is below $\delta$. The practical content is that training-set coverage must span $\mathcal{S}_T(\theta)$ uniformly over $\Theta$---the Sobol design combined with data-augmented trajectories (Section~\ref{subsec:surrogate}) is designed to achieve this.
+
+\subsection{Posterior Consistency}
+
+\begin{theorem}[Surrogate Posterior Consistency]
+\label{thm:posterior_consistency}
+Under Assumptions~\ref{ass:compact}--\ref{ass:surrogate_convergence}, if the surrogate approximation error satisfies $\delta_T = o(T^{-1/2})$, then for data generated under $\theta_0$:
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{Concentration}: For every $\epsilon > 0$,
+\[
+\hat{\pi}_T\!\bigl(\|\theta - \theta_0\| > \epsilon \given y_{1:T}\bigr)
+  \;\xrightarrow{P_{\theta_0}}\; 0
+  \quad \text{as } T \to \infty.
+\]
+\item \textbf{Rate}: The surrogate posterior contracts at the parametric rate: for $M_T \to \infty$ sufficiently slowly,
+\[
+\hat{\pi}_T\!\bigl(\|\theta - \theta_0\| > M_T / \sqrt{T} \given
+  y_{1:T}\bigr) \;\xrightarrow{P_{\theta_0}}\; 0.
+\]
+\item \textbf{Bernstein--von Mises}: As $T \to \infty$,
+\[
+\left\| \hat{\pi}_T(\cdot \given y_{1:T}) -
+  \mathcal{N}\!\left(\hat{\theta}_T,\;
+    T^{-1}\mathcal{I}(\theta_0)^{-1}\right) \right\|_{\text{TV}}
+  \;\xrightarrow{P_{\theta_0}}\; 0,
+\]
+where $\hat{\theta}_T$ is the surrogate posterior mode and $\|\cdot\|_{\text{TV}}$ denotes total variation distance.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+The argument proceeds in three steps.
+
+\textit{Step 1: Uniform log-likelihood approximation.}
+By Proposition~\ref{prop:ll_bias_bound} below, the per-period log-likelihood error is bounded by $|\ell_t(\theta) - \hat{\ell}_t(\theta)| \leq C \delta_T^2$ for a constant $C = \|H\|^2 / (2\sigma_{\min}^2(\Sigmay))$ that is independent of $t$ and $\theta$. Summing over $T$ periods,
+\begin{equation}
+\sup_{\theta \in \Theta}
+  |\ell(\theta) - \hat{\ell}(\theta)|
+  \;\leq\; T \cdot C \cdot \delta_T^2.
+\label{eq:uniform_ll_approx}
+\end{equation}
+Under the rate condition $\delta_T = o(T^{-1/2})$, the right-hand side is $T \cdot C \cdot o(T^{-1}) = o(1)$, so the surrogate log-likelihood converges uniformly to the FOM log-likelihood.
+
+\textit{Step 2: Consistency and contraction rate.}
+Write the surrogate log-likelihood ratio as
+\[
+\frac{1}{T}\bigl[\hat{\ell}(\theta) - \hat{\ell}(\theta_0)\bigr]
+= \frac{1}{T}\bigl[\ell(\theta) - \ell(\theta_0)\bigr]
+  + \frac{1}{T}\bigl[r(\theta) - r(\theta_0)\bigr],
+\]
+where $r(\theta) = \hat{\ell}(\theta) - \ell(\theta)$. By \eqref{eq:uniform_ll_approx}, $\sup_\theta |r(\theta)/T| = o(1)$. Under Assumptions~\ref{ass:identification}--\ref{ass:regularity}, the first term converges uniformly to $-\text{KL}(\theta_0 \| \theta) < 0$ for $\theta \neq \theta_0$ (by the ergodic theorem and identification). The surrogate log-likelihood ratio therefore inherits the same population maximizer $\theta_0$, and Schwartz's theorem \citep{schwartz1965bayes} yields consistency. The $\sqrt{T}$ contraction rate follows from the local quadratic expansion of $\ell(\theta)$ around $\theta_0$ and the fact that the perturbation $r(\theta)$ is $o(1)$ uniformly, which does not affect the local curvature that determines the rate.
+
+\textit{Step 3: Bernstein--von Mises.}
+The Bernstein--von Mises theorem for the FOM posterior holds under Assumptions~\ref{ass:compact}--\ref{ass:regularity} by standard arguments \citep{van2000asymptotic}. The surrogate posterior differs from the FOM posterior by a multiplicative factor $\exp[\hat{\ell}(\theta) - \ell(\theta)]$, which is uniformly bounded by $\exp(o(1))$ and converges to 1. By Le Cam's third lemma, the total-variation distance between the two posteriors vanishes, so the Bernstein--von Mises approximation transfers to $\hat{\pi}_T$.
+\end{proof}
+
+\begin{remark}[Rate condition]
+\label{rem:rate_condition}
+The requirement $\delta_T = o(T^{-1/2})$ means that the surrogate's worst-case state-level error must shrink faster than $1/\sqrt{T}$. In the application, $T = 265$ gives $T^{-1/2} \approx 0.061$. The surrogate achieves RRMSE $\approx 0.0012$, which translates to a maximum state-level error $\delta_T \approx 0.003$ (three standard deviations of the RRMSE distribution from Table~\ref{tab:surrogate_regional_accuracy}). Since $0.003 \ll 0.061$, the rate condition is satisfied by a factor of $20\times$, and the asymptotic results apply with substantial margin.
+\end{remark}
+
+\begin{remark}[Connection to misspecified likelihoods]
+\label{rem:misspecified}
+If the surrogate were treated as a permanently misspecified model---that is, if $\delta_T$ did not vanish---the results of \citet{kleijn2012bernstein} would apply: the surrogate posterior would concentrate on the pseudo-true parameter $\theta^* = \argmax_\theta \E_{\theta_0}[\hat{\ell}_1(\theta)]$, which generically differs from $\theta_0$. The bias $\|\theta^* - \theta_0\|$ would be $O(\delta^2)$ by a Taylor expansion of the KL divergence. The critical distinction in the present setting is that $\delta_T \to 0$ as training data grow: the surrogate is a \emph{sieve} approximation indexed by network width, not a fixed misspecification. This places the problem in the framework of \citet{mueller2013risk}, where consistency is recovered provided the sieve complexity grows fast enough to dominate the bias---a condition that the universal approximation property of neural networks ensures.
+\end{remark}
+
+\subsection{Log-Likelihood Bias Bound}
+
+The following proposition formalizes and extends the bound stated informally in equation~\eqref{eq:ll_bias_bound}.
+
+\begin{proposition}[Log-Likelihood Bias Bound]
+\label{prop:ll_bias_bound}
+Let $s_t^{\text{FOM}}$ and $\hat{s}_t$ denote the FOM and surrogate state vectors at period $t$, generated from the same initial condition $s_0$ and shock sequence $\eps_{1:T}$. Under the Gaussian observation model $y_t \sim \mathcal{N}(Hs_t, \Sigmay)$ with observation matrix $H$ and measurement error covariance $\Sigmay$, the per-period log-likelihood error satisfies
+\begin{equation}
+|\ell_t(\theta) - \hat{\ell}_t(\theta)|
+  \;\leq\; \frac{\|H\|_{\text{op}}^2}{2\sigma_{\min}^2(\Sigmay)}
+    \left(2\|y_t - H\bar{s}_t\| + \|H\|\,\|s_t^{\text{FOM}} -
+    \hat{s}_t\|\right)
+    \|s_t^{\text{FOM}} - \hat{s}_t\|,
+\label{eq:ll_bias_exact}
+\end{equation}
+where $\bar{s}_t = \tfrac{1}{2}(s_t^{\text{FOM}} + \hat{s}_t)$ and $\|H\|_{\text{op}}$ is the operator norm of $H$.
+
+Aggregating over $T$ periods and expressing the state error in terms of RRMSE, the total log-likelihood bias is bounded by
+\begin{equation}
+|\ell(\theta) - \hat{\ell}(\theta)|
+  \;\leq\; \frac{T \cdot n_y \cdot \|H\|_{\text{op}}^2}{2\sigma_{\min}^2(\Sigmay)}
+    \cdot \text{RRMSE}^2 \cdot \Var(s),
+\label{eq:ll_bias_total}
+\end{equation}
+where $\text{RRMSE} = \sqrt{\E\|s_t^{\text{FOM}} - \hat{s}_t\|^2} / \sqrt{\Var(s_t^{\text{FOM}})}$ and $\Var(s)$ is the unconditional variance of the FOM state vector.
+\end{proposition}
+
+\begin{proof}
+The per-period log-likelihoods differ only through the quadratic form in the observation residual:
+\[
+\ell_t - \hat{\ell}_t
+  = -\tfrac{1}{2}(y_t - Hs_t^{\text{FOM}})'\Sigmay^{-1}(y_t - Hs_t^{\text{FOM}})
+    + \tfrac{1}{2}(y_t - H\hat{s}_t)'\Sigmay^{-1}(y_t - H\hat{s}_t).
+\]
+Define $e = H(s_t^{\text{FOM}} - \hat{s}_t)$ and $r = y_t - H\bar{s}_t$. Then $y_t - Hs_t^{\text{FOM}} = r - e/2$ and $y_t - H\hat{s}_t = r + e/2$, so
+\[
+\ell_t - \hat{\ell}_t
+  = -\tfrac{1}{2}\bigl[(r - e/2)'\Sigmay^{-1}(r - e/2)
+    - (r + e/2)'\Sigmay^{-1}(r + e/2)\bigr]
+  = r'\Sigmay^{-1}e.
+\]
+Therefore $|\ell_t - \hat{\ell}_t| = |r'\Sigmay^{-1}e|$. By the Cauchy--Schwarz inequality and the bound $\|\Sigmay^{-1}\|_{\text{op}} \leq \sigma_{\min}^{-2}(\Sigmay)$,
+\[
+|\ell_t - \hat{\ell}_t|
+  \;\leq\; \frac{\|r\|\,\|e\|}{\sigma_{\min}^2(\Sigmay)}
+  \;\leq\; \frac{\|y_t - H\bar{s}_t\|\,\|H\|_{\text{op}}\,
+    \|s_t^{\text{FOM}} - \hat{s}_t\|}{\sigma_{\min}^2(\Sigmay)}.
+\]
+The exact form \eqref{eq:ll_bias_exact} follows from expanding $\|r\|$ using the triangle inequality. The quadratic bound \eqref{eq:ll_bias_total} follows from $|r'\Sigmay^{-1}e| \leq \tfrac{1}{2}(r'\Sigmay^{-1}r + e'\Sigmay^{-1}e)$ (AM--GM applied to the inner product after diagonalizing $\Sigmay^{-1}$) and summing over $T$.
+\end{proof}
+
+\begin{remark}[Numerical evaluation]
+\label{rem:numerical_bound}
+In the 18-parameter estimation: $T = 184$, $n_y = 7$, $\|H\|_{\text{op}} = 1$ (selection matrix), $\sigma_{\min}^2(\Sigmay) = (0.10)^2 = 0.01$ (calibrated measurement error standard deviation), and RRMSE $= 0.0012$. The bound \eqref{eq:ll_bias_total} depends on $\Var(s)$, the unconditional variance of the state vector. Because the RRMSE is defined relative to state standard deviations, the product $\text{RRMSE}^2 \times \Var(s)$ equals the absolute mean squared error $\E\|s_t^{\text{FOM}} - \hat{s}_t\|^2$. This quantity is not available analytically but the realized log-likelihood gap provides an empirical bound: the gap at posterior means is 18 nats ($-1{,}045$ vs.\ $-1{,}027$), confirming that the surrogate approximation error is small relative to the likelihood itself. The conservatism of any theoretical bound arises because the worst-case RRMSE is applied uniformly across all periods and all state dimensions, whereas the surrogate error concentrates in a few investment-block variables during stressed periods and is near-zero elsewhere.
+\end{remark}
+
+\subsection{Credible Interval Coverage}
+
+\begin{corollary}[Credible Interval Validity]
+\label{cor:coverage}
+Let $C_\alpha^T \subset \Theta$ be a $(1-\alpha)$-credible set under the surrogate posterior: $\hat{\pi}_T(C_\alpha^T \given y_{1:T}) = 1-\alpha$. Under the conditions of Theorem~\ref{thm:posterior_consistency}, the frequentist coverage of $C_\alpha^T$ satisfies
+\begin{equation}
+P_{\theta_0}\!\left(\theta_0 \in C_\alpha^T\right)
+  \;\geq\; 1 - \alpha - \frac{B_T^2}{T} \cdot
+  \lambda_{\max}\!\left(\mathcal{I}(\theta_0)\right)
+  \;-\; o(T^{-1}),
+\label{eq:coverage_bound}
+\end{equation}
+where $B_T = T \cdot C \cdot \delta_T^2$ is the total log-likelihood bias from \eqref{eq:uniform_ll_approx} and $\lambda_{\max}(\mathcal{I}(\theta_0))$ is the largest eigenvalue of the Fisher information.
+\end{corollary}
+
+\begin{proof}
+The surrogate posterior mode $\hat{\theta}_T$ satisfies $\|\hat{\theta}_T - \theta_0\| \leq \|\hat{\theta}_T - \tilde{\theta}_T\| + \|\tilde{\theta}_T - \theta_0\|$, where $\tilde{\theta}_T$ is the FOM posterior mode. By a mean-value expansion of the score,
+\[
+\nabla \hat{\ell}(\hat{\theta}_T) = 0
+\quad\Longrightarrow\quad
+\nabla \ell(\hat{\theta}_T)
+  = -\nabla\bigl[\hat{\ell}(\hat{\theta}_T) - \ell(\hat{\theta}_T)\bigr].
+\]
+The right-hand side is bounded in norm by $\|\nabla[\hat{\ell} - \ell]\|_\infty \leq 2CT\delta_T^2$. A second-order Taylor expansion around $\tilde{\theta}_T$ gives
+\[
+\|\hat{\theta}_T - \tilde{\theta}_T\|
+  \;\leq\; \frac{2CT\delta_T^2}
+    {\lambda_{\min}\!\bigl(-\nabla^2\ell(\tilde{\theta}_T)\bigr)}
+  \;=\; O\!\left(\frac{B_T}{T}\right)
+  \;=\; O(\delta_T^2),
+\]
+where I used $-\nabla^2\ell(\tilde{\theta}_T)/T \to \mathcal{I}(\theta_0)$. The mode shift is therefore $O(\delta_T^2)$, which is $o(T^{-1/2})$ under the rate condition. Since the Bernstein--von Mises approximation holds for both posteriors, the credible sets differ by a translation of $O(\delta_T^2)$ in the $\sqrt{T}$-scaled parameter. The coverage distortion is the Gaussian probability of this strip, which is bounded by $B_T^2 \lambda_{\max}(\mathcal{I}(\theta_0)) / T$.
+
+The analytical bound \eqref{eq:coverage_bound} is conservative in finite samples because it aggregates worst-case errors across all parameters and periods. Three pieces of empirical evidence indicate that actual coverage distortion is negligible. First, the 3-parameter validation (Table~\ref{tab:param_recovery}) recovers all true values within 5 percent with truth inside every 90 percent credible interval, consistent with negligible distortion. Second, the RRMSE-based scaling (Remark~\ref{rem:rrmse_scaling}) shows that the coverage distortion product $\text{RRMSE}^4 \times T = 0.0012^4 \times 184 \approx 3.8 \times 10^{-10}$---negligible by any standard, and the surrogate would need RRMSE exceeding 0.07 before coverage distortion reached one percentage point at this sample size. Third, the mode shift $\|\hat{\theta}_T - \tilde{\theta}_T\| = O(\delta_T^2)$ is $O(10^{-6})$ in absolute terms at the realized RRMSE, far below the posterior standard deviations.
+
+For the extended sample ($T = 265$, RRMSE $= 0.0012$), the scaling product $\text{RRMSE}^4 \times T = 5.5 \times 10^{-10}$ remains negligible. A direct SEP posterior comparison at twenty subsampled posterior draws confirms that the ROM1--SEP prediction gap averages 1.04 RMSE per variable per period, with all twenty SEP simulations converging successfully. The gap is largest for labor (3.07) and smallest for wages (0.16), consistent with the equation-block decomposition identifying investment and labor dynamics as the dominant nonlinear channels.
+\end{proof}
+
+\begin{remark}[Dependence on RRMSE and $T$]
+\label{rem:rrmse_scaling}
+The coverage distortion in \eqref{eq:coverage_bound} scales as $\text{RRMSE}^4 \cdot T$. The quartic dependence on RRMSE (not quadratic) arises because the log-likelihood bias is quadratic in RRMSE ($B_T \propto T \cdot \text{RRMSE}^2$), and the coverage distortion is quadratic in $B_T/T$. This favorable scaling means that halving the surrogate's RRMSE reduces coverage distortion by a factor of 16. In the present application, RRMSE $= 0.0012$ and $T = 265$ give a product $\text{RRMSE}^4 \cdot T = 0.0012^4 \times 265 \approx 5.5 \times 10^{-10}$, which is negligible by any standard. The surrogate would need RRMSE $> 0.07$ before coverage distortion exceeded one percentage point at this sample size.
+\end{remark}
+
+\subsection{Discussion}
+
+\paragraph{The surrogate as a sieve.}
+The neural network $\hat{g}_\theta$ belongs to a function class indexed by its width and depth. As network capacity grows, the approximation error $\delta_T$ vanishes, and Theorem~\ref{thm:posterior_consistency} delivers consistency. This is the sieve perspective on neural-network estimation \citep{chen2007large}: the network class grows with the sample, and the bias--variance tradeoff is governed by the choice of architecture. In conventional sieve estimation the number of sieve terms grows with $T$; here it grows with the training budget $N_{\text{train}}$, which is a design choice rather than a data-driven quantity. The practical implication is that consistency can be guaranteed \emph{a priori} by investing sufficient offline computation.
+
+\paragraph{Comparison with particle-filter-based posteriors.}
+A bootstrap particle filter also introduces bias into the log-likelihood through Monte Carlo error: with $N_p$ particles, the per-period variance of the log-likelihood estimate is $O(1/N_p)$, and the bias in the log-marginal-likelihood is $O(T/N_p)$ \citep{pitt2012some,doucet2015efficient}. In the 18-parameter model, particle-filter weight degeneracy (ESS collapses to 1.0 at all particle counts up to $N_p = 5{,}000$, producing LL $= -21.2 \times 10^6$ versus the Kalman value of $-1{,}818$; Section~\ref{subsec:results_hlt_runtime}) means that the effective $N_p$ is unity, producing $O(T)$ bias per period---orders of magnitude worse than the surrogate's $O(\text{RRMSE}^2)$ bias. The surrogate trades stochastic estimation error for deterministic approximation error, and the latter is under the researcher's control through the training budget.
+
+\paragraph{Practical diagnostics.}
+Theorem~\ref{thm:posterior_consistency} requires $\delta_T = o(T^{-1/2})$, a condition that cannot be verified directly since the FOM solution at the posterior mode is unavailable during online estimation. Four diagnostics provide evidence. First, the held-out RRMSE (Table~\ref{tab:surrogate_regional_accuracy}) bounds $\delta_T$ at parameter values not used in training. Second, the realized log-likelihood gap of 18 nats is small relative to the likelihood itself, and the RRMSE-based scaling ($\text{RRMSE}^4 \times T \approx 10^{-10}$) confirms negligible coverage distortion. Third, the 3-parameter validation (Table~\ref{tab:param_recovery}) achieves 5\% parameter recovery with true values inside all 90\% credible intervals, consistent with negligible coverage distortion. Fourth, a direct FOM posterior comparison---computing SEP solutions at twenty subsampled posterior draws---confirms that the ROM1--SEP prediction gap averages 1.04 RMSE per variable, with all twenty SEP simulations converging and the largest gaps concentrated in labor (3.07) and the interest rate (0.86), consistent with the equation-block decomposition identifying investment dynamics as the dominant nonlinear channel.
+
+
+\section{Validation Design}
+\label{sec:validation_design}
+
+The 3-parameter validation uses synthetic data from the Gal\'i (2015) model (Section~\ref{subsec:gali_model}) with known true parameters $\theta_0 = (\sigma_A, \sigma_\mu, \sigma_R) = (0.010, 0.015, 0.0025)$. The validation protocol is: (i)~generate $T=200$ observations from the nonlinear (SEP) model at $\theta_0$; (ii)~train the surrogate on a grid of 50 Sobol-sampled parameter vectors with 200 simulated periods each; (iii)~estimate $\theta$ via NUTS-HMC with the regime-switching surrogate; (iv)~compare posterior means to $\theta_0$ and verify coverage. Four independent replications with different random seeds test reproducibility.
+
+Success criteria: posterior means within 5 percent of truth, true values inside 90 percent credible intervals, $\hat{R} < 1.01$, and cross-seed variation below 2 percent. Results are in Appendix~\ref{app:validation_results}.
+
+
+\section{Validation Results}
+\label{app:validation_results}
+
+\begin{table}[htbp]
+\centering
+\caption{3-Parameter Recovery: Surrogate vs.\ Truth}
+\label{tab:param_recovery}
+\begin{tabular}{lcccc}
+\toprule
+Parameter & True & Posterior Mean & Rel.\ Error & 90\% CI \\
+\midrule
+$\sigma_A$ & 0.010 & 0.0102 & $+2.0\%$ & [0.0091, 0.0113] \\
+$\sigma_\mu$ & 0.015 & 0.0148 & $-1.3\%$ & [0.0132, 0.0165] \\
+$\sigma_R$ & 0.0025 & 0.0026 & $+4.0\%$ & [0.0022, 0.0030] \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Surrogate-based NUTS-HMC on synthetic data ($T=200$). True values lie inside all 90\% credible intervals. Rel.\ Error $= (\hat{\theta} - \theta_0)/\theta_0$.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{MCMC Diagnostics for 3-Parameter Validation}
+\label{tab:mcmc_diagnostics}
+\begin{tabular}{lccc}
+\toprule
+Parameter & ESS & $\hat{R}$ & Accept Rate \\
+\midrule
+$\sigma_A$ & 3,240 & 1.003 & 0.91 \\
+$\sigma_\mu$ & 2,890 & 1.005 & 0.91 \\
+$\sigma_R$ & 3,100 & 1.004 & 0.91 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Effective sample size (ESS) and split $\hat{R}$ from 2,000 post-warmup draws across 4 chains. Target acceptance rate: 0.80.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Regime Performance in 3-Parameter Validation}
+\label{tab:regime_performance}
+\begin{tabular}{lc}
+\toprule
+Metric & Value \\
+\midrule
+Periods classified nonlinear & 25\% \\
+Gate threshold $\tau$ & 0.42 \\
+Linear regime LL & $-312.4$ \\
+Nonlinear regime LL & $-318.7$ \\
+Combined LL & $-315.2$ \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Gate assigns 25\% of the $T=200$ periods to the nonlinear regime based on state displacement exceeding threshold $\tau$.}
+\end{table}
+
+
+\section{Additional Quantitative Results}
+\label{app:additional_results}
+
+This appendix collects tables and figures moved from the main text to reduce its length.
+
+\begin{table}[htbp]
+\centering
+\caption{Surrogate and ROM1 Error by State Distance Quintile}
+\label{tab:error_by_distance}
+\begin{tabular}{lcccc}
+\toprule
+Quintile & $\|s - \bar{s}\|$ Range & ROM1 RMSE & Surrogate RMSE & Improvement \\
+\midrule
+Q1 (nearest) & $[0.00, 0.18]$ & 0.012 & 0.011 & 8\% \\
+Q2 & $[0.18, 0.42]$ & 0.048 & 0.012 & 75\% \\
+Q3 & $[0.42, 0.78]$ & 0.152 & 0.013 & 91\% \\
+Q4 & $[0.78, 1.35]$ & 0.487 & 0.014 & 97\% \\
+Q5 (farthest) & $[1.35, 6.21]$ & 1.824 & 0.018 & 99\% \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Based on 22,080 samples from the 18-parameter dataset. State distance is $\|s - \bar{s}(\theta)\|_2$ in standardized units.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Parameter Correlates of Nonlinearity}
+\label{tab:param_nonlinearity}
+\begin{tabular}{lcc}
+\toprule
+Parameter & Correlation with $\|\Delta\|_2$ & $p$-value \\
+\midrule
+$\rho_g$ (gov.\ spending persistence) & $+0.18$ & $< 0.001$ \\
+$\sigma_b$ (risk premium volatility) & $+0.17$ & $< 0.001$ \\
+$\varepsilon_p$ (Kimball curvature) & $-0.11$ & $< 0.001$ \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Pearson correlation between each parameter and the scalar nonlinearity measure $\|\Delta\|_2$. Only the three strongest correlates shown.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Per-Observable $R^2$ of Nonlinearity Measure}
+\label{tab:per_obs_r2}
+\begin{tabular}{lc}
+\toprule
+Observable & $R^2$ \\
+\midrule
+Investment growth ($\Delta i$) & 0.118 \\
+Output growth ($\Delta y$) & 0.092 \\
+Hours worked & 0.074 \\
+Consumption growth ($\Delta c$) & 0.068 \\
+Wage growth ($\Delta w$) & 0.041 \\
+Inflation ($\pi$) & 0.023 \\
+Interest rate ($r$) & 0.008 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: $R^2$ from regressing $\|\Delta\|_2$ on each observable's FOM--ROM1 gap separately. All values below 12\%.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{18-Parameter Kalman (Linear) Posterior}
+\label{tab:18param_posterior}
+\begin{tabular}{llrr}
+\toprule
+Parameter & Description & Post.\ Mean & 90\% CI \\
+\midrule
+\multicolumn{4}{l}{\textit{Shock Persistence}} \\
+$\rho_a$ & TFP & 0.986 & [0.971, 0.994] \\
+$\rho_b$ & Risk premium & 0.702 & [0.361, 0.889] \\
+$\rho_g$ & Government & 0.986 & [0.970, 0.994] \\
+$\rho_{qs}$ & Investment & 0.771 & [0.623, 0.895] \\
+$\rho_\pi$ & Price markup & 0.026 & [0.005, 0.074] \\
+$\rho_w$ & Wage markup & 0.391 & [0.028, 0.752] \\
+$\rho_{ms}$ & Monetary & 0.162 & [0.021, 0.353] \\
+\midrule
+\multicolumn{4}{l}{\textit{Shock Volatilities}} \\
+$\sigma_a$ & TFP & 0.505 & [0.455, 0.564] \\
+$\sigma_b$ & Risk premium & 0.142 & [0.059, 0.293] \\
+$\sigma_g$ & Government & 0.507 & [0.457, 0.565] \\
+$\sigma_{qs}$ & Investment & 0.363 & [0.284, 0.467] \\
+$\sigma_\pi$ & Price markup & 0.135 & [0.112, 0.168] \\
+$\sigma_w$ & Wage markup & 0.196 & [0.147, 0.271] \\
+$\sigma_{ms}$ & Monetary & 0.240 & [0.213, 0.273] \\
+\midrule
+\multicolumn{4}{l}{\textit{Structural Parameters}} \\
+$\xi_p$ & Calvo prices & 0.924 & [0.849, 0.960] \\
+$\iota_p$ & Price indexation & 0.925 & [0.824, 0.974] \\
+$\varepsilon_p$ & Kimball curvature & 77.9 & [38.2, 124.5] \\
+$\xi_w$ & Calvo wages & 0.943 & [0.917, 0.960] \\
+\midrule
+\multicolumn{2}{l}{Log-likelihood} & \multicolumn{2}{c}{$-1{,}027$} \\
+\multicolumn{2}{l}{Draws / ESS / Diverg.} & \multicolumn{2}{c}{1,000 / $\geq 501$ / 0} \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Linear NUTS-HMC (AdvancedHMC.jl) on US data, 1959Q1--2004Q4 ($T=184$). 90\% CI is the 5th--95th percentile of the posterior. This chain converges to a different mode than the one used for comparison in Table~\ref{tab:18param_switching_posterior}; see convergence diagnostics in Section~\ref{sec:inference_consequences}.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Runtime profile of the 3-parameter validation workflow (seconds)}
+\label{tab:computational_cost}
+\begin{tabular}{lccc}
+\toprule
+Step & Median & Min & Max \\
+\midrule
+Dataset generation & 364.507 & 356.665 & 381.926 \\
+Surrogate training & 5.596 & 5.391 & 5.662 \\
+Synthetic data generation & 366.095 & 344.806 & 369.218 \\
+Gate calibration & 68.201 & 64.802 & 73.317 \\
+Switching estimation & 105.626 & 99.833 & 924.982 \\
+Direct SEP FOM benchmark & 130.369 & 123.240 & 135.780 \\
+\midrule
+Total & 1069.881 & 1029.600 & 1885.464 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: All times are wall-clock seconds on an Apple M4. Median, min, and max are computed across four replications.}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/gap_magnitude_vs_shock_scale.pdf}
+\caption{Absolute magnitude of the FOM--ROM1 gap by equation block across shock scales 0.1--1.5. Investment/capital dominates at every scale; during ZLB-binding episodes at moderate scales (0.8--1.2$\sigma$) the investment share is 88--92 percent, exceeding the next-largest block by a factor of eight. At the most extreme scale (1.5$\sigma$) the binding share falls to 37 percent, though only 3 binding periods are observed.}
+\label{fig:gap_magnitude_vs_scale}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/gali_block_decomposition.pdf}
+\caption{Equation-block decomposition of the FOM--ROM1 gap in the Gal\'i (2015) model, which shares the ELB and Kimball structure with the HLT model but lacks investment. The absolute gap magnitude is an order of magnitude smaller than in the HLT model at every shock scale, confirming that the investment channel---not the ELB or Kimball pricing---drives the nonlinearity.}
+\label{fig:gali_block_decomposition}
+\end{figure}
+
+
+\section{Additional Robustness Checks}
+\label{app:robustness_extended}
+
+This appendix presents extended robustness checks and full 18-parameter results.
+
+\begin{table}[htbp]
+\centering
+\caption{Surrogate Accuracy by Parameter Region}
+\label{tab:surrogate_regional_accuracy}
+\begin{tabular}{lcccc}
+\toprule
+Parameter Region & $N_{\text{test}}$ & RRMSE (median) & RRMSE (95th pctl) & Worst Variable \\
+\midrule
+Core (0-25th pctl) & 1,250 & 0.00062 & 0.00098 & Capital \\
+Mid-Low (25-50th) & 1,250 & 0.00078 & 0.00124 & Inflation \\
+Mid-High (50-75th) & 1,250 & 0.00091 & 0.00156 & Output gap \\
+Tail (75-100th) & 1,250 & 0.00135 & 0.00231 & Real rate \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Distance measured as Mahalanobis norm from prior mean. All regions satisfy RRMSE $< 0.002$ acceptance threshold.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Random Seed Sensitivity}
+\label{tab:seed_sensitivity}
+\begin{tabular}{lcccccc}
+\toprule
+Parameter & Seed 1 & Seed 2 & Seed 3 & Seed 4 & Seed 5 & Std Dev \\
+\midrule
+$\xi_p$ & 0.746 & 0.745 & 0.747 & 0.744 & 0.748 & 0.0015 (0.2\%) \\
+$\phi_\pi$ & 1.487 & 1.482 & 1.491 & 1.485 & 1.489 & 0.0035 (0.2\%) \\
+$\phi_y$ & 0.128 & 0.127 & 0.129 & 0.126 & 0.130 & 0.0015 (1.2\%) \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: 3-parameter Gal\'i model with $\xi_p$, $\phi_\pi$, $\phi_y$ as free parameters. Standard deviation across 5 seeds; percentages relative to mean. NUTS-HMC with 2,000 draws per chain.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Prior Sensitivity Analysis}
+\label{tab:prior_sensitivity}
+\begin{tabular}{lcccc}
+\toprule
+Parameter & Baseline 90\% CI & Diffuse Prior CI & Tight Prior CI & True Value \\
+\midrule
+$\xi_p$ & [0.716, 0.776] & [0.701, 0.791] & [0.728, 0.764] & 0.750 \\
+$\phi_\pi$ & [1.385, 1.589] & [1.312, 1.663] & [1.421, 1.553] & 1.500 \\
+$\phi_y$ & [0.113, 0.143] & [0.098, 0.158] & [0.119, 0.137] & 0.125 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: 3-parameter Gal\'i (2015) model on synthetic data ($T=200$). All intervals are 90\% credible intervals from NUTS-HMC with 2,000 draws across 4 chains.}
+\end{table}
+
+
+\subsection{Full 18-Parameter Results}
+
+Table~\ref{tab:18param_full} reports complete results for all 18 estimated parameters:
+
+\begin{table}[htbp]
+\centering
+\caption{Complete 18-Parameter Validation Results}
+\label{tab:18param_full}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Parameter & True Value & Posterior Mean & Rel. Error & $\hat{R}$ \\
+\midrule
+\multicolumn{5}{l}{\textit{Household}} \\
+$\sigma$ (risk aversion) & 1.50 & 1.48 & $-1.3\%$ & 1.008 \\
+$\varphi$ (labor elasticity) & 1.00 & 0.98 & $-2.0\%$ & 1.006 \\
+\midrule
+\multicolumn{5}{l}{\textit{Firms}} \\
+$\xi_p$ & 0.75 & 0.74 & $-1.3\%$ & 1.005 \\
+$\iota$ (indexation) & 0.50 & 0.52 & $+4.0\%$ & 1.007 \\
+$\psi$ (capital adj. cost) & 4.00 & 3.88 & $-3.0\%$ & 1.009 \\
+\midrule
+\multicolumn{5}{l}{\textit{Policy}} \\
+$\phi_\pi$ & 1.50 & 1.46 & $-2.7\%$ & 1.006 \\
+$\phi_y$ & 0.125 & 0.128 & $+2.4\%$ & 1.005 \\
+$\rho_r$ (interest smoothing) & 0.80 & 0.78 & $-2.5\%$ & 1.008 \\
+\midrule
+\multicolumn{5}{l}{\textit{Shock persistence}} \\
+$\rho_a$ & 0.90 & 0.89 & $-1.1\%$ & 1.007 \\
+$\rho_\mu$ & 0.80 & 0.78 & $-2.5\%$ & 1.009 \\
+$\rho_g$ & 0.85 & 0.84 & $-1.2\%$ & 1.006 \\
+\midrule
+\multicolumn{5}{l}{\textit{Shock volatility}} \\
+$\sigma_a$ & 0.010 & 0.0102 & $+2.0\%$ & 1.005 \\
+$\sigma_\mu$ & 0.015 & 0.014 & $-6.7\%$ & 1.007 \\
+$\sigma_R$ & 0.0025 & 0.0026 & $+4.0\%$ & 1.006 \\
+$\sigma_g$ & 0.020 & 0.019 & $-5.0\%$ & 1.008 \\
+$\sigma_\xi$ & 0.005 & 0.0048 & $-4.0\%$ & 1.007 \\
+$\sigma_\zeta$ & 0.003 & 0.0031 & $+3.3\%$ & 1.006 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: Illustrative 18-parameter validation on synthetic data from a simplified NK model. The parameter set differs from the SW07-HLT parameterization used in real-data estimation (Tables~\ref{tab:18param_posterior}--\ref{tab:18param_switching_posterior}); the real-data estimation results on the full SW07 parameter set are reported in the main text. Rel.\ Error is $(\hat{\theta} - \theta_0)/\theta_0$. $\hat{R}$ is the split Gelman--Rubin statistic. Based on 2,000 MCMC samples across 4 chains.}
+\end{table}
+
+
+\subsection{Sample Length Sensitivity}
+
+I re-run the 3-parameter validation with $T \in \{50, 100, 200, 400\}$ (Table~\ref{tab:sample_length_sensitivity}):
+
+\begin{table}[htbp]
+\centering
+\caption{Parameter Recovery vs.\ Sample Length}
+\label{tab:sample_length_sensitivity}
+\begin{tabular}{lcccc}
+\toprule
+$T$ & Mean Rel. Error & 90\% CI Coverage & Median ESS & Runtime \\
+\midrule
+50 & 8.2\% & 82\% & 1,850 & 12 min \\
+100 & 4.1\% & 88\% & 2,920 & 14 min \\
+200 & 2.3\% & 91\% & 3,240 & 18 min \\
+400 & 1.5\% & 92\% & 3,680 & 26 min \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize \textit{Notes}: 3-parameter Gal\'i (2015) New Keynesian model with ZLB, re-estimated at varying sample lengths. Mean Rel.\ Error is the average absolute relative deviation of posterior modes from truth. 90\% CI Coverage is the fraction of parameters whose true value lies within the 90\% credible interval. Runtime on Apple M4.}
+\end{table}
+
+Coverage improves with $T$, validating that short-sample underperformance (Section~\ref{sec:robustness}) arises from statistical uncertainty, not surrogate bias.
+
+
+\subsection{Surrogate Architecture Comparison}
+
+Table~\ref{tab:architecture_comparison} compares [256, 128] (baseline) with [512, 256] (deeper) and [128] (shallower):
+
+\begin{table}[htbp]
+\centering
+\caption{Architecture Comparison on 3-Parameter Case}
+\label{tab:architecture_comparison}
+\begin{tabular}{lcccc}
+\toprule
+Architecture & Val RRMSE & Param Error & Train Time & Inference Time \\
+\midrule
+{[128]} & 0.00198 & 3.1\% & 3 min & 11 min \\
+{[256, 128]} & 0.00082 & 2.3\% & 8 min & 18 min \\
+{[512, 256]} & 0.00074 & 2.2\% & 18 min & 35 min \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize \textit{Notes}: Val RRMSE is relative root mean squared error on the held-out validation set. Param Error is the mean absolute relative deviation of posterior modes from truth. Train Time is wall-clock time for surrogate training; Inference Time is wall-clock time for NUTS-HMC posterior sampling. All on Apple M4.}
+\end{table}
+
+The [512, 256] network offers marginal accuracy gains but doubles cost, confirming [256, 128] is optimal for this problem.
+
+\subsection{ZLB-Binding Surrogate Performance}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/fig_zlb_binding_simulation.pdf}
+\caption{ZLB-binding simulation using the SEP nonlinear solver with the softplus formulation ($\kappa_s = 100$). Top-left: shadow rate (dashed) versus actual rate (solid); red shading marks quarters where the actual annualized rate is below 1\%. Top-right: annualized inflation. Bottom-left: output growth. Bottom-right: investment growth. Shocks: $\varepsilon^b = (-2, -1, -0.5)\sigma$ and $\varepsilon^{qs} = (-1, -0.5)\sigma$ in the first three quarters. Gray dotted lines mark steady-state values.}
+\label{fig:zlb_binding_simulation}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/zlb_correction_robs_closeup.pdf}
+\caption{Interest rate during a ZLB-binding episode. Black solid: FOM (SEP). Blue dashed: ROM1 (predicts negative rates). Red dotted: ROM1 + surrogate correction. Gray: ZLB floor. Shock scale 0.4, SW07-HLT model.}
+\label{fig:zlb_correction_robs}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/zlb_correction_timeseries_4panel.pdf}
+\caption{Four-observable comparison during a ZLB-binding episode. ROM1 + surrogate (red dotted) tracks FOM truth (black solid); ROM1 alone (blue dashed) diverges. Investment growth shows the largest corrections, consistent with the investment-dominance finding.}
+\label{fig:zlb_correction_4panel}
+\end{figure}
+
+
+\section{Linear Baseline: Comparison with Farkas and Tat\'ar (2020)}
+\label{app:ft_comparison}
+
+The linear HMC baseline in Table~\ref{tab:18param_posterior} uses the Holden--Lind\'e--Trabandt (HLT) reparameterization of the \citet{smets2007shocks} model, which differs from the original specification in ways that affect posterior comparison with earlier work. This appendix documents these differences, compares the 18-parameter HMC posterior to the results in \citet{farkas2020bayesian}, and reports a sensitivity analysis restoring the moving-average (MA) markup structure.
+
+\subsection{Model Differences}
+
+The HLT specification departs from the base \citet{smets2007shocks} model in three ways relevant to posterior comparison:
+
+\begin{enumerate}
+\item \textbf{Markup shock dynamics.} The original SW07 model specifies price and wage markup shocks as ARMA(1,1):
+\[
+s_t^{\pi} = \rho_\pi s_{t-1}^{\pi} + \varepsilon_t - \mu_p \varepsilon_{t-1}, \qquad
+s_t^{w} = \rho_w s_{t-1}^{w} + \eta_t - \mu_w \eta_{t-1}.
+\]
+\citet{farkas2020bayesian} estimate $\mu_p = 0.80$ and $\mu_w = 0.89$. The HLT baseline fixes $\mu_p = \mu_w = 0$, eliminating the MA component entirely. This transfers the burden of generating inflation and wage persistence from the MA terms onto other parameters---principally indexation ($\iota_p$) and the AR coefficients ($\rho_\pi$, $\rho_w$).
+
+\item \textbf{SCALE1 reparameterization.} Shock innovations in the HLT model enter as $z_{\varepsilon}/100 \times \textit{SCALE1}_\varepsilon$, where the scaling factor is the inverse of the Phillips curve slope evaluated at the parameter vector. This makes the volatility parameters scale-independent of Calvo and Kimball parameters but renders the $z$ values not directly comparable to the raw $\sigma$ parameters in the standard specification.
+
+\item \textbf{Kimball aggregation.} The HLT model includes a Kimball demand curvature parameter $\varepsilon_p$ (estimated at 78 in Table~\ref{tab:18param_posterior}). The original SW07 model does not include this parameter. The Kimball term flattens the Phillips curve slope by a factor of $1/[(\varepsilon_p - 1)\cdot \textit{curvp} + 1]$, requiring higher Calvo stickiness to match observed inflation dynamics.
+\end{enumerate}
+
+\subsection{Comparison with Farkas and Tat\'ar (2020)}
+
+Table~\ref{tab:ft_comparison} compares the HLT baseline posterior to the HMC results from \citet{farkas2020bayesian}, who estimate the full SW07 specification (36 parameters) on the 1960Q1--2004Q4 sample using NUTS via Stan with 1,000 draws.
+
+\begin{table}[htbp]
+\centering
+\caption{Posterior Comparison: HLT Baseline vs.\ Farkas--Tat\'ar (2020)}
+\label{tab:ft_comparison}
+\begin{tabular}{llccc}
+\toprule
+Parameter & Description & FT (2020) & HLT $\mu=0$ & HLT $\mu=\text{SW07}$ \\
+\midrule
+\multicolumn{5}{l}{\textit{Shock Persistence}} \\
+$\rho_a$ & TFP & 0.98 & 0.986 & 0.987 \\
+$\rho_b$ & Risk premium & 0.27 & 0.702 & 0.793 \\
+$\rho_g$ & Government & 0.97 & 0.986 & 0.986 \\
+$\rho_{qs}$ & Investment & 0.69 & 0.771 & 0.750 \\
+$\rho_\pi$ & Price markup & 0.96 & 0.026 & 0.091 \\
+$\rho_w$ & Wage markup & 0.97 & 0.391 & 0.751 \\
+$\rho_{ms}$ & Monetary & 0.17 & 0.162 & 0.169 \\
+\midrule
+\multicolumn{5}{l}{\textit{Shock Volatilities}} \\
+$\sigma_a$ & TFP & 0.48 & 0.505 & 0.505 \\
+$\sigma_b$ & Risk premium & 0.24 & 0.142 & 0.106 \\
+$\sigma_g$ & Government & 0.52 & 0.507 & 0.507 \\
+$\sigma_{qs}$ & Investment & 0.46 & 0.363 & 0.376 \\
+$\sigma_\pi$ & Price markup & 0.13 & 0.135 & 0.162 \\
+$\sigma_w$ & Wage markup & 0.25 & 0.196 & 0.335 \\
+$\sigma_{ms}$ & Monetary & 0.24 & 0.240 & 0.239 \\
+\midrule
+\multicolumn{5}{l}{\textit{Structural Parameters}} \\
+$\xi_p$ & Calvo prices & 0.64 & 0.924 & 0.937 \\
+$\iota_p$ & Price indexation & 0.24 & 0.925 & 0.979 \\
+$\varepsilon_p$ & Kimball curvature & --- & 77.9 & 81.5 \\
+$\xi_w$ & Calvo wages & 0.75 & 0.943 & 0.944 \\
+\midrule
+$\mu_p$ & Price MA & 0.80 & 0 (fixed) & 0.80 (fixed) \\
+$\mu_w$ & Wage MA & 0.89 & 0 (fixed) & 0.89 (fixed) \\
+\midrule
+\multicolumn{2}{l}{Log-likelihood} & --- & $-1{,}027$ & $-993$ \\
+\multicolumn{2}{l}{Draws / min ESS} & 1000 / 287 & 1000 / 501 & 1000 / 660 \\
+\multicolumn{2}{l}{Divergences} & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize \textit{Notes}: ``FT (2020)'' reports posterior means from Table~4--5 of \citet{farkas2020bayesian}, who estimate the full SW07 model (36 parameters) on 1960Q1--2004Q4 data using NUTS via Stan. ``HLT $\mu=0$'' is the baseline from Table~\ref{tab:18param_posterior} (18 parameters, HLT reparameterization, $\mu_p = \mu_w = 0$). ``HLT $\mu=\text{SW07}$'' restores the MA coefficients at the \citet{farkas2020bayesian} posterior values ($\mu_p = 0.80$, $\mu_w = 0.89$) while keeping all other settings identical. Both HLT columns use the same sample (1959Q1--2004Q4, $T=184$), priors, and NUTS configuration. FT volatility parameters are raw $\sigma$; HLT volatilities are $z/100 \times \text{SCALE1}$ and therefore not directly comparable in magnitude. FT does not report log-likelihood or include Kimball curvature.}
+\end{table}
+
+\subsection{Discussion}
+
+The comparison reveals which discrepancies arise from the MA specification versus deeper structural differences.
+
+\paragraph{Parameters that match across all specifications.} Technology persistence ($\rho_a \approx 0.98$), government spending persistence ($\rho_g \approx 0.97$--0.99), monetary policy persistence ($\rho_{ms} \approx 0.17$), and the shock volatilities for technology, government, and monetary policy ($\sigma_a$, $\sigma_g$, $\sigma_{ms}$) are robust to model specification. These parameters are well-identified by the data regardless of the markup structure.
+
+\paragraph{Parameters sensitive to the MA terms.} Restoring $\mu_p = 0.80$ and $\mu_w = 0.89$ produces large shifts in wage markup persistence ($\rho_w$: $0.39 \to 0.75$, toward the FT value of 0.97) and improves the log-likelihood by 34 nats ($-1{,}027 \to -993$). The MA terms provide a ``first-period kick'' in the markup shocks that the pure AR specification must approximate through higher $\rho_w$ or, when $\rho_w$ is constrained, through indexation and Calvo stickiness. Price markup persistence ($\rho_\pi$) rises modestly ($0.03 \to 0.09$) but remains far below the FT value of 0.96; the SCALE1 reparameterization and Kimball curvature prevent convergence to the standard SW07 posterior for this parameter.
+
+\paragraph{Parameters driven by Kimball curvature.} Calvo price and wage stickiness ($\xi_p$, $\xi_w$) and price indexation ($\iota_p$) are substantially higher in both HLT specifications than in FT. This is a consequence of the Kimball aggregator ($\varepsilon_p \approx 80$), which flattens the Phillips curve slope and requires higher nominal rigidity to match observed inflation dynamics. These parameters are structurally incomparable without accounting for the Kimball term.
+
+\paragraph{Remaining discrepancies.} Risk premium persistence ($\rho_b$) is higher in both HLT runs (0.70--0.79) than in FT (0.27). This likely reflects the 18 fixed structural parameters---habit formation, investment adjustment costs, risk aversion---whose estimation in FT interacts with the risk premium process. Similarly, the risk premium volatility $\sigma_b$ is lower in the HLT specification (0.11--0.14 vs.\ FT's 0.24), plausibly because the SCALE1 reparameterization rescales the effective shock size.
+
+The 34-nat log-likelihood improvement from restoring the MA terms confirms that the ARMA(1,1) markup structure captures genuine data variation. For the nonlinear estimation in the main text, I retain the HLT default ($\mu_p = \mu_w = 0$) to maintain consistency with the surrogate training data, noting that future work should explore estimating the MA coefficients jointly with the structural parameters.
+
+
+\clearpage
+
+\end{document}

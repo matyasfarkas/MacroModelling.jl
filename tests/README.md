@@ -1,3 +1,19 @@
+# MacroModelling.jl Legacy SEP Validation Corpus
+
+## Consolidation Status (2026-02-24)
+
+This `tests/` tree is retained as a legacy/historical validation corpus during the
+repository consolidation. The active package test suite lives under `test/`.
+
+For active test fixtures, prefer:
+
+- `test/fixtures/sep_validation` (canonical path for package tests)
+
+Until the full corpus is physically reclassified, scripts/tests may fall back to the
+legacy location:
+
+- `tests/sep_validation`
+
 # MacroModelling.jl Test Suite
 
 Organized test files for SEP (Stochastic Extended Path) solver validation and development.

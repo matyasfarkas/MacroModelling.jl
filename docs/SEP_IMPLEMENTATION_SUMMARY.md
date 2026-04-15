@@ -198,6 +198,21 @@ solve!(model,
        sep_deterministic_shocks=shocks)
 ```
 
+### Additional SEP options (stochastic solver)
+
+These options are available in `solve!(...; algorithm=:stochastic_extended_path, ...)`:
+
+- `sep_line_search`, `sep_line_search_maxit`, `sep_line_search_factor`, `sep_line_search_min_alpha`  
+  Control damped line search for Newton steps.
+- `sep_lm_lambda`, `sep_lm_lambda_scale`, `sep_lm_lambda_min`, `sep_lm_lambda_max`  
+  Levenberg–Marquardt regularization on normal equations.
+- `sep_linear_solver`, `sep_fallback_solver`  
+  Switch between `:normal_equations` and `:qr` when steps stall.
+- `sep_accept_tol`  
+  Acceptance tolerance for SEP in simulation loops (treats `final_error <= sep_accept_tol` as success).
+- `sep_shock_scale`  
+  Scales **GH nodes** used for stochastic expectations (useful to improve convergence in stiff models).
+
 ---
 
 ## Validation Results

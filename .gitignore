@@ -61,3 +61,56 @@ samples*
 *samples.csv
 skewness*.png
 conditional_forecast*.png
+
+# Data directories (do not commit large datasets)
+data/
+**/data/
+archive/data/
+
+# Backup and temporary files
+*.working
+*.backup
+*~
+
+# Generated output directories
+--out-dir=*/
+output/
+results/
+
+# Archive directory (keep local development history)
+# IMPORTANT: Archive contains confidential research - do not commit
+archive/
+
+# Consolidation / validation local artifacts (keep heavy outputs local)
+.local_artifacts/
+!.local_artifacts/.gitkeep
+
+# Validation benchmark artifacts
+checkpoints/
+benchmark_outputs/
+validation_runs/
+
+# Claude Code session data
+.claude/
+
+# Remote desktop session files
+.rustdesk_*
+
+# Sync conflict files
+.sync-conflict-*
+
+# Plots.jl temp cache
+gr-temp/
+
+# LaTeX auxiliary files (in paper directory)
+docs/paper/*.aux
+docs/paper/*.bbl
+docs/paper/*.blg
+docs/paper/*.log
+docs/paper/*.out
+docs/paper/*.toc
+docs/paper/*.fls
+docs/paper/*.fdb_latexmk
+docs/paper/*.synctex.gz
+docs/paper/*.bak
+docs/paper/*.backup*

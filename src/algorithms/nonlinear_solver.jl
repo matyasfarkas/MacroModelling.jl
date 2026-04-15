@@ -394,7 +394,7 @@ function update_α̂(g::T, α::T, P̋::T, P̃::T)::T where T <: Real
     return -g * α^2 / (2 * (P̋ - P̃ - g * α))
 end
 
-function has_nonfinite(A::AbstractArray)
+function has_nonfinite(A::AbstractArray)::Bool  # FIX H-01: Explicit return type for type stability
     @inbounds for x in A
         if !isfinite(x)
             return true

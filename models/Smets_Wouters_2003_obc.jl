@@ -112,7 +112,7 @@
 
 end
 
-@parameters Smets_Wouters_2003_obc begin  
+@parameters Smets_Wouters_2003_obc simplify = false begin  
     R̄ = 0.0  # effective lower bound
 
     lambda_p = 0.368

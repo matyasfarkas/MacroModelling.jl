@@ -3525,6 +3525,18 @@ function get_loglikelihood(𝓂::ℳ,
                             quadratic_matrix_equation_algorithm::Symbol = DEFAULT_QME_ALGORITHM, 
                             lyapunov_algorithm::Symbol = DEFAULT_LYAPUNOV_ALGORITHM, 
                             sylvester_algorithm::Union{Symbol,Vector{Symbol},Tuple{Symbol,Vararg{Symbol}}} = DEFAULT_SYLVESTER_SELECTOR(𝓂),
+                            sep_periods::Union{Nothing,Int} = nothing,
+                            sep_order::Union{Nothing,Int} = nothing,
+                            sep_nnodes::Union{Nothing,Int} = nothing,
+                            sep_sparse_tree::Union{Nothing,Bool} = nothing,
+                            sep_maxit::Union{Nothing,Int} = nothing,
+                            sep_tol::Union{Nothing,Float64} = nothing,
+                            sep_accept_tol::Union{Nothing,Float64} = nothing,
+                            sep_shock_scale::Union{Nothing,Float64} = nothing,
+                            sep_inv_maxit::Union{Nothing,Int} = nothing,
+                            sep_inv_step_tol::Union{Nothing,Float64} = nothing,
+                            sep_inv_resid_tol::Union{Nothing,Float64} = nothing,
+                            sep_inv_lambda::Union{Nothing,Float64} = nothing,
                             verbose::Bool = DEFAULT_VERBOSE)::S where {S <: Real, U <: AbstractFloat}
                             # timer::TimerOutput = TimerOutput(),
 
@@ -3547,10 +3559,12 @@ function get_loglikelihood(𝓂::ℳ,
 
     observables = @ignore_derivatives get_and_check_observables(𝓂, data)
 
-    @ignore_derivatives solve!(𝓂, 
-                                opts = opts,
-                                # timer = timer, 
-                                algorithm = algorithm)
+    if !(algorithm == :stochastic_extended_path && filter == :inversion)
+        @ignore_derivatives solve!(𝓂,
+                                    opts = opts,
+                                    # timer = timer,
+                                    algorithm = algorithm)
+    end
 
     bounds_violated = @ignore_derivatives check_bounds(parameter_values, 𝓂)
 
@@ -3565,7 +3579,24 @@ function get_loglikelihood(𝓂::ℳ,
 
     # @timeit_debug timer "Get relevant steady state and solution" begin
 
-    TT, SS_and_pars, 𝐒, state, solved = get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂, opts = opts)
+    TT, SS_and_pars, 𝐒, state, solved = if algorithm == :stochastic_extended_path
+        get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂;
+                                                    opts = opts,
+                                                    sep_periods = sep_periods,
+                                                    sep_order = sep_order,
+                                                    sep_nnodes = sep_nnodes,
+                                                    sep_sparse_tree = sep_sparse_tree,
+                                                    sep_maxit = sep_maxit,
+                                                    sep_tol = sep_tol,
+                                                    sep_accept_tol = sep_accept_tol,
+                                                    sep_shock_scale = sep_shock_scale,
+                                                    sep_inv_maxit = sep_inv_maxit,
+                                                    sep_inv_step_tol = sep_inv_step_tol,
+                                                    sep_inv_resid_tol = sep_inv_resid_tol,
+                                                    sep_inv_lambda = sep_inv_lambda)
+    else
+        get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂, opts = opts)
+    end
                                                                                     # timer = timer,
 
     # end # timeit_debug
@@ -3589,6 +3620,93 @@ function get_loglikelihood(𝓂::ℳ,
     llh = calculate_loglikelihood(Val(filter), algorithm, observables, 𝐒, data_in_deviations, TT, presample_periods, initial_covariance, state, warmup_iterations, filter_algorithm, opts, on_failure_loglikelihood) # timer = timer
 
     # end # timeit_debug
+
+    return llh
+end
+
+"""
+$(SIGNATURES)
+Return the per-period Kalman filter log-likelihood contributions for a given model/data pair.
+
+This mirrors `get_loglikelihood` but returns a vector of log-likelihood terms (one per period)
+and currently supports `filter=:kalman` only.
+"""
+function get_loglikelihood_per_period(𝓂::ℳ,
+                                        data::KeyedArray{Float64},
+                                        parameter_values::Vector{S};
+                                        algorithm::Symbol = DEFAULT_ALGORITHM,
+                                        filter::Symbol = DEFAULT_FILTER_SELECTOR(algorithm),
+                                        on_failure_loglikelihood::U = -Inf,
+                                        warmup_iterations::Int = DEFAULT_WARMUP_ITERATIONS,
+                                        presample_periods::Int = DEFAULT_PRESAMPLE_PERIODS,
+                                        initial_covariance::Symbol = :theoretical,
+                                        filter_algorithm::Symbol = :LagrangeNewton,
+                                        tol::Tolerances = Tolerances(),
+                                        quadratic_matrix_equation_algorithm::Symbol = DEFAULT_QME_ALGORITHM,
+                                        lyapunov_algorithm::Symbol = DEFAULT_LYAPUNOV_ALGORITHM,
+                                        sylvester_algorithm::Union{Symbol,Vector{Symbol},Tuple{Symbol,Vararg{Symbol}}} = DEFAULT_SYLVESTER_SELECTOR(𝓂),
+                                        verbose::Bool = DEFAULT_VERBOSE)::Vector{S} where {S <: Real, U <: AbstractFloat}
+    opts = merge_calculation_options(tol = tol, verbose = verbose,
+                            quadratic_matrix_equation_algorithm = quadratic_matrix_equation_algorithm,
+                            sylvester_algorithm² = isa(sylvester_algorithm, Symbol) ? sylvester_algorithm : sylvester_algorithm[1],
+                            sylvester_algorithm³ = (isa(sylvester_algorithm, Symbol) || length(sylvester_algorithm) < 2) ? sum(k * (k + 1) ÷ 2 for k in 1:𝓂.timings.nPast_not_future_and_mixed + 1 + 𝓂.timings.nExo) > DEFAULT_SYLVESTER_THRESHOLD ? DEFAULT_LARGE_SYLVESTER_ALGORITHM : DEFAULT_SYLVESTER_ALGORITHM : sylvester_algorithm[2],
+                            lyapunov_algorithm = lyapunov_algorithm)
+
+    @assert length(parameter_values) == length(𝓂.parameters) "The number of parameter values provided does not match the number of parameters in the model. If this function is used in the context of estimation and not all parameters are estimated, the estimated parameters need to be combined with the other model parameters in one `Vector`. Ensure they have the same order they were declared in the `@parameters` block (check by calling `get_parameters`)."
+
+    @assert initial_covariance ∈ [:theoretical, :diagonal] "Invalid method to initialise the Kalman filters covariance matrix. Supported methods are: the theoretical long run values (option `:theoretical`) or large values (10.0) along the diagonal (option `:diagonal`)."
+
+    filter, _, algorithm, _, _, warmup_iterations = @ignore_derivatives normalize_filtering_options(filter, false, algorithm, false, warmup_iterations)
+
+    observables = @ignore_derivatives get_and_check_observables(𝓂, data)
+
+    @ignore_derivatives solve!(𝓂,
+                                opts = opts,
+                                algorithm = algorithm)
+
+    bounds_violated = @ignore_derivatives check_bounds(parameter_values, 𝓂)
+
+    if bounds_violated
+        return fill(zero(S) + on_failure_loglikelihood, size(data, 2))
+    end
+
+    NSSS_labels = @ignore_derivatives [sort(union(𝓂.exo_present, 𝓂.var))..., 𝓂.calibration_equations_parameters...]
+
+    obs_indices = @ignore_derivatives convert(Vector{Int}, indexin(observables, NSSS_labels))
+
+    TT, SS_and_pars, 𝐒, state, solved = get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂, opts = opts)
+
+    if !solved
+        return fill(zero(S) + on_failure_loglikelihood, size(data, 2))
+    end
+
+    if collect(axiskeys(data, 1)) isa Vector{String}
+        data = @ignore_derivatives rekey(data, 1 => axiskeys(data, 1) .|> Meta.parse .|> replace_indices)
+    end
+
+    dt = @ignore_derivatives collect(data(observables))
+
+    data_in_deviations = dt .- SS_and_pars[obs_indices]
+
+    if filter == :kalman
+        llh = calculate_kalman_filter_loglikelihood_per_period(observables, 𝐒, data_in_deviations, TT,
+                                                                presample_periods = presample_periods,
+                                                                initial_covariance = initial_covariance,
+                                                                opts = opts,
+                                                                on_failure_loglikelihood = on_failure_loglikelihood)
+    elseif filter == :inversion
+        # Use proper per-period inversion filter
+        llh = calculate_inversion_filter_loglikelihood_per_period(Val(algorithm), state, 𝐒, data_in_deviations,
+                                                                   observables, TT,
+                                                                   warmup_iterations = warmup_iterations,
+                                                                   presample_periods = presample_periods,
+                                                                   filter_algorithm = filter_algorithm,
+                                                                   opts = opts,
+                                                                   on_failure_loglikelihood = on_failure_loglikelihood)
+    else
+        # For other filters (particle, etc.), fallback to error
+        error("get_loglikelihood_per_period currently supports filter=:kalman and filter=:inversion only. Got filter=$(filter)")
+    end
 
     return llh
 end

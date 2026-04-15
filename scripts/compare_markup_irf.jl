@@ -6,13 +6,16 @@
 # - get_sep_irf(model, shock, size)
 
 using MacroModelling, Plots, Printf, StatsBase, AxisKeys
-include("models/Smets_Wouters_2007_HLT.jl")
+include(joinpath(@__DIR__, "hlt_surrogate", "hlt_model_loader_utils.jl"))
+
+const HLT_MODEL = load_hlt_model(normpath(joinpath(@__DIR__, "..")), "Smets_Wouters_2007_HLT"; mod = @__MODULE__)
+const SKIP_SEP = "--skip-sep" in ARGS
 
 """
 Get MacroModelling IRF for price markup shock.
 """
 function get_mm_irf_markup(; periods=40)
-    m = Smets_Wouters_2007_HLT
+    m = HLT_MODEL
 
     # Get IRF for epinf shock
     irf = get_irf(m; shocks=:epinf, periods=periods)
@@ -30,7 +33,7 @@ Method:
 function get_sep_irf_markup(; periods=40)
     println("  [SEP IRF computation using MacroModelling integration]")
 
-    m = Smets_Wouters_2007_HLT
+    m = HLT_MODEL
 
     # Solve with SEP (using conservative settings for large model)
     T_sep = min(periods, 20)  # Limit to 20 periods for computational efficiency
@@ -113,11 +116,16 @@ function compare_markup_irfs(; periods=40)
     end
 
     # Get SEP IRF using MacroModelling integration
+    if SKIP_SEP
+        println("\n3. Skipping SEP IRF (--skip-sep).")
+        return (mm=mm_responses, sep=Dict{Symbol, Vector{Float64}}())
+    end
+
     println("\n3. Computing SEP IRF...")
     sep_irf = get_sep_irf_markup(; periods=periods)
 
     # Get model to access variable names
-    m = Smets_Wouters_2007_HLT
+    m = HLT_MODEL
     var_names = m.var
 
     # Convert to Dict for easier variable access
