@@ -1,0 +1,450 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\bibstyle{plainnat}
+\citation{gust2012effects,boehl2022monetary,guerrieri2015occbin}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{7}{section.1}\protected@file@percent }
+\newlabel{sec:introduction}{{1}{7}{Introduction}{section.1}{}}
+\citation{guerrieri2015occbin}
+\citation{kase2025estimating,naubert2025differentiable}
+\citation{fair1983solution,adjemian2025stochastic}
+\citation{judd1992projection}
+\citation{krueger2004computing,winschel2010solving}
+\citation{peherstorfer2018survey}
+\citation{kennedy2001bayesian}
+\citation{koop2022bayesian}
+\citation{naubert2025differentiable}
+\citation{kase2025estimating}
+\citation{janssens2025efficient}
+\citation{childers2022filter}
+\citation{farkas2020bayesian}
+\citation{herbst2019tempered}
+\citation{cubaborda2019likelihood}
+\citation{gust2012effects}
+\citation{boehl2022monetary}
+\citation{fernandezvillaverde2021estimating}
+\@writefile{toc}{\contentsline {section}{\numberline {2}The Invisibility Property}{10}{section.2}\protected@file@percent }
+\newlabel{sec:invisibility}{{2}{10}{The Invisibility Property}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}A General Perturbation Invisibility Result}{10}{subsection.2.1}\protected@file@percent }
+\newlabel{prop:invisibility}{{2.1}{10}{Perturbation Invisibility}{theorem.2.1}{}}
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Analytical Ranking of Nonlinearity Sources}{11}{subsection.2.2}\protected@file@percent }
+\citation{guerrieri2015occbin}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Model Environment}{12}{section.3}\protected@file@percent }
+\newlabel{sec:model}{{3}{12}{Model Environment}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}General DSGE Framework}{12}{subsection.3.1}\protected@file@percent }
+\newlabel{eq:equilibrium}{{1}{12}{General DSGE Framework}{equation.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Observation Equation}{13}{subsection.3.2}\protected@file@percent }
+\newlabel{eq:observation}{{2}{13}{Observation Equation}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Estimation Problem}{13}{subsection.3.3}\protected@file@percent }
+\newlabel{eq:posterior}{{3}{13}{Estimation Problem}{equation.3}{}}
+\citation{gali2015monetary}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Illustrative Models}{14}{subsection.3.4}\protected@file@percent }
+\newlabel{subsec:gali_model}{{3.4}{14}{Illustrative Models}{subsection.3.4}{}}
+\citation{peherstorfer2018survey}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Nonlinear Solution and Surrogate}{15}{section.4}\protected@file@percent }
+\newlabel{sec:methodology}{{4}{15}{Nonlinear Solution and Surrogate}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Multi-Fidelity Architecture}{15}{subsection.4.1}\protected@file@percent }
+\newlabel{subsec:multifidelity}{{4.1}{15}{Multi-Fidelity Architecture}{subsection.4.1}{}}
+\citation{fair1983solution}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Stochastic Extended Path (SEP) Algorithm}{16}{subsection.4.2}\protected@file@percent }
+\newlabel{subsec:sep}{{4.2}{16}{Stochastic Extended Path (SEP) Algorithm}{subsection.4.2}{}}
+\newlabel{eq:newton_iteration}{{4}{16}{Stochastic Extended Path (SEP) Algorithm}{equation.4}{}}
+\citation{aruoba2006comparing,kimetal2008pruning}
+\citation{andreasen2018pruning}
+\citation{fernandez2016solution}
+\newlabel{eq:softplus_zlb}{{5}{17}{Stochastic Extended Path (SEP) Algorithm}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Dataset Generation and Surrogate Training}{18}{subsection.4.3}\protected@file@percent }
+\newlabel{subsec:surrogate}{{4.3}{18}{Dataset Generation and Surrogate Training}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Regime-Switching Gate and Inversion Filter}{18}{subsection.4.4}\protected@file@percent }
+\newlabel{subsec:regime_switching}{{4.4}{18}{Regime-Switching Gate and Inversion Filter}{subsection.4.4}{}}
+\citation{hoffman2014nuts}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Filter-Free Hamiltonian Monte Carlo}{19}{subsection.4.5}\protected@file@percent }
+\newlabel{subsec:hmc}{{4.5}{19}{Filter-Free Hamiltonian Monte Carlo}{subsection.4.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Nonlinearity variance decomposition and surrogate accuracy by distance from steady state. Panel~(a): $R^2$ from regressing the nonlinearity measure $\Delta _j = \|g^{\text  {FOM}} - g^{\text  {ROM1}}\|_2$ on each feature set separately. Panel~(b): RMSE of the neural surrogate (blue) and first-order perturbation ROM1 (red) across quintiles of state distance $\|s - \bar  {s}(\theta )\|_2$, with percentage improvement labeled. The surrogate's RMSE is roughly flat while ROM1 errors grow by two orders of magnitude. Based on 22,080 training samples from the 18-parameter dataset.}}{20}{figure.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:nonlinearity_decomposition}{{1}{20}{Nonlinearity variance decomposition and surrogate accuracy by distance from steady state. Panel~(a): $R^2$ from regressing the nonlinearity measure $\Delta _j = \|g^{\text {FOM}} - g^{\text {ROM1}}\|_2$ on each feature set separately. Panel~(b): RMSE of the neural surrogate (blue) and first-order perturbation ROM1 (red) across quintiles of state distance $\|s - \bar {s}(\theta )\|_2$, with percentage improvement labeled. The surrogate's RMSE is roughly flat while ROM1 errors grow by two orders of magnitude. Based on 22,080 training samples from the 18-parameter dataset}{figure.caption.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Quantitative Decomposition}{20}{section.5}\protected@file@percent }
+\newlabel{sec:decomposition}{{5}{20}{Quantitative Decomposition}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}The 69 Percent Finding}{20}{subsection.5.1}\protected@file@percent }
+\newlabel{subsec:nonlinearity_sources}{{5.1}{20}{The 69 Percent Finding}{subsection.5.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Equation-Block Decomposition of the FOM--ROM1 Gap}}{21}{table.caption.3}\protected@file@percent }
+\newlabel{tab:equation_block}{{1}{21}{Equation-Block Decomposition of the FOM--ROM1 Gap}{table.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}State-Dependent Impulse Responses}{22}{subsection.5.2}\protected@file@percent }
+\newlabel{subsec:irf_comparison}{{5.2}{22}{State-Dependent Impulse Responses}{subsection.5.2}{}}
+\citation{smets2007shocks}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Investment growth impulse responses: ROM1 (dashed) vs.\ SEP FOM (solid) for the investment-specific shock at magnitudes of $1\sigma $ through $5\sigma $. Positive shocks shown in red, negative shocks in dark red (dash-dot). At small shocks the two coincide; at large shocks the SEP FOM shows amplification (positive) and asymmetric attenuation (negative) that the linear model cannot represent. Y-axis: percentage deviation from steady state. Horizon: 40 quarters from steady state.}}{23}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:sep_vs_rom1_eqs}{{2}{23}{Investment growth impulse responses: ROM1 (dashed) vs.\ SEP FOM (solid) for the investment-specific shock at magnitudes of $1\sigma $ through $5\sigma $. Positive shocks shown in red, negative shocks in dark red (dash-dot). At small shocks the two coincide; at large shocks the SEP FOM shows amplification (positive) and asymmetric attenuation (negative) that the linear model cannot represent. Y-axis: percentage deviation from steady state. Horizon: 40 quarters from steady state}{figure.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}ROM1 Forecast Errors in Real Data}{23}{subsection.5.3}\protected@file@percent }
+\newlabel{subsec:rom1_forecast_errors}{{5.3}{23}{ROM1 Forecast Errors in Real Data}{subsection.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces All-observable impulse responses to a $4\sigma $ investment-specific shock. ROM1 (blue dashed), SEP FOM positive (red solid), SEP FOM negative (dark red dash-dot). The nonlinear correction concentrates in investment growth, with spillovers to output and hours. Inflation and the interest rate are nearly unchanged between ROM1 and SEP FOM. Y-axis: percentage deviation from steady state.}}{24}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:all_vars_eqs}{{3}{24}{All-observable impulse responses to a $4\sigma $ investment-specific shock. ROM1 (blue dashed), SEP FOM positive (red solid), SEP FOM negative (dark red dash-dot). The nonlinear correction concentrates in investment growth, with spillovers to output and hours. Inflation and the interest rate are nearly unchanged between ROM1 and SEP FOM. Y-axis: percentage deviation from steady state}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}The ELB as Alternative Hypothesis}{24}{subsection.5.4}\protected@file@percent }
+\newlabel{subsec:elb_alternative}{{5.4}{24}{The ELB as Alternative Hypothesis}{subsection.5.4}{}}
+\citation{gali2015monetary}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces ROM1 one-step-ahead forecast errors for US data (1959Q1--2004Q4). Top: investment growth; middle: output growth; bottom: inflation. Shaded areas: NBER recessions. Dashed red lines: $\pm 2\sigma $ bands.}}{25}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:rom1_forecast_errors}{{4}{25}{ROM1 one-step-ahead forecast errors for US data (1959Q1--2004Q4). Top: investment growth; middle: output growth; bottom: inflation. Shaded areas: NBER recessions. Dashed red lines: $\pm 2\sigma $ bands}{figure.caption.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces ROM1 forecast errors: crisis vs.\ normal quarters}}{26}{table.caption.7}\protected@file@percent }
+\newlabel{tab:crisis_vs_normal}{{2}{26}{ROM1 forecast errors: crisis vs.\ normal quarters}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Gal\'i Negative Control}{26}{subsection.5.5}\protected@file@percent }
+\newlabel{subsec:gali_control}{{5.5}{26}{Gal\'i Negative Control}{subsection.5.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Counterfactual Model Variants}{26}{subsection.5.6}\protected@file@percent }
+\newlabel{subsec:counterfactuals}{{5.6}{26}{Counterfactual Model Variants}{subsection.5.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Equation-block decomposition of the FOM--ROM1 gap across shock scales 0.1--1.5. Each point is the average block share across ten Mahalanobis-stratified posterior draws and all simulated periods at that scale. Investment/capital (red) holds at 89--92 percent across the full shock-scale frontier; the consumption/Euler block (blue) accounts for the remaining 8--11 percent. All other blocks are below 2 percent at every scale.}}{27}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:decomposition_vs_scale}{{5}{27}{Equation-block decomposition of the FOM--ROM1 gap across shock scales 0.1--1.5. Each point is the average block share across ten Mahalanobis-stratified posterior draws and all simulated periods at that scale. Investment/capital (red) holds at 89--92 percent across the full shock-scale frontier; the consumption/Euler block (blue) accounts for the remaining 8--11 percent. All other blocks are below 2 percent at every scale}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Consequences for Inference}{27}{section.6}\protected@file@percent }
+\newlabel{sec:inference_consequences}{{6}{27}{Consequences for Inference}{section.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces ZLB contribution to nonlinearity in the Gal\'i model. Blue circles: FOM--ROM1 gap without the ZLB constraint. Red diamonds: with the ZLB. Below $3\sigma $ shocks the two are nearly indistinguishable; the ZLB begins to matter at $5\sigma $ and roughly quadruples the gap at $10\sigma $. At empirically relevant shock scales the ZLB contributes negligibly to the FOM--ROM1 gap.}}{28}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:gali_obc_vs_no_obc}{{6}{28}{ZLB contribution to nonlinearity in the Gal\'i model. Blue circles: FOM--ROM1 gap without the ZLB constraint. Red diamonds: with the ZLB. Below $3\sigma $ shocks the two are nearly indistinguishable; the ZLB begins to matter at $5\sigma $ and roughly quadruples the gap at $10\sigma $. At empirically relevant shock scales the ZLB contributes negligibly to the FOM--ROM1 gap}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}18-Parameter Real-Data Estimation}{28}{subsection.6.1}\protected@file@percent }
+\newlabel{subsec:results_18param_kalman}{{6.1}{28}{18-Parameter Real-Data Estimation}{subsection.6.1}{}}
+\newlabel{par:results_18param_switching}{{6.1}{28}{Regime-switching surrogate estimation}{section*.10}{}}
+\@writefile{toc}{\contentsline {paragraph}{Regime-switching surrogate estimation.}{28}{section*.10}\protected@file@percent }
+\citation{herbst2016sequential}
+\citation{herbst2019tempered}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Posterior Comparison: Kalman vs.\ Regime-Switching Surrogate}}{30}{table.caption.11}\protected@file@percent }
+\newlabel{tab:18param_switching_posterior}{{3}{30}{Posterior Comparison: Kalman vs.\ Regime-Switching Surrogate}{table.caption.11}{}}
+\citation{gordon1993novel}
+\citation{snyder2008obstacles}
+\citation{herbst2019tempered}
+\citation{aruoba2021piecewise}
+\@writefile{toc}{\contentsline {paragraph}{Convergence diagnostics.}{31}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Scope limitations.}{31}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Runtime}{31}{subsection.6.2}\protected@file@percent }
+\newlabel{subsec:results_hlt_runtime}{{6.2}{31}{Runtime}{subsection.6.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Computational Benchmark Comparison}}{32}{table.caption.14}\protected@file@percent }
+\newlabel{tab:benchmarks}{{4}{32}{Computational Benchmark Comparison}{table.caption.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Extended-Sample Estimation Through 2025}{32}{subsection.6.3}\protected@file@percent }
+\newlabel{subsec:extended_sample}{{6.3}{32}{Extended-Sample Estimation Through 2025}{subsection.6.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Extended-Sample Posterior Comparison (1959Q1--2025Q1)}}{34}{table.caption.15}\protected@file@percent }
+\newlabel{tab:extended_sample_posterior}{{5}{34}{Extended-Sample Posterior Comparison (1959Q1--2025Q1)}{table.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Kalman-smoothed shocks (in $\sigma $ units), 2018--2025. Both series are evaluated through the same linear Kalman smoother; only the parameter vector differs. Blue dashed: linear posterior mean; red solid: surrogate posterior mean. Gray band: COVID window (2020Q1--2021Q2). At the linear posterior, risk-premium shocks peak at $56\sigma $. At the surrogate posterior, the halved $\sigma _b$ forces even larger normalized shocks---the surrogate's parameters are structurally incompatible with a linear filter. The 30-nat log-likelihood improvement under the regime-switching likelihood (Table~\ref {tab:extended_sample_posterior}) confirms that the nonlinear propagation channel, not parameter recalibration alone, accounts for the better fit.}}{35}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:covid_shock_comparison}{{7}{35}{Kalman-smoothed shocks (in $\sigma $ units), 2018--2025. Both series are evaluated through the same linear Kalman smoother; only the parameter vector differs. Blue dashed: linear posterior mean; red solid: surrogate posterior mean. Gray band: COVID window (2020Q1--2021Q2). At the linear posterior, risk-premium shocks peak at $56\sigma $. At the surrogate posterior, the halved $\sigma _b$ forces even larger normalized shocks---the surrogate's parameters are structurally incompatible with a linear filter. The 30-nat log-likelihood improvement under the regime-switching likelihood (Table~\ref {tab:extended_sample_posterior}) confirms that the nonlinear propagation channel, not parameter recalibration alone, accounts for the better fit}{figure.caption.16}{}}
+\citation{alvarez2024rise}
+\citation{golosov2007menu}
+\citation{nakamura2010monetary}
+\citation{rotemberg1982sticky}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Discussion and Robustness}{36}{section.7}\protected@file@percent }
+\newlabel{sec:robustness}{{7}{36}{Discussion and Robustness}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Robustness to Pricing Specification}{36}{subsection.7.1}\protected@file@percent }
+\newlabel{subsec:pricing_robustness}{{7.1}{36}{Robustness to Pricing Specification}{subsection.7.1}{}}
+\citation{smets2007shocks}
+\citation{christiano2005nominal,justiniano2010investment}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Sensitivity to Investment Adjustment Cost Curvature}{37}{subsection.7.2}\protected@file@percent }
+\newlabel{subsec:csadjcost_sensitivity}{{7.2}{37}{Sensitivity to Investment Adjustment Cost Curvature}{subsection.7.2}{}}
+\citation{herbst2016sequential}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Equation-Block Decomposition: Sensitivity to $S''(1)$}}{38}{table.caption.17}\protected@file@percent }
+\newlabel{tab:csadjcost_sensitivity}{{6}{38}{Equation-Block Decomposition: Sensitivity to $S''(1)$}{table.caption.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Known Limitations}{39}{subsection.7.3}\protected@file@percent }
+\newlabel{subsec:known_limitations}{{7.3}{39}{Known Limitations}{subsection.7.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Policy Implications}{39}{subsection.7.4}\protected@file@percent }
+\citation{kase2025estimating,naubert2025differentiable}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{40}{section.8}\protected@file@percent }
+\newlabel{sec:conclusion}{{8}{40}{Conclusion}{section.8}{}}
+\citation{christiano2005nominal,justiniano2010investment}
+\bibdata{farkas_jmp_2026}
+\bibcite{adjemian2025stochastic}{{1}{2025}{{Adjemian and Juillard}}{{}}}
+\bibcite{alvarez2024rise}{{2}{2024}{{Alvarez et~al.}}{{Alvarez, Rossi-Hansberg, and Sollaci}}}
+\bibcite{andreasen2018pruning}{{3}{2018}{{Andreasen et~al.}}{{Andreasen, Fern{\'a}ndez-Villaverde, and Rubio-Ram{\'\i }rez}}}
+\bibcite{aruoba2006comparing}{{4}{2006}{{Aruoba et~al.}}{{Aruoba, Fern{\'a}ndez-Villaverde, and Rubio-Ram{\'\i }rez}}}
+\bibcite{aruoba2021piecewise}{{5}{2021}{{Aruoba et~al.}}{{Aruoba, Cuba-Borda, Higa-Flores, Schorfheide, and Villalvazo}}}
+\bibcite{betancourt2017conceptual}{{6}{2017}{{Betancourt}}{{}}}
+\bibcite{boehl2022monetary}{{7}{2022}{{Boehl}}{{}}}
+\bibcite{chen2007large}{{8}{2007}{{Chen}}{{}}}
+\bibcite{childers2022filter}{{9}{2022}{{Childers et~al.}}{{Childers, Echenique, and Richter}}}
+\bibcite{christiano2005nominal}{{10}{2005}{{Christiano et~al.}}{{Christiano, Eichenbaum, and Evans}}}
+\bibcite{cubaborda2019likelihood}{{11}{2019}{{Cuba-Borda et~al.}}{{Cuba-Borda, Guerrieri, Iacoviello, and Zhong}}}
+\bibcite{cybenko1989approximation}{{12}{1989}{{Cybenko}}{{}}}
+\bibcite{doucet2001sequential}{{13}{2001}{{Doucet et~al.}}{{Doucet, de~Freitas, and Gordon}}}
+\bibcite{doucet2015efficient}{{14}{2015}{{Doucet et~al.}}{{Doucet, Pitt, Deligiannidis, and Kohn}}}
+\bibcite{fair1983solution}{{15}{1983}{{Fair and Taylor}}{{}}}
+\bibcite{farkas2020bayesian}{{16}{2020}{{Farkas and Tat{\'a}r}}{{}}}
+\bibcite{fernandezvillaverde2007estimating}{{17}{2007}{{Fern{\'a}ndez-Villaverde and Rubio-Ram{\'\i }rez}}{{}}}
+\bibcite{fernandezvillaverde2021estimating}{{18}{2015}{{Fern{\'a}ndez-Villaverde et~al.}}{{Fern{\'a}ndez-Villaverde, Guerr{\'o}n-Quintana, and Rubio-Ram{\'\i }rez}}}
+\bibcite{fernandez2016solution}{{19}{2016}{{Fern{\'a}ndez-Villaverde et~al.}}{{Fern{\'a}ndez-Villaverde, Rubio-Ram{\'\i }rez, and Schorfheide}}}
+\bibcite{gali2015monetary}{{20}{2015}{{Gal{\'\i }}}{{}}}
+\bibcite{golosov2007menu}{{21}{2007}{{Golosov and Lucas}}{{}}}
+\bibcite{gordon1993novel}{{22}{1993}{{Gordon et~al.}}{{Gordon, Salmond, and Smith}}}
+\bibcite{guerrieri2015occbin}{{23}{2015}{{Guerrieri and Iacoviello}}{{}}}
+\bibcite{gust2012effects}{{24}{2017}{{Gust et~al.}}{{Gust, Herbst, L{\'o}pez-Salido, and Smith}}}
+\bibcite{herbst2016sequential}{{25}{2016}{{Herbst and Schorfheide}}{{}}}
+\bibcite{herbst2019tempered}{{26}{2019}{{Herbst and Schorfheide}}{{}}}
+\bibcite{hoffman2014nuts}{{27}{2014}{{Hoffman and Gelman}}{{}}}
+\bibcite{hornik1989multilayer}{{28}{1989}{{Hornik et~al.}}{{Hornik, Stinchcombe, and White}}}
+\bibcite{janssens2025efficient}{{29}{2025}{{Janssens and McCrary}}{{}}}
+\bibcite{judd1992projection}{{30}{1992}{{Judd}}{{}}}
+\bibcite{justiniano2010investment}{{31}{2010}{{Justiniano et~al.}}{{Justiniano, Primiceri, and Tambalotti}}}
+\bibcite{kase2025estimating}{{32}{2025}{{Kase et~al.}}{{Kase, Melosi, and Rottner}}}
+\bibcite{kennedy2001bayesian}{{33}{2001}{{Kennedy and O'Hagan}}{{}}}
+\bibcite{kimetal2008pruning}{{34}{2008}{{Kim et~al.}}{{Kim, Kim, Schaumburg, and Sims}}}
+\bibcite{kleijn2012bernstein}{{35}{2012}{{Kleijn and van~der Vaart}}{{}}}
+\bibcite{koop2022bayesian}{{36}{2022}{{Koop et~al.}}{{Koop, Mcintyre, Mitchell, and Poon}}}
+\bibcite{krueger2004computing}{{37}{2004}{{Krueger and Kubler}}{{}}}
+\bibcite{loshchilov2019decoupled}{{38}{2019}{{Loshchilov and Hutter}}{{}}}
+\bibcite{mueller2013risk}{{39}{2013}{{M{\"u}ller}}{{}}}
+\bibcite{nakamura2010monetary}{{40}{2010}{{Nakamura and Steinsson}}{{}}}
+\bibcite{naubert2025differentiable}{{41}{2025}{{Naubert}}{{}}}
+\bibcite{peherstorfer2018survey}{{42}{2018}{{Peherstorfer et~al.}}{{Peherstorfer, Willcox, and Gunzburger}}}
+\bibcite{pitt2012some}{{43}{2012}{{Pitt et~al.}}{{Pitt, dos Santos~Silva, Giordani, and Kohn}}}
+\bibcite{rotemberg1982sticky}{{44}{1982}{{Rotemberg}}{{}}}
+\bibcite{schwartz1965bayes}{{45}{1965}{{Schwartz}}{{}}}
+\bibcite{smets2007shocks}{{46}{2007}{{Smets and Wouters}}{{}}}
+\bibcite{snyder2008obstacles}{{47}{2008}{{Snyder et~al.}}{{Snyder, Bengtsson, Bickel, and Anderson}}}
+\bibcite{van2000asymptotic}{{48}{2000}{{van~der Vaart}}{{}}}
+\bibcite{vehtari2021rank}{{49}{2021}{{Vehtari et~al.}}{{Vehtari, Gelman, Simpson, Carpenter, and B{\"u}rkner}}}
+\bibcite{winschel2010solving}{{50}{2010}{{Winschel and Kr{\"a}tzig}}{{}}}
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Full Model Specification}{48}{appendix.A}\protected@file@percent }
+\newlabel{app:model}{{A}{48}{Full Model Specification}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Household Problem}{48}{subsection.A.1}\protected@file@percent }
+\newlabel{eq:euler_full}{{8}{48}{Household Problem}{equation.8}{}}
+\newlabel{eq:labor_supply_full}{{9}{48}{Household Problem}{equation.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Firm Problem}{48}{subsection.A.2}\protected@file@percent }
+\newlabel{eq:nkpc_full}{{11}{49}{Firm Problem}{equation.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Monetary Policy}{49}{subsection.A.3}\protected@file@percent }
+\newlabel{eq:taylor_zlb_full}{{12}{49}{Monetary Policy}{equation.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Exogenous Processes}{49}{subsection.A.4}\protected@file@percent }
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.5}Market Clearing}{50}{subsection.A.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.6}Log-Linearized System (for comparison)}{50}{subsection.A.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.7}Steady State}{50}{subsection.A.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.8}SW07-HLT Model Specification}{51}{subsection.A.8}\protected@file@percent }
+\newlabel{app:sw07_model}{{A.8}{51}{SW07-HLT Model Specification}{subsection.A.8}{}}
+\@writefile{toc}{\contentsline {paragraph}{Households.}{51}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Capital accumulation and investment.}{51}{section*.20}\protected@file@percent }
+\citation{smets2007shocks}
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {paragraph}{Capital utilization.}{52}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Price setting.}{52}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Wage setting.}{52}{section*.23}\protected@file@percent }
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {paragraph}{Monetary policy.}{53}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Exogenous processes.}{53}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Estimated parameters.}{53}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Observables.}{53}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}SEP Algorithm Implementation Details}{54}{appendix.B}\protected@file@percent }
+\newlabel{app:sep}{{B}{54}{SEP Algorithm Implementation Details}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Gauss--Hermite Quadrature Nodes}{54}{subsection.B.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Sparse Tree Construction}{54}{subsection.B.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.3}Newton Solver with Fixed Initial Condition}{55}{subsection.B.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.4}Levenberg--Marquardt Regularization}{56}{subsection.B.4}\protected@file@percent }
+\newlabel{app:sep_lm}{{B.4}{56}{Levenberg--Marquardt Regularization}{subsection.B.4}{}}
+\newlabel{alg:lm_newton}{{1}{57}{Levenberg--Marquardt Regularization}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.5}Backtracking Line Search}{57}{subsection.B.5}\protected@file@percent }
+\newlabel{app:sep_linesearch}{{B.5}{57}{Backtracking Line Search}{subsection.B.5}{}}
+\newlabel{alg:line_search}{{2}{58}{Backtracking Line Search}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.6}Smooth ZLB Approximation}{58}{subsection.B.6}\protected@file@percent }
+\newlabel{app:sep_smooth_zlb}{{B.6}{58}{Smooth ZLB Approximation}{subsection.B.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.7}SEP Solver Parameters}{58}{subsection.B.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces SEP Solver Configuration Parameters}}{59}{table.caption.28}\protected@file@percent }
+\newlabel{tab:sep_solver_params}{{7}{59}{SEP Solver Configuration Parameters}{table.caption.28}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.8}Warm-Starting Implementation}{60}{subsection.B.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {C}Surrogate Training Details}{60}{appendix.C}\protected@file@percent }
+\newlabel{app:surrogate}{{C}{60}{Surrogate Training Details}{appendix.C}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}Data Standardization}{60}{subsection.C.1}\protected@file@percent }
+\citation{loshchilov2019decoupled}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}Architecture and Hyperparameters}{61}{subsection.C.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}Training Procedure}{62}{subsection.C.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Optimizer.}{62}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Gradient clipping.}{62}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Loss function.}{62}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Batch size.}{62}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Early stopping.}{62}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.4}Learning Rate Schedule}{63}{subsection.C.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.5}ResNet with FiLM Conditioning}{63}{subsection.C.5}\protected@file@percent }
+\newlabel{app:resnet_film}{{C.5}{63}{ResNet with FiLM Conditioning}{subsection.C.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.6}Training Modes}{64}{subsection.C.6}\protected@file@percent }
+\newlabel{app:training_modes}{{C.6}{64}{Training Modes}{subsection.C.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.7}Out-of-Distribution Detection}{65}{subsection.C.7}\protected@file@percent }
+\newlabel{app:ood}{{C.7}{65}{Out-of-Distribution Detection}{subsection.C.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.8}Hyperparameter Grid Search}{65}{subsection.C.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Hyperparameter Grid Search Results}}{66}{table.caption.34}\protected@file@percent }
+\newlabel{tab:hyperparameter_grid}{{8}{66}{Hyperparameter Grid Search Results}{table.caption.34}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {D}Dataset Generation}{66}{appendix.D}\protected@file@percent }
+\newlabel{app:dataset}{{D}{66}{Dataset Generation}{appendix.D}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.1}Parameter Sampling}{66}{subsection.D.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.2}Shock Generation}{67}{subsection.D.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.3}SEP Simulation and Sample Extraction}{67}{subsection.D.3}\protected@file@percent }
+\newlabel{alg:dataset_gen}{{3}{68}{SEP Simulation and Sample Extraction}{algorithm.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.4}Data Augmentation}{68}{subsection.D.4}\protected@file@percent }
+\newlabel{app:data_augmentation}{{D.4}{68}{Data Augmentation}{subsection.D.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.5}Output Format and Checkpointing}{69}{subsection.D.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {E}Inversion Filter}{69}{appendix.E}\protected@file@percent }
+\newlabel{app:inversion}{{E}{69}{Inversion Filter}{appendix.E}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.1}Two-Phase Architecture}{69}{subsection.E.1}\protected@file@percent }
+\newlabel{eq:inversion_objective}{{54}{70}{Two-Phase Architecture}{equation.54}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.2}Gauss--Newton Shock Refinement}{70}{subsection.E.2}\protected@file@percent }
+\newlabel{app:gauss_newton}{{E.2}{70}{Gauss--Newton Shock Refinement}{subsection.E.2}{}}
+\newlabel{alg:gauss_newton}{{4}{71}{Gauss--Newton Shock Refinement}{algorithm.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.3}Per-Period Log-Likelihood}{71}{subsection.E.3}\protected@file@percent }
+\newlabel{eq:per_period_ll}{{57}{71}{Per-Period Log-Likelihood}{equation.57}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {E.4}Batch NN Correction}{72}{subsection.E.4}\protected@file@percent }
+\newlabel{app:batch_nn}{{E.4}{72}{Batch NN Correction}{subsection.E.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {F}Regime-Switching Gate}{72}{appendix.F}\protected@file@percent }
+\newlabel{app:gate}{{F}{72}{Regime-Switching Gate}{appendix.F}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {F.1}Gate Statistics}{72}{subsection.F.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {F.2}Gate Calibration}{73}{subsection.F.2}\protected@file@percent }
+\newlabel{app:gate_calibration}{{F.2}{73}{Gate Calibration}{subsection.F.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {F.3}Hard and Soft Gating}{73}{subsection.F.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {F.4}Switched Likelihood}{74}{subsection.F.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {G}HMC Implementation}{74}{appendix.G}\protected@file@percent }
+\newlabel{app:hmc}{{G}{74}{HMC Implementation}{appendix.G}{}}
+\citation{smets2007shocks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.1}Parameter Transforms}{75}{subsection.G.1}\protected@file@percent }
+\newlabel{app:param_transforms}{{G.1}{75}{Parameter Transforms}{subsection.G.1}{}}
+\newlabel{eq:logit_fwd}{{64}{75}{Parameter Transforms}{equation.64}{}}
+\newlabel{eq:logit_inv}{{65}{75}{Parameter Transforms}{equation.65}{}}
+\newlabel{eq:logit_jacobian}{{66}{75}{Parameter Transforms}{equation.66}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.2}Prior Specifications}{75}{subsection.G.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Prior Specifications for the 18-Parameter HLT Model}}{76}{table.caption.35}\protected@file@percent }
+\newlabel{tab:prior_specs}{{9}{76}{Prior Specifications for the 18-Parameter HLT Model}{table.caption.35}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.3}Initialization}{77}{subsection.G.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.4}Implementation}{77}{subsection.G.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.5}Gradient Computation}{77}{subsection.G.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Filter-free mode (3-parameter).}{77}{section*.36}\protected@file@percent }
+\citation{betancourt2017conceptual}
+\@writefile{toc}{\contentsline {paragraph}{Inversion-filter mode (18-parameter).}{78}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.6}NUTS Tuning}{78}{subsection.G.6}\protected@file@percent }
+\newlabel{app:nuts_tuning}{{G.6}{78}{NUTS Tuning}{subsection.G.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.7}Diagnostics}{79}{subsection.G.7}\protected@file@percent }
+\newlabel{app:hmc_diagnostics}{{G.7}{79}{Diagnostics}{subsection.G.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {G.8}End-to-End Estimation Pipeline}{79}{subsection.G.8}\protected@file@percent }
+\newlabel{alg:pipeline}{{5}{80}{End-to-End Estimation Pipeline}{algorithm.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {H}Computational Details}{80}{appendix.H}\protected@file@percent }
+\newlabel{app:computational}{{H}{80}{Computational Details}{appendix.H}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {H.1}Hardware and Software}{80}{subsection.H.1}\protected@file@percent }
+\citation{gordon1993novel}
+\citation{snyder2008obstacles}
+\citation{doucet2001sequential,fernandezvillaverde2007estimating}
+\@writefile{toc}{\contentsline {subsection}{\numberline {H.2}Reproducibility}{81}{subsection.H.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {H.3}Bootstrap Particle Filter Benchmark}{81}{subsection.H.3}\protected@file@percent }
+\newlabel{app:pf_benchmark}{{H.3}{81}{Bootstrap Particle Filter Benchmark}{subsection.H.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Bootstrap Particle Filter: Log-Likelihood vs.\ Kalman Baseline}}{81}{table.caption.38}\protected@file@percent }
+\newlabel{tab:pf_benchmark}{{10}{81}{Bootstrap Particle Filter: Log-Likelihood vs.\ Kalman Baseline}{table.caption.38}{}}
+\citation{snyder2008obstacles}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {H.3.1}Conditionally-Optimal Particle Filter}{82}{subsubsection.H.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces COPF: Log-Likelihood vs.\ Kalman Baseline}}{83}{table.caption.39}\protected@file@percent }
+\newlabel{tab:copf_benchmark}{{11}{83}{COPF: Log-Likelihood vs.\ Kalman Baseline}{table.caption.39}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Shock-Scale Calibration}{83}{appendix.I}\protected@file@percent }
+\newlabel{app:shock_scale_calibration}{{I}{83}{Shock-Scale Calibration}{appendix.I}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces SEP Convergence by Shock Scale}}{83}{table.caption.40}\protected@file@percent }
+\newlabel{tab:shock_scale_grid}{{12}{83}{SEP Convergence by Shock Scale}{table.caption.40}{}}
+\citation{kleijn2012bernstein}
+\citation{mueller2013risk}
+\@writefile{toc}{\contentsline {section}{\numberline {J}Identification and Approximation Error}{84}{appendix.J}\protected@file@percent }
+\newlabel{sec:identification}{{J}{84}{Identification and Approximation Error}{appendix.J}{}}
+\newlabel{eq:ll_bias_bound}{{69}{84}{Identification and Approximation Error}{equation.69}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {K}Formal Consistency of the Surrogate Posterior}{84}{appendix.K}\protected@file@percent }
+\newlabel{sec:formal_consistency}{{K}{84}{Formal Consistency of the Surrogate Posterior}{appendix.K}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.1}Setup and Assumptions}{85}{subsection.K.1}\protected@file@percent }
+\newlabel{ass:compact}{{K.1}{85}{Parameter space}{theorem.K.1}{}}
+\newlabel{ass:identification}{{K.2}{85}{Identification}{theorem.K.2}{}}
+\citation{hornik1989multilayer,cybenko1989approximation}
+\newlabel{ass:regularity}{{K.3}{86}{Regularity}{theorem.K.3}{}}
+\newlabel{ass:surrogate_convergence}{{K.4}{86}{Uniform surrogate convergence}{theorem.K.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.2}Posterior Consistency}{86}{subsection.K.2}\protected@file@percent }
+\newlabel{thm:posterior_consistency}{{K.5}{86}{Surrogate Posterior Consistency}{theorem.K.5}{}}
+\citation{schwartz1965bayes}
+\newlabel{eq:uniform_ll_approx}{{70}{87}{Posterior Consistency}{equation.70}{}}
+\citation{van2000asymptotic}
+\citation{kleijn2012bernstein}
+\citation{mueller2013risk}
+\newlabel{rem:rate_condition}{{K.6}{88}{Rate condition}{theorem.K.6}{}}
+\newlabel{rem:misspecified}{{K.7}{88}{Connection to misspecified likelihoods}{theorem.K.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.3}Log-Likelihood Bias Bound}{88}{subsection.K.3}\protected@file@percent }
+\newlabel{prop:ll_bias_bound}{{K.8}{89}{Log-Likelihood Bias Bound}{theorem.K.8}{}}
+\newlabel{eq:ll_bias_exact}{{71}{89}{Log-Likelihood Bias Bound}{equation.71}{}}
+\newlabel{eq:ll_bias_total}{{72}{89}{Log-Likelihood Bias Bound}{equation.72}{}}
+\newlabel{rem:numerical_bound}{{K.9}{90}{Numerical evaluation}{theorem.K.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.4}Credible Interval Coverage}{90}{subsection.K.4}\protected@file@percent }
+\newlabel{cor:coverage}{{K.10}{90}{Credible Interval Validity}{theorem.K.10}{}}
+\newlabel{eq:coverage_bound}{{73}{90}{Credible Interval Validity}{equation.73}{}}
+\citation{chen2007large}
+\citation{pitt2012some,doucet2015efficient}
+\newlabel{rem:rrmse_scaling}{{K.11}{92}{Dependence on RRMSE and $T$}{theorem.K.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.5}Discussion}{92}{subsection.K.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The surrogate as a sieve.}{92}{section*.41}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Comparison with particle-filter-based posteriors.}{93}{section*.42}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Practical diagnostics.}{93}{section*.43}\protected@file@percent }
+\citation{vehtari2021rank}
+\@writefile{toc}{\contentsline {section}{\numberline {L}Validation Design}{94}{appendix.L}\protected@file@percent }
+\newlabel{sec:validation_design}{{L}{94}{Validation Design}{appendix.L}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {M}Validation Results}{94}{appendix.M}\protected@file@percent }
+\newlabel{app:validation_results}{{M}{94}{Validation Results}{appendix.M}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces 3-Parameter Recovery: Surrogate vs.\ Truth}}{94}{table.caption.44}\protected@file@percent }
+\newlabel{tab:param_recovery}{{13}{94}{3-Parameter Recovery: Surrogate vs.\ Truth}{table.caption.44}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces MCMC Diagnostics for 3-Parameter Validation}}{95}{table.caption.45}\protected@file@percent }
+\newlabel{tab:mcmc_diagnostics}{{14}{95}{MCMC Diagnostics for 3-Parameter Validation}{table.caption.45}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Regime Performance in 3-Parameter Validation}}{95}{table.caption.46}\protected@file@percent }
+\newlabel{tab:regime_performance}{{15}{95}{Regime Performance in 3-Parameter Validation}{table.caption.46}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {N}Multi-Chain Convergence Diagnostics}{95}{appendix.N}\protected@file@percent }
+\newlabel{app:multi_chain_convergence}{{N}{95}{Multi-Chain Convergence Diagnostics}{appendix.N}{}}
+\citation{vehtari2021rank}
+\@writefile{toc}{\contentsline {section}{\numberline {O}Monte Carlo Coverage at 18 Parameters}{96}{appendix.O}\protected@file@percent }
+\newlabel{app:mc_coverage}{{O}{96}{Monte Carlo Coverage at 18 Parameters}{appendix.O}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Multi-Chain Convergence: Linear NUTS-HMC (Extended Sample)}}{97}{table.caption.47}\protected@file@percent }
+\newlabel{tab:rhat_linear}{{16}{97}{Multi-Chain Convergence: Linear NUTS-HMC (Extended Sample)}{table.caption.47}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Multi-Chain Convergence: Surrogate NUTS-HMC (Extended Sample)}}{98}{table.caption.48}\protected@file@percent }
+\newlabel{tab:rhat_surrogate}{{17}{98}{Multi-Chain Convergence: Surrogate NUTS-HMC (Extended Sample)}{table.caption.48}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Monte Carlo Coverage: Linear Kalman + NUTS-HMC (90\% CI, 14 Replications)}}{99}{table.caption.49}\protected@file@percent }
+\newlabel{tab:mc_coverage_linear}{{18}{99}{Monte Carlo Coverage: Linear Kalman + NUTS-HMC (90\% CI, 14 Replications)}{table.caption.49}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {P}Additional Quantitative Results}{100}{appendix.P}\protected@file@percent }
+\newlabel{app:additional_results}{{P}{100}{Additional Quantitative Results}{appendix.P}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Surrogate and ROM1 Error by State Distance Quintile}}{100}{table.caption.50}\protected@file@percent }
+\newlabel{tab:error_by_distance}{{19}{100}{Surrogate and ROM1 Error by State Distance Quintile}{table.caption.50}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Parameter Correlates of Nonlinearity}}{100}{table.caption.51}\protected@file@percent }
+\newlabel{tab:param_nonlinearity}{{20}{100}{Parameter Correlates of Nonlinearity}{table.caption.51}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {Q}Additional Robustness Checks}{100}{appendix.Q}\protected@file@percent }
+\newlabel{app:robustness_extended}{{Q}{100}{Additional Robustness Checks}{appendix.Q}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {Q.1}Full 18-Parameter Results}{100}{subsection.Q.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {Q.2}Sample Length Sensitivity}{100}{subsection.Q.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Per-Observable $R^2$ of Nonlinearity Measure}}{101}{table.caption.52}\protected@file@percent }
+\newlabel{tab:per_obs_r2}{{21}{101}{Per-Observable $R^2$ of Nonlinearity Measure}{table.caption.52}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces 18-Parameter Kalman (Linear) Posterior}}{101}{table.caption.53}\protected@file@percent }
+\newlabel{tab:18param_posterior}{{22}{101}{18-Parameter Kalman (Linear) Posterior}{table.caption.53}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Runtime profile of the 3-parameter validation workflow (seconds)}}{102}{table.caption.54}\protected@file@percent }
+\newlabel{tab:computational_cost}{{23}{102}{Runtime profile of the 3-parameter validation workflow (seconds)}{table.caption.54}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Absolute magnitude of the FOM--ROM1 gap by equation block across shock scales 0.1--1.5. Investment/capital dominates at every scale; during ZLB-binding episodes at moderate scales (0.8--1.2$\sigma $) the investment share is 88--92 percent, exceeding the next-largest block by a factor of eight. At the most extreme scale (1.5$\sigma $) the binding share falls to 37 percent, though only 3 binding periods are observed.}}{102}{figure.caption.55}\protected@file@percent }
+\newlabel{fig:gap_magnitude_vs_scale}{{8}{102}{Absolute magnitude of the FOM--ROM1 gap by equation block across shock scales 0.1--1.5. Investment/capital dominates at every scale; during ZLB-binding episodes at moderate scales (0.8--1.2$\sigma $) the investment share is 88--92 percent, exceeding the next-largest block by a factor of eight. At the most extreme scale (1.5$\sigma $) the binding share falls to 37 percent, though only 3 binding periods are observed}{figure.caption.55}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Equation-block decomposition of the FOM--ROM1 gap in the Gal\'i (2015) model, which shares the ELB and Kimball structure with the HLT model but lacks investment. The absolute gap magnitude is an order of magnitude smaller than in the HLT model at every shock scale, confirming that the investment channel---not the ELB or Kimball pricing---drives the nonlinearity.}}{103}{figure.caption.56}\protected@file@percent }
+\newlabel{fig:gali_block_decomposition}{{9}{103}{Equation-block decomposition of the FOM--ROM1 gap in the Gal\'i (2015) model, which shares the ELB and Kimball structure with the HLT model but lacks investment. The absolute gap magnitude is an order of magnitude smaller than in the HLT model at every shock scale, confirming that the investment channel---not the ELB or Kimball pricing---drives the nonlinearity}{figure.caption.56}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces Surrogate Accuracy by Parameter Region}}{103}{table.caption.57}\protected@file@percent }
+\newlabel{tab:surrogate_regional_accuracy}{{24}{103}{Surrogate Accuracy by Parameter Region}{table.caption.57}{}}
+\citation{smets2007shocks}
+\citation{farkas2020bayesian}
+\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces Random Seed Sensitivity}}{104}{table.caption.58}\protected@file@percent }
+\newlabel{tab:seed_sensitivity}{{25}{104}{Random Seed Sensitivity}{table.caption.58}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {26}{\ignorespaces Prior Sensitivity Analysis}}{104}{table.caption.59}\protected@file@percent }
+\newlabel{tab:prior_sensitivity}{{26}{104}{Prior Sensitivity Analysis}{table.caption.59}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {Q.3}Surrogate Architecture Comparison}{104}{subsection.Q.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {Q.4}ZLB-Binding Surrogate Performance}{104}{subsection.Q.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {R}Linear Baseline: Comparison with Farkas and Tat\'ar (2020)}{104}{appendix.R}\protected@file@percent }
+\newlabel{app:ft_comparison}{{R}{104}{Linear Baseline: Comparison with Farkas and Tat\'ar (2020)}{appendix.R}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {27}{\ignorespaces Complete 18-Parameter Validation Results}}{105}{table.caption.60}\protected@file@percent }
+\newlabel{tab:18param_full}{{27}{105}{Complete 18-Parameter Validation Results}{table.caption.60}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {28}{\ignorespaces Parameter Recovery vs.\ Sample Length}}{105}{table.caption.61}\protected@file@percent }
+\newlabel{tab:sample_length_sensitivity}{{28}{105}{Parameter Recovery vs.\ Sample Length}{table.caption.61}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {29}{\ignorespaces Architecture Comparison on 3-Parameter Case}}{106}{table.caption.62}\protected@file@percent }
+\newlabel{tab:architecture_comparison}{{29}{106}{Architecture Comparison on 3-Parameter Case}{table.caption.62}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces ZLB-binding simulation using the SEP nonlinear solver with the softplus formulation ($\kappa _s = 100$). Top-left: shadow rate (dashed) versus actual rate (solid); red shading marks quarters where the actual annualized rate is below 1\%. Top-right: annualized inflation. Bottom-left: output growth. Bottom-right: investment growth. Shocks: $\varepsilon ^b = (-2, -1, -0.5)\sigma $ and $\varepsilon ^{qs} = (-1, -0.5)\sigma $ in the first three quarters. Gray dotted lines mark steady-state values.}}{106}{figure.caption.63}\protected@file@percent }
+\newlabel{fig:zlb_binding_simulation}{{10}{106}{ZLB-binding simulation using the SEP nonlinear solver with the softplus formulation ($\kappa _s = 100$). Top-left: shadow rate (dashed) versus actual rate (solid); red shading marks quarters where the actual annualized rate is below 1\%. Top-right: annualized inflation. Bottom-left: output growth. Bottom-right: investment growth. Shocks: $\varepsilon ^b = (-2, -1, -0.5)\sigma $ and $\varepsilon ^{qs} = (-1, -0.5)\sigma $ in the first three quarters. Gray dotted lines mark steady-state values}{figure.caption.63}{}}
+\citation{smets2007shocks}
+\citation{farkas2020bayesian}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Interest rate during a ZLB-binding episode. Black solid: FOM (SEP). Blue dashed: ROM1 (predicts negative rates). Red dotted: ROM1 + surrogate correction. Gray: ZLB floor. Shock scale 0.4, SW07-HLT model.}}{107}{figure.caption.64}\protected@file@percent }
+\newlabel{fig:zlb_correction_robs}{{11}{107}{Interest rate during a ZLB-binding episode. Black solid: FOM (SEP). Blue dashed: ROM1 (predicts negative rates). Red dotted: ROM1 + surrogate correction. Gray: ZLB floor. Shock scale 0.4, SW07-HLT model}{figure.caption.64}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {R.1}Model Differences}{107}{subsection.R.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Four-observable comparison during a ZLB-binding episode. ROM1 + surrogate (red dotted) tracks FOM truth (black solid); ROM1 alone (blue dashed) diverges. Investment growth shows the largest corrections, consistent with the investment-dominance finding.}}{108}{figure.caption.65}\protected@file@percent }
+\newlabel{fig:zlb_correction_4panel}{{12}{108}{Four-observable comparison during a ZLB-binding episode. ROM1 + surrogate (red dotted) tracks FOM truth (black solid); ROM1 alone (blue dashed) diverges. Investment growth shows the largest corrections, consistent with the investment-dominance finding}{figure.caption.65}{}}
+\citation{farkas2020bayesian}
+\citation{farkas2020bayesian}
+\citation{farkas2020bayesian}
+\@writefile{toc}{\contentsline {subsection}{\numberline {R.2}Comparison with Farkas and Tat\'ar (2020)}{109}{subsection.R.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {R.3}Discussion}{109}{subsection.R.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Parameters that match across all specifications.}{109}{section*.67}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {30}{\ignorespaces Posterior Comparison: HLT Baseline vs.\ Farkas--Tat\'ar (2020)}}{110}{table.caption.66}\protected@file@percent }
+\newlabel{tab:ft_comparison}{{30}{110}{Posterior Comparison: HLT Baseline vs.\ Farkas--Tat\'ar (2020)}{table.caption.66}{}}
+\@writefile{toc}{\contentsline {paragraph}{Parameters sensitive to the MA terms.}{111}{section*.68}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Parameters driven by Kimball curvature.}{111}{section*.69}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Remaining discrepancies.}{111}{section*.70}\protected@file@percent }
+\gdef \@abspage@last{111}

@@ -6,6 +6,12 @@ function hlt_model_file_and_symbol(model_name::AbstractString)
         return "Smets_Wouters_2007_HLT_zlb.jl", :Smets_Wouters_2007_HLT_zlb
     elseif name == "Smets_Wouters_2007_HLT"
         return "Smets_Wouters_2007_HLT.jl", :Smets_Wouters_2007_HLT
+    elseif name == "Smets_Wouters_2007_HLT_obc_GL"
+        return "Smets_Wouters_2007_HLT_obc_GL.jl", :Smets_Wouters_2007_HLT_obc_GL
+    elseif name == "Smets_Wouters_2007_HLT_obc_NS"
+        return "Smets_Wouters_2007_HLT_obc_NS.jl", :Smets_Wouters_2007_HLT_obc_NS
+    elseif name == "Smets_Wouters_2007_HLT_obc_Rot"
+        return "Smets_Wouters_2007_HLT_obc_Rot.jl", :Smets_Wouters_2007_HLT_obc_Rot
     else
         error("Unsupported HLT model name: $name")
     end

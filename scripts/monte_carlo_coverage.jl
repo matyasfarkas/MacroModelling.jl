@@ -226,7 +226,7 @@ function draw_true_theta_baseline_perturb(rng::AbstractRNG; scale=0.15)
     return θ
 end
 
-function draw_true_theta(rng::AbstractRNG, mode::String)
+function draw_true_theta(rng::AbstractRNG, mode::AbstractString)
     if mode == "prior"
         return draw_true_theta_from_prior(rng)
     elseif mode == "baseline_perturb"
@@ -285,14 +285,15 @@ function generate_synthetic_data(model, θ_true::Vector{Float64}, T::Int;
     end
 
     # Extract observables after burn-in
-    # sim is a KeyedArray with Variable and Time axes
+    # sim is a 3D KeyedArray (Variables, Periods, Shocks) — use positional indexing
+    # to avoid AxisKeys ambiguity with Symbol lookup across dimensions
+    sim_vars = axiskeys(sim, 1)
     obs_matrix = zeros(d_obs, T)
     for (oi, obs_name) in enumerate(observables)
-        if obs_name in axiskeys(sim, 1)
-            obs_row = sim(obs_name)
-            # Skip first burn_in periods (columns correspond to time 1:total_periods)
+        vi = findfirst(==(obs_name), sim_vars)
+        if vi !== nothing
             for t in 1:T
-                obs_matrix[oi, t] = obs_row[burn_in + t]
+                obs_matrix[oi, t] = sim[vi, burn_in + t, 1]
             end
         else
             @warn "Observable $obs_name not found in simulation output."
@@ -632,6 +633,7 @@ n_success = 0
 n_fail = 0
 
 for rep in start_rep:N_rep
+    global n_success, n_fail, completed_results
     # Skip if already completed
     if haskey(completed_results, rep)
         println("\n  Rep $rep/$N_rep: already completed (from checkpoint), skipping.")

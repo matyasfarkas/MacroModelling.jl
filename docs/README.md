@@ -1,6 +1,12 @@
-# MacroModelling.jl Documentation
+# MacroModelling.jl Documentation & Replication Package
 
 Comprehensive documentation for MacroModelling.jl features, including SEP solver and regime-switching estimation.
+
+**📄 This repository contains the complete replication package for:**
+> **"Structural Bias from Linearization in DSGE Estimation"** (Farkas, 2026)  
+> *Full paper with code, data, and results*
+
+**See the [main README](../README.md) for paper overview and full replication instructions.**
 
 ## Features Documentation
 

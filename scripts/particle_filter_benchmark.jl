@@ -316,6 +316,77 @@ if params_surrogate !== nothing
 end
 
 # ============================================================================
+# Step 7b: Run COPF (Conditionally-Optimal Particle Filter) Benchmark
+# ============================================================================
+
+println("\n" * "-" ^ 76)
+println("STEP 7b: Running COPF benchmark (optimal proposal)")
+println("-" ^ 76)
+
+function run_copf_benchmark(params::Vector{Float64}, label::String;
+                             n_particles_grid=n_particles_grid, n_seeds=n_seeds)
+    println("\n  --- COPF: $label ---")
+    results = PFResult[]
+
+    for np in n_particles_grid
+        lls = Float64[]
+        ess_mins = Float64[]
+        n_res = Float64[]
+
+        t0 = time()
+        for seed in 1:n_seeds
+            pf_result = particle_filter_copf_loglik(
+                mm_model, obs_data, observables, params;
+                n_particles = np,
+                seed = seed * 1000 + 42,
+                measurement_error = :auto,
+                resample_scheme = :systematic,
+                resample_threshold = 0.5,
+                initial_covariance = :theoretical,
+                verbose = false
+            )
+            push!(lls, pf_result.ll_total)
+            push!(ess_mins, minimum(pf_result.ess_per_period))
+            push!(n_res, pf_result.n_resamples)
+        end
+        wall_time = (time() - t0) / n_seeds
+
+        ll_m = mean(lls)
+        ll_s = n_seeds > 1 ? std(lls) : 0.0
+        ess_min_m = mean(ess_mins)
+        n_res_m = mean(n_res)
+
+        push!(results, PFResult(np, ll_m, ll_s, ess_min_m, n_res_m, wall_time))
+
+        @printf("    N=%5d  LL=%.2f +/- %.2f  ESS_min=%.0f  resamples=%.0f  time=%.2fs\n",
+                np, ll_m, ll_s, ess_min_m, n_res_m, wall_time)
+    end
+
+    return results
+end
+
+results_copf_linear = nothing
+results_copf_surrogate = nothing
+
+if params_linear !== nothing
+    results_copf_linear = run_copf_benchmark(params_linear, "COPF Linear posterior mean")
+end
+
+if params_surrogate !== nothing
+    results_copf_surrogate = run_copf_benchmark(params_surrogate, "COPF Surrogate posterior mean")
+end
+
+# COPF convergence diagnostic
+if results_copf_linear !== nothing && !isnan(kalman_ll_linear)
+    println("\n  COPF convergence to Kalman filter (linear posterior mean):")
+    for r in results_copf_linear
+        gap = r.ll_mean - kalman_ll_linear
+        @printf("    N=%5d  COPF-KF gap = %+.2f  (%.4f%% of |KF|)\n",
+                r.n_particles, gap, abs(gap / kalman_ll_linear) * 100)
+    end
+end
+
+# ============================================================================
 # Step 8: Print Summary Table
 # ============================================================================
 
@@ -376,10 +447,74 @@ end
 
 # Convergence diagnostic
 if results_linear !== nothing && !isnan(kalman_ll_linear)
-    println("\nConvergence to Kalman filter (linear posterior mean):")
+    println("\nConvergence to Kalman filter — Bootstrap (linear posterior mean):")
     for r in results_linear
         gap = r.ll_mean - kalman_ll_linear
-        @printf("  N=%5d  PF-KF gap = %+.2f  (%.1f%% of |KF|)\n",
+        @printf("  N=%5d  BPF-KF gap = %+.2f  (%.1f%% of |KF|)\n",
+                r.n_particles, gap, abs(gap / kalman_ll_linear) * 100)
+    end
+end
+
+# COPF summary table
+println("\n" * "=" ^ 76)
+println("SUMMARY TABLE: COPF (Optimal Proposal) vs Kalman Filter")
+println("=" ^ 76)
+
+@printf("\n%-10s | %-24s | %-24s | %-12s\n",
+        "N_part", "COPF LL (linear)", "COPF LL (surrogate)", "Wall time")
+println("-" ^ 76)
+
+for i in 1:length(n_particles_grid)
+    np = n_particles_grid[i]
+
+    ll_lin_str = if results_copf_linear !== nothing
+        r = results_copf_linear[i]
+        @sprintf("%.2f +/- %.2f", r.ll_mean, r.ll_std)
+    else
+        "N/A"
+    end
+
+    ll_surr_str = if results_copf_surrogate !== nothing
+        r = results_copf_surrogate[i]
+        @sprintf("%.2f +/- %.2f", r.ll_mean, r.ll_std)
+    else
+        "N/A"
+    end
+
+    wt = if results_copf_linear !== nothing
+        @sprintf("%.2fs", results_copf_linear[i].wall_time)
+    elseif results_copf_surrogate !== nothing
+        @sprintf("%.2fs", results_copf_surrogate[i].wall_time)
+    else
+        "N/A"
+    end
+
+    @printf("%-10d | %-24s | %-24s | %-12s\n", np, ll_lin_str, ll_surr_str, wt)
+end
+
+println("-" ^ 76)
+@printf("%-10s | %-24s | %-24s |\n",
+        "Kalman",
+        isnan(kalman_ll_linear) ? "N/A" : @sprintf("%.2f (exact)", kalman_ll_linear),
+        isnan(kalman_ll_surrogate) ? "N/A" : @sprintf("%.2f (exact)", kalman_ll_surrogate))
+println("=" ^ 76)
+
+# COPF ESS summary
+println("\nCOPF Effective Sample Size (minimum across periods):")
+@printf("%-10s | %-20s | %-20s\n", "N_part", "ESS_min (linear)", "ESS_min (surrogate)")
+println("-" ^ 56)
+for i in 1:length(n_particles_grid)
+    np = n_particles_grid[i]
+    ess_lin = results_copf_linear !== nothing ? @sprintf("%.0f", results_copf_linear[i].ess_min_mean) : "N/A"
+    ess_surr = results_copf_surrogate !== nothing ? @sprintf("%.0f", results_copf_surrogate[i].ess_min_mean) : "N/A"
+    @printf("%-10d | %-20s | %-20s\n", np, ess_lin, ess_surr)
+end
+
+if results_copf_linear !== nothing && !isnan(kalman_ll_linear)
+    println("\nCOPF convergence to Kalman filter (linear posterior mean):")
+    for r in results_copf_linear
+        gap = r.ll_mean - kalman_ll_linear
+        @printf("  N=%5d  COPF-KF gap = %+.2f  (%.4f%% of |KF|)\n",
                 r.n_particles, gap, abs(gap / kalman_ll_linear) * 100)
     end
 end
@@ -431,6 +566,28 @@ if have_surrogate
     ) for r in results_surrogate]
 end
 
+# Save COPF results
+if results_copf_linear !== nothing
+    results_dict["results_copf_linear"] = [(
+        n_particles = r.n_particles,
+        ll_mean = r.ll_mean,
+        ll_std = r.ll_std,
+        ess_min_mean = r.ess_min_mean,
+        n_resamples_mean = r.n_resamples_mean,
+        wall_time = r.wall_time
+    ) for r in results_copf_linear]
+end
+if results_copf_surrogate !== nothing
+    results_dict["results_copf_surrogate"] = [(
+        n_particles = r.n_particles,
+        ll_mean = r.ll_mean,
+        ll_std = r.ll_std,
+        ess_min_mean = r.ess_min_mean,
+        n_resamples_mean = r.n_resamples_mean,
+        wall_time = r.wall_time
+    ) for r in results_copf_surrogate]
+end
+
 out_path = joinpath(out_dir, "particle_filter_benchmark_results.jls")
 Serialization.serialize(out_path, results_dict)
 println("  Saved: $out_path")
@@ -465,10 +622,37 @@ open(report_path, "w") do io
 
     if results_linear !== nothing && !isnan(kalman_ll_linear)
         println(io, "")
-        println(io, "Convergence to Kalman (linear):")
+        println(io, "Bootstrap PF convergence to Kalman (linear):")
         for r in results_linear
             gap = r.ll_mean - kalman_ll_linear
             @printf(io, "  N=%5d  gap = %+.2f (%.2f%%)\n",
+                    r.n_particles, gap, abs(gap / kalman_ll_linear) * 100)
+        end
+    end
+
+    # COPF results
+    println(io, "")
+    println(io, "COPF (Conditionally-Optimal) Results:")
+    println(io, "")
+    @printf(io, "%-10s  %-18s  %-18s  %-10s  %-10s\n",
+            "N_part", "LL_mean(lin)", "LL_mean(surr)", "ESS_min", "Time(s)")
+    println(io, "-" ^ 70)
+
+    for i in 1:length(n_particles_grid)
+        np = n_particles_grid[i]
+        ll_lin = results_copf_linear !== nothing ? @sprintf("%.2f +/- %.2f", results_copf_linear[i].ll_mean, results_copf_linear[i].ll_std) : "N/A"
+        ll_surr = results_copf_surrogate !== nothing ? @sprintf("%.2f +/- %.2f", results_copf_surrogate[i].ll_mean, results_copf_surrogate[i].ll_std) : "N/A"
+        ess_val = results_copf_linear !== nothing ? results_copf_linear[i].ess_min_mean : (results_copf_surrogate !== nothing ? results_copf_surrogate[i].ess_min_mean : NaN)
+        wt = results_copf_linear !== nothing ? results_copf_linear[i].wall_time : (results_copf_surrogate !== nothing ? results_copf_surrogate[i].wall_time : NaN)
+        @printf(io, "%-10d  %-18s  %-18s  %-10.0f  %-10.2f\n", np, ll_lin, ll_surr, ess_val, wt)
+    end
+
+    if results_copf_linear !== nothing && !isnan(kalman_ll_linear)
+        println(io, "")
+        println(io, "COPF convergence to Kalman (linear):")
+        for r in results_copf_linear
+            gap = r.ll_mean - kalman_ll_linear
+            @printf(io, "  N=%5d  gap = %+.2f (%.4f%%)\n",
                     r.n_particles, gap, abs(gap / kalman_ll_linear) * 100)
         end
     end

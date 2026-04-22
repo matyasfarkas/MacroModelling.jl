@@ -1,0 +1,62 @@
+\contentsline {section}{\numberline {1}Introduction}{5}{section.2}%
+\contentsline {section}{\numberline {2}Literature Review}{6}{section.3}%
+\contentsline {subsection}{\numberline {2.1}The Integrated Policy Framework}{6}{subsection.4}%
+\contentsline {subsection}{\numberline {2.2}Open Economy DSGE Models}{6}{subsection.5}%
+\contentsline {subsection}{\numberline {2.3}Nominal Rigidities and Price Setting}{7}{subsection.6}%
+\contentsline {subsection}{\numberline {2.4}Numerical Solution Methods}{7}{subsection.7}%
+\contentsline {subsection}{\numberline {2.5}Contribution}{8}{subsection.8}%
+\contentsline {section}{\numberline {3}Model}{8}{section.9}%
+\contentsline {subsection}{\numberline {3.1}Households}{8}{subsection.10}%
+\contentsline {subsection}{\numberline {3.2}Labor Markets and Wage Setting}{9}{subsection.16}%
+\contentsline {subsection}{\numberline {3.3}Domestic Goods Production and Pricing}{11}{subsection.25}%
+\contentsline {subsection}{\numberline {3.4}Import Pricing}{13}{subsection.41}%
+\contentsline {subsection}{\numberline {3.5}CES Aggregation of Domestic and Imported Goods}{15}{subsection.51}%
+\contentsline {subsection}{\numberline {3.6}International Linkages and Uncovered Interest Parity}{16}{subsection.65}%
+\contentsline {subsection}{\numberline {3.7}Debt Limit Constraint}{18}{subsection.77}%
+\contentsline {paragraph}{Normal Times}{19}{section*.81}%
+\contentsline {paragraph}{Financial Stress}{19}{section*.82}%
+\contentsline {paragraph}{Precautionary Behavior and Solution Methods.}{20}{section*.85}%
+\contentsline {subsection}{\numberline {3.8}Monetary Policy and Inflation}{20}{subsection.86}%
+\contentsline {subsection}{\numberline {3.9}Potential Output}{21}{subsection.91}%
+\contentsline {subsection}{\numberline {3.10}Stochastic Processes}{22}{subsection.101}%
+\contentsline {subsection}{\numberline {3.11}Complete System}{23}{subsection.112}%
+\contentsline {section}{\numberline {4}Implementation}{23}{section.113}%
+\contentsline {subsection}{\numberline {4.1}Julia/MacroModelling.jl Framework}{23}{subsection.114}%
+\contentsline {subsection}{\numberline {4.2}Model Specification}{24}{subsection.115}%
+\contentsline {subsection}{\numberline {4.3}Key Implementation Differences from Original QMIPF}{24}{subsection.119}%
+\contentsline {subsubsection}{\numberline {4.3.1}Calvo Stickiness Parameters}{25}{subsubsection.120}%
+\contentsline {subsubsection}{\numberline {4.3.2}Simplified NFA Dynamics}{25}{subsubsection.121}%
+\contentsline {subsubsection}{\numberline {4.3.3}UIP Formulation}{25}{subsubsection.122}%
+\contentsline {subsubsection}{\numberline {4.3.4}Current Limitations and Features Not Yet Implemented}{26}{subsubsection.123}%
+\contentsline {paragraph}{Features Successfully Implemented:}{26}{section*.124}%
+\contentsline {paragraph}{Features Not Yet Implemented:}{27}{section*.125}%
+\contentsline {paragraph}{Known Calibration Differences:}{27}{section*.126}%
+\contentsline {subsection}{\numberline {4.4}Steady State Computation}{28}{subsection.127}%
+\contentsline {subsection}{\numberline {4.5}Parameter Calibration}{29}{subsection.130}%
+\contentsline {section}{\numberline {5}Numerical Methods}{31}{section.133}%
+\contentsline {subsection}{\numberline {5.1}First-Order Perturbation}{31}{subsection.134}%
+\contentsline {subsection}{\numberline {5.2}Higher-Order Perturbation}{32}{subsection.137}%
+\contentsline {subsection}{\numberline {5.3}Stochastic Extended Path (SEP) Algorithm}{33}{subsection.143}%
+\contentsline {subsubsection}{\numberline {5.3.1}Algorithm Overview}{33}{subsubsection.144}%
+\contentsline {subsubsection}{\numberline {5.3.2}Implementation for QMIPF}{34}{subsubsection.150}%
+\contentsline {subsubsection}{\numberline {5.3.3}SEP Parameter Settings}{36}{subsubsection.151}%
+\contentsline {subsection}{\numberline {5.4}Occasionally Binding Constraints with Mixed Complementarity Problems}{36}{subsection.152}%
+\contentsline {subsubsection}{\numberline {5.4.1}The MCP Formulation}{37}{subsubsection.153}%
+\contentsline {subsubsection}{\numberline {5.4.2}Integration with SEP}{37}{subsubsection.154}%
+\contentsline {subsubsection}{\numberline {5.4.3}Validation: RBC Model with Investment Floor}{38}{subsubsection.159}%
+\contentsline {subsubsection}{\numberline {5.4.4}Application to QMIPF Debt Limit}{39}{subsubsection.160}%
+\contentsline {section}{\numberline {6}Results}{40}{section.161}%
+\contentsline {subsection}{\numberline {6.1}Steady State and Eigenvalue Analysis}{40}{subsection.162}%
+\contentsline {subsection}{\numberline {6.2}Impulse Response Functions}{40}{subsection.165}%
+\contentsline {paragraph}{Productivity Shock (Figure \ref {fig:irf_eps_z}).}{43}{section*.175}%
+\contentsline {paragraph}{Foreign Interest Rate Shock (Figure \ref {fig:irf_eps_i_st}).}{44}{section*.176}%
+\contentsline {paragraph}{FX Intervention Shock (Figure \ref {fig:irf_eps_tau_f}).}{44}{section*.177}%
+\contentsline {paragraph}{Comparison: Linear, Deterministic Nonlinear, and Stochastic Nonlinear.}{44}{section*.178}%
+\contentsline {subsection}{\numberline {6.3}Shock Size Sensitivity: Impact of Future Uncertainty}{45}{subsection.181}%
+\contentsline {subsubsection}{\numberline {6.3.1}Productivity Shock ($\epsilon _t^Z$)}{46}{subsubsection.182}%
+\contentsline {subsubsection}{\numberline {6.3.2}Risk Premium Shock ($\epsilon _t^{\tau _f}$)}{49}{subsubsection.189}%
+\contentsline {subsubsection}{\numberline {6.3.3}Foreign Interest Rate Shock ($\epsilon _t^{i^*}$)}{52}{subsubsection.196}%
+\contentsline {subsubsection}{\numberline {6.3.4}Key Findings: Shock Size Sensitivity}{54}{subsubsection.203}%
+\contentsline {subsection}{\numberline {6.4}Computational Performance}{55}{subsection.209}%
+\contentsline {section}{\numberline {7}Conclusion}{56}{section.212}%
+\contentsline {section}{\numberline {A}Variable Definitions}{59}{appendix.218}%

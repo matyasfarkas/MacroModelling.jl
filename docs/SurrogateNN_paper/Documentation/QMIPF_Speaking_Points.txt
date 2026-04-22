@@ -1,0 +1,161 @@
+================================================================================
+QMIPF Julia Replication: 5-Minute Speaking Points
+Unit Meeting Presentation
+================================================================================
+
+SLIDE 1: WHAT IS THIS PROJECT? (45 seconds)
+--------------------------------------------------------------------------------
+
+- Replicated the Quantitative Microfounded IPF Model (Adrian et al. 2021) in Julia
+- Original: 180+ equations in Dynare/Matlab
+- New: Full implementation in MacroModelling.jl package
+- WHY: Enable nonlinear solution methods not available in Dynare
+  * Stochastic Extended Path (SEP) algorithm
+  * Mixed Complementarity Problems for occasionally binding constraints
+
+KEY MESSAGE: "We now have a Julia-native QMIPF that matches Dynare AND goes beyond it"
+
+
+SLIDE 2: WHAT DOES THE MODEL CAPTURE? (45 seconds)
+--------------------------------------------------------------------------------
+
+Core Structure (200 variables, 120 shocks, 119 parameters):
+- Small open economy with nominal rigidities (Calvo prices + wages)
+- CES aggregation of domestic and imported goods
+- Real UIP with endogenous risk premium (Gabaix-Maggiori)
+- Taylor rule monetary policy
+
+IPF Policy Tools:
+1. Conventional monetary policy (interest rate)
+2. FX intervention (TAU_F wedge in UIP)
+3. Capital flow management (debt limits, risk premium)
+
+KEY MESSAGE: "Full microfoundations for analyzing EME policy tradeoffs"
+
+
+SLIDE 3: VALIDATION - JULIA MATCHES DYNARE (45 seconds)
+--------------------------------------------------------------------------------
+
+Three-way comparison for 1-sigma shocks:
+1. Dynare first-order perturbation (reference)
+2. Julia deterministic SEP (order=0)
+3. Julia stochastic SEP (order=20)
+
+Results (see Figures 1-3):
+- Perfect alignment at 1-sigma: validates implementation
+- All three methods yield identical IRFs for small shocks
+- Difference < 0.1% for output, consumption, investment
+
+KEY MESSAGE: "The Julia implementation is validated against Dynare"
+
+
+SLIDE 4: THE NOVELTY - IMPACT OF FUTURE UNCERTAINTY (1 minute)
+--------------------------------------------------------------------------------
+
+What stochastic SEP captures that linear methods miss:
+- Agents integrate over FUTURE shock realizations
+- Uses Gauss-Hermite quadrature (3 nodes per shock)
+- Order=20 means looking 20 periods ahead with uncertainty
+
+Key findings at 2-3 sigma shocks (see Figures 4-12):
+1. Linear scaling breaks down
+2. Stochastic SEP shows 4-9% DAMPENING vs deterministic
+3. Precautionary behavior emerges under uncertainty
+4. Financial variables (Q, NFA) diverge more than real variables
+
+Exception: NFA can be AMPLIFIED (+0.6-0.7%) due to portfolio rebalancing
+
+KEY MESSAGE: "Future uncertainty matters quantitatively for policy analysis"
+
+
+SLIDE 5: WHAT'S WORKING, WHAT'S NEXT (45 seconds)
+--------------------------------------------------------------------------------
+
+IMPLEMENTED:
+[X] Core QMIPF structure (households, firms, unions, policy)
+[X] Calvo pricing for goods and wages with indexation
+[X] Real UIP with endogenous risk premium
+[X] SEP solver (deterministic and stochastic)
+[X] MCP for occasionally binding constraints
+[X] Full Dynare validation
+
+NOT YET IMPLEMENTED:
+[ ] Two-country version (foreign economy currently exogenous)
+[ ] Currency denomination of debt (gross positions)
+[ ] Financial intermediaries / banking sector
+[ ] Bayesian estimation
+[ ] Optimal policy (Ramsey)
+
+KEY MESSAGE: "Core model works; extensions are straightforward"
+
+
+SLIDE 6: BOTTOM LINE (30 seconds)
+--------------------------------------------------------------------------------
+
+Three takeaways:
+
+1. REPLICATION SUCCESSFUL
+   Julia/MacroModelling.jl matches Dynare for linear solution
+
+2. NONLINEARITY MATTERS
+   At 2-3 sigma shocks, precautionary effects are 4-9%
+   Linear methods understate crisis responses
+
+3. READY FOR POLICY USE
+   SEP enables scenario analysis with uncertainty
+   MCP enables ZLB/debt limit analysis
+
+NEXT STEPS:
+- Two-country extension for spillover analysis
+- Estimation on EME data
+- Optimal policy under uncertainty
+
+
+================================================================================
+BACKUP: KEY NUMBERS TO REMEMBER
+================================================================================
+
+Model Size:
+- 200 total variables (101 auxiliary)
+- 145 state variables
+- 120 shocks
+- 119 parameters
+
+Calibration:
+- Calvo prices: xi_p = 0.63 (domestic), xi_m = 0.93 (imports)
+- Calvo wages: xi_w = 0.81
+- Risk premium: gamma_0 = 0.0001
+
+Computation:
+- Model loading: ~30 seconds (first run), <5 seconds (precompiled)
+- Linear IRF: <0.1 seconds
+- Deterministic SEP IRF: 2-3 seconds
+- Stochastic SEP IRF (order=20): 2-3 minutes per shock
+
+Validation:
+- Peak response difference vs Dynare: <0.1%
+- Stochastic vs deterministic gap: 4-9% dampening
+- NFA amplification under uncertainty: +0.6-0.7%
+
+
+================================================================================
+FREQUENTLY ASKED QUESTIONS
+================================================================================
+
+Q: Why Julia instead of Dynare?
+A: SEP algorithm implementation + future estimation/optimal policy extensions
+
+Q: Why does uncertainty dampen responses?
+A: Precautionary motive - agents save more, invest less when future is uncertain
+
+Q: Why is NFA amplified not dampened?
+A: Portfolio rebalancing - uncertainty triggers larger external adjustments
+
+Q: What's the computational cost?
+A: Stochastic SEP is 100x slower than linear, but still practical (minutes not hours)
+
+Q: Can we do estimation?
+A: Not yet, but MacroModelling.jl infrastructure supports it - planned extension
+
+
+================================================================================

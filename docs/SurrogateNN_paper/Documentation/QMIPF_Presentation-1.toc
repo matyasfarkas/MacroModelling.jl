@@ -1,0 +1,6 @@
+\beamer@sectionintoc {1}{Motivation and Objectives}{3}{0}{1}
+\beamer@sectionintoc {2}{Model Structure}{4}{0}{2}
+\beamer@sectionintoc {3}{Validation: Julia Matches Dynare}{6}{0}{3}
+\beamer@sectionintoc {4}{The Novelty: Impact of Future Uncertainty}{10}{0}{4}
+\beamer@sectionintoc {5}{Implementation Status}{14}{0}{5}
+\beamer@sectionintoc {6}{Conclusions}{15}{0}{6}
