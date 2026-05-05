@@ -3537,6 +3537,9 @@ function get_loglikelihood(𝓂::ℳ,
                             sep_inv_step_tol::Union{Nothing,Float64} = nothing,
                             sep_inv_resid_tol::Union{Nothing,Float64} = nothing,
                             sep_inv_lambda::Union{Nothing,Float64} = nothing,
+                            sep_inv_predict_tol::Union{Nothing,Float64} = nothing,
+                            sep_inv_logdet_method::Union{Nothing,Symbol,String} = nothing,
+                            sep_inv_logdet_sv_tol::Union{Nothing,Float64} = nothing,
                             verbose::Bool = DEFAULT_VERBOSE)::S where {S <: Real, U <: AbstractFloat}
                             # timer::TimerOutput = TimerOutput(),
 
@@ -3593,7 +3596,10 @@ function get_loglikelihood(𝓂::ℳ,
                                                     sep_inv_maxit = sep_inv_maxit,
                                                     sep_inv_step_tol = sep_inv_step_tol,
                                                     sep_inv_resid_tol = sep_inv_resid_tol,
-                                                    sep_inv_lambda = sep_inv_lambda)
+                                                    sep_inv_lambda = sep_inv_lambda,
+                                                    sep_inv_predict_tol = sep_inv_predict_tol,
+                                                    sep_inv_logdet_method = sep_inv_logdet_method,
+                                                    sep_inv_logdet_sv_tol = sep_inv_logdet_sv_tol)
     else
         get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂, opts = opts)
     end

@@ -58,6 +58,9 @@ verbose      = any(==("--verbose"), ARGS)
 override_cmap  = parse_kv_float(ARGS, "--cmap", NaN)
 override_cmaw  = parse_kv_float(ARGS, "--cmaw", NaN)
 
+# Optional warm-start: init θ at the posterior mean of a previous chain
+init_from_path = parse_kv_string(ARGS, "--init-from", "")
+
 if data_path == ""
     error("Usage: julia run_linear_hmc_advancedhmc.jl --data=<payload.jls> [--out=...] [--samples=500] [--adapt=200]")
 end
@@ -299,27 +302,45 @@ baseline = get_phase1_18param_baseline()
 θ_calib = Float64[get(baseline, tname, NaN) for tname in theta_names]
 any(isnan, θ_calib) && error("Missing baseline value for some parameters")
 
-# Build init at midpoint between calibrated value and prior mode, clamped to interior
+# Build init: warm-start from --init-from posterior mean, else blended calib/prior.
 θ_init = similar(θ_calib)
-for i in 1:n_theta
-    lb, ub = prior_bounds[i]
-    # Prior mode (approximate: use mean for Beta, mode for InvGamma)
-    prior_mode = if specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :Beta
-        α = specs[findfirst(==(theta_names[i]), spec_names)].prior_params.α
-        β = specs[findfirst(==(theta_names[i]), spec_names)].prior_params.β
-        α / (α + β)  # prior mean
-    elseif specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :InvGamma
-        specs[findfirst(==(theta_names[i]), spec_names)].prior_params.θ  # scale ≈ mode
-    elseif specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :Normal
-        specs[findfirst(==(theta_names[i]), spec_names)].prior_params.μ
+if init_from_path != ""
+    println("  Loading initialization from: $init_from_path")
+    init_chain = deserialize(init_from_path)
+    θ_src = if haskey(init_chain, "theta_post_mean")
+        Float64.(init_chain["theta_post_mean"])
+    elseif haskey(init_chain, "chain") && init_chain["chain"] isa AbstractMatrix
+        Float64.(vec(mean(init_chain["chain"], dims=1)))
     else
-        (lb + ub) / 2
+        error("Cannot extract init from $init_from_path: no theta_post_mean or chain key")
     end
-    # Clamp calibrated value into interior of bounds
-    calib_clamped = clamp(θ_calib[i], lb + 0.05*(ub-lb), ub - 0.05*(ub-lb))
-    # Average of calibrated (clamped) and prior mode
-    θ_init[i] = 0.5 * calib_clamped + 0.5 * prior_mode
-    θ_init[i] = clamp(θ_init[i], lb + 0.05*(ub-lb), ub - 0.05*(ub-lb))
+    length(θ_src) == n_theta || error("init-from chain has $(length(θ_src)) θ, expected $n_theta")
+    for i in 1:n_theta
+        lb, ub = prior_bounds[i]
+        θ_init[i] = clamp(θ_src[i], lb + 0.01*(ub-lb), ub - 0.01*(ub-lb))
+    end
+    println("  Init source: posterior mean from $(init_from_path)")
+else
+    for i in 1:n_theta
+        lb, ub = prior_bounds[i]
+        # Prior mode (approximate: use mean for Beta, mode for InvGamma)
+        prior_mode = if specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :Beta
+            α = specs[findfirst(==(theta_names[i]), spec_names)].prior_params.α
+            β = specs[findfirst(==(theta_names[i]), spec_names)].prior_params.β
+            α / (α + β)  # prior mean
+        elseif specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :InvGamma
+            specs[findfirst(==(theta_names[i]), spec_names)].prior_params.θ  # scale ≈ mode
+        elseif specs[findfirst(==(theta_names[i]), spec_names)].prior_type == :Normal
+            specs[findfirst(==(theta_names[i]), spec_names)].prior_params.μ
+        else
+            (lb + ub) / 2
+        end
+        # Clamp calibrated value into interior of bounds
+        calib_clamped = clamp(θ_calib[i], lb + 0.05*(ub-lb), ub - 0.05*(ub-lb))
+        # Average of calibrated (clamped) and prior mode
+        θ_init[i] = 0.5 * calib_clamped + 0.5 * prior_mode
+        θ_init[i] = clamp(θ_init[i], lb + 0.05*(ub-lb), ub - 0.05*(ub-lb))
+    end
 end
 
 println("  Initial values (blended calib/prior):")

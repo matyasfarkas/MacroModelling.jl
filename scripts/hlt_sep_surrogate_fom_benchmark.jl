@@ -187,7 +187,10 @@ function make_sep_override_dict(; sep_periods,
                                  sep_inv_maxit,
                                  sep_inv_step_tol,
                                  sep_inv_resid_tol,
-                                 sep_inv_lambda)
+                                 sep_inv_lambda,
+                                 sep_inv_predict_tol = nothing,
+                                 sep_inv_logdet_method = nothing,
+                                 sep_inv_logdet_sv_tol = nothing)
     return Dict{String,Any}(
         "sep_periods" => sep_periods,
         "sep_order" => sep_order,
@@ -201,6 +204,9 @@ function make_sep_override_dict(; sep_periods,
         "sep_inv_step_tol" => sep_inv_step_tol,
         "sep_inv_resid_tol" => sep_inv_resid_tol,
         "sep_inv_lambda" => sep_inv_lambda,
+        "sep_inv_predict_tol" => sep_inv_predict_tol,
+        "sep_inv_logdet_method" => sep_inv_logdet_method,
+        "sep_inv_logdet_sv_tol" => sep_inv_logdet_sv_tol,
     )
 end
 
@@ -253,6 +259,9 @@ function build_sep_floor_recovery_rungs(base_sep_overrides::Dict{String,Any})
                 "sep_inv_step_tol" => 1e-4,
                 "sep_inv_resid_tol" => 1e-3,
                 "sep_inv_lambda" => 1e-3,
+                "sep_inv_predict_tol" => get(base_sep_overrides, "sep_inv_predict_tol", 1e-10),
+                "sep_inv_logdet_method" => get(base_sep_overrides, "sep_inv_logdet_method", nothing),
+                "sep_inv_logdet_sv_tol" => get(base_sep_overrides, "sep_inv_logdet_sv_tol", nothing),
             ),
         ),
         Dict{String,Any}(
@@ -271,6 +280,9 @@ function build_sep_floor_recovery_rungs(base_sep_overrides::Dict{String,Any})
                 "sep_inv_step_tol" => 1e-4,
                 "sep_inv_resid_tol" => 1e-3,
                 "sep_inv_lambda" => 1e-3,
+                "sep_inv_predict_tol" => get(base_sep_overrides, "sep_inv_predict_tol", 1e-10),
+                "sep_inv_logdet_method" => get(base_sep_overrides, "sep_inv_logdet_method", nothing),
+                "sep_inv_logdet_sv_tol" => get(base_sep_overrides, "sep_inv_logdet_sv_tol", nothing),
             ),
         ),
     ]
@@ -325,6 +337,9 @@ function run_fom_attempt(model,
             sep_inv_step_tol = get(sep_overrides, "sep_inv_step_tol", nothing),
             sep_inv_resid_tol = get(sep_overrides, "sep_inv_resid_tol", nothing),
             sep_inv_lambda = get(sep_overrides, "sep_inv_lambda", nothing),
+            sep_inv_predict_tol = get(sep_overrides, "sep_inv_predict_tol", nothing),
+            sep_inv_logdet_method = get(sep_overrides, "sep_inv_logdet_method", nothing),
+            sep_inv_logdet_sv_tol = get(sep_overrides, "sep_inv_logdet_sv_tol", nothing),
         )
         if !isfinite(ll_fom)
             status = "invalid_loglikelihood"
@@ -440,6 +455,9 @@ sep_inv_maxit = parse_optional_arg_int(ARGS, "--sep-inv-maxit")
 sep_inv_step_tol = parse_optional_arg_float(ARGS, "--sep-inv-step-tol")
 sep_inv_resid_tol = parse_optional_arg_float(ARGS, "--sep-inv-resid-tol")
 sep_inv_lambda = parse_optional_arg_float(ARGS, "--sep-inv-lambda")
+sep_inv_predict_tol = parse_optional_arg_float(ARGS, "--sep-inv-predict-tol")
+sep_inv_logdet_method = parse_optional_arg_symbol(ARGS, "--sep-inv-logdet-method")
+sep_inv_logdet_sv_tol = parse_optional_arg_float(ARGS, "--sep-inv-logdet-sv-tol")
 recovery_ladder = parse_arg_bool(ARGS, "--recovery-ladder", false)
 recovery_ladder_max_rungs = parse_optional_arg_int(ARGS, "--recovery-ladder-max-rungs")
 allow_fail = parse_arg_bool(ARGS, "--allow-fail", true)
@@ -473,6 +491,7 @@ if benchmark_preset !== nothing
         has_cli_arg(ARGS, "--sep-inv-resid-tol") || (sep_inv_resid_tol = 1e-4)
         has_cli_arg(ARGS, "--sep-inv-step-tol") || (sep_inv_step_tol = 1e-5)
         has_cli_arg(ARGS, "--sep-inv-lambda") || (sep_inv_lambda = 1e-3)
+        has_cli_arg(ARGS, "--sep-inv-predict-tol") || (sep_inv_predict_tol = 1e-10)
         has_cli_arg(ARGS, "--allow-fail") || (allow_fail = true)
     elseif benchmark_preset == :direct_sep_gated_smoke_order1_tuned
         preset_note = "Applied bounded HLT/OBC direct-SEP gated-block stochastic (order-1) tuned smoke defaults that produced finite direct FOM values in HLT/OBC probes (override with explicit flags)."
@@ -496,6 +515,8 @@ if benchmark_preset !== nothing
         has_cli_arg(ARGS, "--sep-inv-resid-tol") || (sep_inv_resid_tol = 1e-3)
         has_cli_arg(ARGS, "--sep-inv-step-tol") || (sep_inv_step_tol = 1e-4)
         has_cli_arg(ARGS, "--sep-inv-lambda") || (sep_inv_lambda = 1e-3)
+        has_cli_arg(ARGS, "--sep-inv-predict-tol") || (sep_inv_predict_tol = 1e-10)
+        has_cli_arg(ARGS, "--sep-inv-logdet-method") || (sep_inv_logdet_method = :exact)
         has_cli_arg(ARGS, "--allow-fail") || (allow_fail = true)
     elseif benchmark_preset == :first_order_gated_smoke
         preset_note = "Applied bounded first-order inversion gated-block smoke defaults (override with explicit flags)."
@@ -688,6 +709,9 @@ base_sep_overrides = make_sep_override_dict(
     sep_inv_step_tol = sep_inv_step_tol,
     sep_inv_resid_tol = sep_inv_resid_tol,
     sep_inv_lambda = sep_inv_lambda,
+    sep_inv_predict_tol = sep_inv_predict_tol,
+    sep_inv_logdet_method = sep_inv_logdet_method,
+    sep_inv_logdet_sv_tol = sep_inv_logdet_sv_tol,
 )
 for (label, params) in sort(collect(panel); by = first)
     attempts = Dict{String,Any}[]
@@ -830,6 +854,9 @@ payload = Dict(
         "sep_inv_step_tol" => sep_inv_step_tol,
         "sep_inv_resid_tol" => sep_inv_resid_tol,
         "sep_inv_lambda" => sep_inv_lambda,
+        "sep_inv_predict_tol" => sep_inv_predict_tol,
+        "sep_inv_logdet_method" => sep_inv_logdet_method === nothing ? nothing : String(sep_inv_logdet_method),
+        "sep_inv_logdet_sv_tol" => sep_inv_logdet_sv_tol,
     ),
     "results" => results,
     "comparisons" => comparisons,

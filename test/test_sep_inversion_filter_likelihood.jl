@@ -7,6 +7,16 @@ println("SEP INVERSION FILTER LIKELIHOOD TESTS")
 println("="^80)
 
 @testset verbose = true "SEP Inversion Filter Likelihood" begin
+    @testset "Logdet method handles singular square Jacobians explicitly" begin
+        J = [1.0 0.0; 0.0 0.0]
+        @test MacroModelling._sep_inv_logabsdet(J; method = :exact) == -Inf
+        @test MacroModelling._sep_inv_logabsdet(J; method = :svd_pseudodet) ≈ 0.0
+
+        diag = MacroModelling._sep_inv_logdet_diagnostics(J; method = :svd_pseudodet)
+        @test diag["sep_inv_logdet_method"] == "svd_pseudodet"
+        @test diag["sep_inv_logdet_rank"] == 1
+    end
+
     include("../models/RBC_Dynare.jl")
 
     Random.seed!(20260225)
@@ -94,6 +104,8 @@ println("="^80)
             sep_inv_resid_tol = 1e-6,
             sep_inv_step_tol = 1e-6,
             sep_inv_lambda = 1e-4,
+            sep_inv_predict_tol = 1e-9,
+            sep_inv_logdet_method = :svd_pseudodet,
         )
 
         @test isfinite(ll)
@@ -106,5 +118,7 @@ println("="^80)
         @test get(diag, "sep_order", nothing) == 1
         @test get(diag, "sep_nnodes", nothing) == 3
         @test get(diag, "sep_inv_maxit", nothing) == 8
+        @test get(diag, "sep_inv_predict_tol", nothing) == 1e-9
+        @test get(diag, "sep_inv_logdet_method", nothing) == "svd_pseudodet"
     end
 end

@@ -10008,7 +10008,10 @@ function get_relevant_steady_state_and_state_update(::Val{:stochastic_extended_p
                                                     sep_inv_maxit::Union{Nothing,Int} = nothing,
                                                     sep_inv_step_tol::Union{Nothing,Float64} = nothing,
                                                     sep_inv_resid_tol::Union{Nothing,Float64} = nothing,
-                                                    sep_inv_lambda::Union{Nothing,Float64} = nothing) where S <: Real
+                                                    sep_inv_lambda::Union{Nothing,Float64} = nothing,
+                                                    sep_inv_predict_tol::Union{Nothing,Float64} = nothing,
+                                                    sep_inv_logdet_method::Union{Nothing,Symbol,String} = nothing,
+                                                    sep_inv_logdet_sv_tol::Union{Nothing,Float64} = nothing) where S <: Real
                                                     # timer::TimerOutput = TimerOutput(),
     SS_and_pars, (solution_error, iters) = get_NSSS_and_parameters(𝓂, parameter_values, opts = opts)
 
@@ -10053,21 +10056,30 @@ function get_relevant_steady_state_and_state_update(::Val{:stochastic_extended_p
     sep_inv_step_tol_final = isnothing(sep_inv_step_tol) ? 1e-6 : sep_inv_step_tol
     sep_inv_resid_tol_final = isnothing(sep_inv_resid_tol) ? 1e-6 : sep_inv_resid_tol
     sep_inv_lambda_final = isnothing(sep_inv_lambda) ? 1e-4 : sep_inv_lambda
+    sep_inv_predict_tol_final = isnothing(sep_inv_predict_tol) ? min(sep_tol_final, 1e-10) : sep_inv_predict_tol
+    sep_inv_logdet_method_final = isnothing(sep_inv_logdet_method) ? :exact : (sep_inv_logdet_method isa Symbol ? sep_inv_logdet_method : Symbol(sep_inv_logdet_method))
+    sep_inv_logdet_sv_tol_final = isnothing(sep_inv_logdet_sv_tol) ? sqrt(eps(Float64)) : sep_inv_logdet_sv_tol
 
     if sep_periods_final <= 0 || sep_order_final < 0 || sep_nnodes_final <= 0 || sep_maxit_final <= 0 ||
        !(sep_tol_final > 0) || !(sep_accept_tol_final > 0) || !(sep_shock_scale_final >= 0) ||
        sep_inv_maxit_final <= 0 || !(sep_inv_step_tol_final > 0) || !(sep_inv_resid_tol_final > 0) ||
-       !(sep_inv_lambda_final >= 0)
+       !(sep_inv_lambda_final >= 0) || !(sep_inv_predict_tol_final > 0) ||
+       !(sep_inv_logdet_method_final in (:exact, :svd_pseudodet, :pseudodet)) ||
+       !(sep_inv_logdet_sv_tol_final > 0)
         if opts.verbose
             println("Invalid SEP inversion settings: " *
                     "periods=$(sep_periods_final), order=$(sep_order_final), nnodes=$(sep_nnodes_final), " *
                     "maxit=$(sep_maxit_final), tol=$(sep_tol_final), accept_tol=$(sep_accept_tol_final), " *
                     "shock_scale=$(sep_shock_scale_final), inv_maxit=$(sep_inv_maxit_final), " *
                     "inv_step_tol=$(sep_inv_step_tol_final), inv_resid_tol=$(sep_inv_resid_tol_final), " *
-                    "inv_lambda=$(sep_inv_lambda_final)")
+                    "inv_lambda=$(sep_inv_lambda_final), inv_predict_tol=$(sep_inv_predict_tol_final), " *
+                    "inv_logdet_method=$(sep_inv_logdet_method_final), " *
+                    "inv_logdet_sv_tol=$(sep_inv_logdet_sv_tol_final)")
         end
         return TT, SS_and_pars, (;), [state0], false
     end
+
+    sep_inv_logdet_method_final = sep_inv_logdet_method_final == :pseudodet ? :svd_pseudodet : sep_inv_logdet_method_final
 
     sep_ctx = (
         kind = :stochastic_extended_path,
@@ -10086,6 +10098,9 @@ function get_relevant_steady_state_and_state_update(::Val{:stochastic_extended_p
         sep_inv_step_tol = sep_inv_step_tol_final,
         sep_inv_resid_tol = sep_inv_resid_tol_final,
         sep_inv_lambda = sep_inv_lambda_final,
+        sep_inv_predict_tol = min(sep_tol_final, sep_inv_predict_tol_final),
+        sep_inv_logdet_method = sep_inv_logdet_method_final,
+        sep_inv_logdet_sv_tol = sep_inv_logdet_sv_tol_final,
     )
 
     return TT, SS_and_pars, sep_ctx, [state0], true

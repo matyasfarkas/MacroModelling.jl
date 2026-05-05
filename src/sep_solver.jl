@@ -1985,7 +1985,7 @@ function sep_solve_mm!(
                         # HMC-based expectation approximation
                         # Get shock covariance for this period
                         Σ_period = if dε > 0
-                            Σ[stochastic_idx, stochastic_idx]
+                            Σ
                         else
                             zeros(dε, dε)
                         end
@@ -2177,7 +2177,7 @@ function sep_solve_mm!(
                         # HMC-based expectation approximation for residual and Jacobian
                         # Get shock covariance for this period
                         Σ_period = if dε > 0
-                            Σ[stochastic_idx, stochastic_idx]
+                            Σ
                         else
                             zeros(dε, dε)
                         end

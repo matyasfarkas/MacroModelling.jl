@@ -1,0 +1,157 @@
+#!/usr/bin/env julia
+# ============================================================================
+# Mode-sensitivity report for extended-sample HMC artifacts.
+#
+# This is a lightweight provenance script: it does not rerun HMC. It reads the
+# existing cold-start, warm-start, and linear chain artifacts and writes a table
+# that makes warm-start dependence visible in the paper.
+# ============================================================================
+
+using Serialization, Statistics, Printf, Dates
+
+const REPO_ROOT = normpath(joinpath(@__DIR__, ".."))
+const ARTIFACT_DIR = joinpath(REPO_ROOT, ".local_artifacts", "mode_sensitivity")
+const CHAIN_DIR = joinpath(REPO_ROOT, ".local_artifacts", "hlt_18param_realdata")
+
+const CHAIN_SPECS = [
+    ("Kalman", "linear seed99", "calibrated interior", "hlt_linear_hmc_extended_18p_2000.jls"),
+    ("Kalman", "linear seed3",  "calibrated interior", "hlt_linear_hmc_extended_18p_2000_seed3.jls"),
+    ("Kalman", "linear seed4",  "calibrated interior", "hlt_linear_hmc_extended_18p_2000_seed4.jls"),
+    ("Kalman", "linear seed5",  "calibrated interior", "hlt_linear_hmc_extended_18p_2000_seed5.jls"),
+    ("Surrogate", "cold seed2", "calibrated interior", "hlt_surrogate_hmc_extended_18p_2000_seed2.jls"),
+    ("Surrogate", "cold seed3", "calibrated interior", "hlt_surrogate_hmc_extended_18p_2000_seed3.jls"),
+    ("Surrogate", "cold seed4", "calibrated interior", "hlt_surrogate_hmc_extended_18p_2000_seed4.jls"),
+    ("Surrogate", "warm seed42", "linear posterior mean", "hlt_surrogate_hmc_extended_18p_2000.jls"),
+    ("Surrogate", "warm seed5",  "linear posterior mean", "hlt_surrogate_hmc_extended_18p_2000_seed5.jls"),
+    ("Surrogate", "warm seed6",  "linear posterior mean", "hlt_surrogate_hmc_extended_18p_2000_seed6.jls"),
+    ("Surrogate", "warm seed7",  "linear posterior mean", "hlt_surrogate_hmc_extended_18p_2000_seed7.jls"),
+]
+
+const PARAMS = [
+    (:z_ea, "\\sigma_a"),
+    (:z_eb, "\\sigma_b"),
+    (:z_eqs, "\\sigma_{qs}"),
+    (:crhob, "\\rho_b"),
+    (:crhow, "\\rho_w"),
+    (:curvp, "\\phi_p"),
+]
+
+function load_chain(path::AbstractString)
+    d = deserialize(path)
+    haskey(d, "chain") || error("Missing chain key in $path")
+    mat = Matrix{Float64}(d["chain"])
+    names = Symbol.(d["theta_names"])
+    return d, mat, names
+end
+
+function param_mean(mat::AbstractMatrix, names::Vector{Symbol}, pname::Symbol)
+    idx = findfirst(==(pname), names)
+    idx === nothing && return NaN
+    return mean(mat[:, idx])
+end
+
+function fmt(x; digits=3)
+    x isa Missing && return "--"
+    !isfinite(Float64(x)) && return "--"
+    return @sprintf("%.*f", digits, Float64(x))
+end
+
+function md_escape(s::AbstractString)
+    return replace(s, "|" => "\\|")
+end
+
+mkpath(ARTIFACT_DIR)
+
+rows = NamedTuple[]
+for (family, label, init_source, file) in CHAIN_SPECS
+    path = joinpath(CHAIN_DIR, file)
+    if !isfile(path)
+        @warn "Missing chain artifact" path
+        continue
+    end
+    d, mat, names = load_chain(path)
+    vals = Dict(p => param_mean(mat, names, p) for (p, _) in PARAMS)
+    ll = Float64(get(d, "ll_post_mean", NaN))
+    acc = haskey(d, "acceptance_rates") ? mean(Float64.(d["acceptance_rates"])) : NaN
+    push!(rows, (
+        family = family,
+        label = label,
+        init_source = init_source,
+        n_draws = size(mat, 1),
+        ll_post_mean = ll,
+        n_divergent = Int(get(d, "n_divergent", -1)),
+        accept = acc,
+        values = vals,
+        path = path,
+    ))
+end
+
+md_path = joinpath(ARTIFACT_DIR, "MODE_SENSITIVITY_SUMMARY.md")
+tex_path = joinpath(ARTIFACT_DIR, "table_mode_sensitivity.tex")
+csv_path = joinpath(ARTIFACT_DIR, "mode_sensitivity.csv")
+
+open(md_path, "w") do io
+    println(io, "# Mode Sensitivity Summary")
+    println(io)
+    println(io, "Generated: $(now())")
+    println(io)
+    println(io, "This table reads existing extended-sample chain artifacts. It is a provenance table, not a fresh HMC run.")
+    println(io)
+    println(io, "| Family | Chain | Init source | Draws | LL at mean | Div. | Accept | sigma_a | sigma_b | sigma_qs | rho_b | rho_w | phi_p |")
+    println(io, "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for r in rows
+        vals = [r.values[p] for (p, _) in PARAMS]
+        println(io, "| $(md_escape(r.family)) | $(md_escape(r.label)) | $(md_escape(r.init_source)) | $(r.n_draws) | $(fmt(r.ll_post_mean; digits=2)) | $(r.n_divergent) | $(fmt(r.accept; digits=3)) | " *
+                    join(fmt.(vals; digits=3), " | ") * " |")
+    end
+    println(io)
+    println(io, "Source artifacts:")
+    for r in rows
+        println(io, "- `$(relpath(r.path, REPO_ROOT))`")
+    end
+    println(io)
+    println(io, "Interpretation guardrail: the high-likelihood surrogate result should be described as conditional on the warm-started mode unless a fresh global mode search shows otherwise.")
+end
+
+open(tex_path, "w") do io
+    println(io, "% Generated by scripts/mode_sensitivity_report.jl on $(now())")
+    println(io, "\\begin{tabular}{lllrrrrrrr}")
+    println(io, "\\toprule")
+    println(io, "Family & Chain & Init & LL & Div. & Accept & \$\\sigma_a\$ & \$\\sigma_b\$ & \$\\sigma_{qs}\$ \\\\")
+    println(io, "\\midrule")
+    for r in rows
+        vals = [r.values[:z_ea], r.values[:z_eb], r.values[:z_eqs]]
+        println(io, "$(r.family) & $(r.label) & $(r.init_source) & $(fmt(r.ll_post_mean; digits=1)) & $(r.n_divergent) & $(fmt(r.accept; digits=2)) & $(join(fmt.(vals; digits=3), " & ")) \\\\")
+    end
+    println(io, "\\bottomrule")
+    println(io, "\\end{tabular}")
+    println(io, "% Notes: Existing chain artifacts only; use with the Rhat diagnostics in .local_artifacts/rhat_diagnostics_*.")
+end
+
+open(csv_path, "w") do io
+    println(io, "family,chain,init_source,n_draws,ll_post_mean,n_divergent,acceptance,sigma_a,sigma_b,sigma_qs,rho_b,rho_w,phi_p,path")
+    for r in rows
+        vals = [r.values[p] for (p, _) in PARAMS]
+        println(io, join([
+            r.family,
+            r.label,
+            r.init_source,
+            string(r.n_draws),
+            fmt(r.ll_post_mean; digits=6),
+            string(r.n_divergent),
+            fmt(r.accept; digits=6),
+            fmt(vals[1]; digits=6),
+            fmt(vals[2]; digits=6),
+            fmt(vals[3]; digits=6),
+            fmt(vals[4]; digits=6),
+            fmt(vals[5]; digits=6),
+            fmt(vals[6]; digits=6),
+            relpath(r.path, REPO_ROOT),
+        ], ","))
+    end
+end
+
+println("Wrote:")
+println("  $(relpath(md_path, REPO_ROOT))")
+println("  $(relpath(tex_path, REPO_ROOT))")
+println("  $(relpath(csv_path, REPO_ROOT))")

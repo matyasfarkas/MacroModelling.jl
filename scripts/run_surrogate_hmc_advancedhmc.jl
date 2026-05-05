@@ -19,6 +19,10 @@
 #       --data=.local_artifacts/hlt_18param_realdata/hlt_real_data_payload.jls \
 #       --out=.local_artifacts/hlt_18param_realdata/hlt_surrogate_hmc_advhmc.jls \
 #       --samples=500 --adapt=200 --seed=42
+#
+# Linear+gate ablation:
+#   add --disable-nn-correction=true to keep the same gate, inversion filter,
+#   observation scaling, and soft mixing while zeroing the NN residual correction.
 # ============================================================================
 
 using Serialization, Random, LinearAlgebra
@@ -43,6 +47,12 @@ function parse_kv_string(args, key, default)
 end
 parse_kv_int(args, key, default) = parse(Int, parse_kv_string(args, key, string(default)))
 parse_kv_float(args, key, default) = parse(Float64, parse_kv_string(args, key, string(default)))
+function parse_kv_bool(args, key, default)
+    raw = lowercase(strip(parse_kv_string(args, key, string(default))))
+    raw in ("true", "t", "1", "yes", "y") && return true
+    raw in ("false", "f", "0", "no", "n") && return false
+    error("Invalid boolean for $key: $raw")
+end
 
 surrogate_path = parse_kv_string(ARGS, "--surrogate", "")
 data_path      = parse_kv_string(ARGS, "--data", "")
@@ -77,6 +87,10 @@ gate_k_pre  = parse_kv_int(ARGS, "--gate-k-pre", 4)
 gate_k_post = parse_kv_int(ARGS, "--gate-k-post", 8)
 gate_min_len = parse_kv_int(ARGS, "--gate-min-len", 4)
 
+# Ablation: same gate/inversion architecture, zero NN residual correction.
+disable_nn_correction = parse_kv_bool(ARGS, "--disable-nn-correction", false) ||
+                        any(==("--disable-nn-correction"), ARGS)
+
 if surrogate_path == "" || data_path == ""
     error("""Usage: julia run_surrogate_hmc_advancedhmc.jl \\
         --surrogate=<surrogate.jls> --data=<payload.jls> \\
@@ -105,6 +119,7 @@ println("  Seed:           $seed")
 println("  Init from:      $(init_from_path == "" ? "(blended calib/prior)" : init_from_path)")
 println("  Gate calib:     $(gate_path == "" ? "(none — full surrogate)" : gate_path)")
 println("  Gate mode:      $gate_mode")
+println("  NN correction:  $(disable_nn_correction ? "disabled (linear+gate ablation)" : "enabled")")
 
 # ============================================================================
 # Step 1: Load Data Payload
@@ -315,10 +330,31 @@ else
     single_nn_residual = (x_nn) -> predict_frozen(frozen, x_nn)
 end
 
+if disable_nn_correction
+    zero_residual_predict = (state, shock_t, θ_local) -> zeros(promote_type(eltype(state), eltype(shock_t), eltype(θ_local)), d_obs)
+    surrogate_residual_predict = zero_residual_predict
+    surrogate_step_predict = (state, shock_t, θ_local) -> MacroModelling.predict_additive_residual(
+        rom_full_predict,
+        surrogate_residual_predict,
+        state,
+        shock_t,
+        θ_local,
+        d_obs;
+        allow_full_residual = false,
+    )
+    batch_nn_residual = (X_nn) -> zeros(eltype(X_nn), frozen.d_out, size(X_nn, 2))
+    single_nn_residual = (x_nn) -> zeros(eltype(x_nn), frozen.d_out)
+    println("  NN residuals:   zeroed for linear+gate ablation")
+end
+
 # Correction clamp bounds: ±3σ of training RMSE per output dimension
 if val_rmse !== nothing && length(val_rmse) == frozen.d_out
-    nn_correction_clamp = 3.0 .* val_rmse
-    println("  Correction clamp: ±3×RMSE (obs max=$(round(maximum(nn_correction_clamp[1:d_obs]), sigdigits=3)), state max=$(round(maximum(nn_correction_clamp[(d_obs+1):end]), sigdigits=3)))")
+    nn_correction_clamp = disable_nn_correction ? nothing : 3.0 .* val_rmse
+    if disable_nn_correction
+        println("  Correction clamp: disabled (NN correction zeroed)")
+    else
+        println("  Correction clamp: ±3×RMSE (obs max=$(round(maximum(nn_correction_clamp[1:d_obs]), sigdigits=3)), state max=$(round(maximum(nn_correction_clamp[(d_obs+1):end]), sigdigits=3)))")
+    end
 else
     nn_correction_clamp = nothing
     println("  Correction clamp: disabled (no val_rmse)")
@@ -848,7 +884,8 @@ results = Dict{String,Any}(
     "model_name"         => "Smets_Wouters_2007_HLT",
     "surrogate_path"     => surrogate_path,
     "sampler"            => "NUTS (AdvancedHMC.jl)",
-    "likelihood"         => "inversion_filter + surrogate",
+    "likelihood"         => disable_nn_correction ? "inversion_filter + linear_gate_no_nn" : "inversion_filter + surrogate",
+    "disable_nn_correction" => disable_nn_correction,
     "gradient"           => "finite_differences",
     "inv_maxit"          => inv_maxit,
     "inv_tol"            => inv_tol,

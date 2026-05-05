@@ -263,30 +263,65 @@ function _sep_inv_shock_sigmas(𝓂::ℳ, parameter_values::AbstractVector{<:Rea
     return sigmas
 end
 
-function _sep_inv_logabsdet(J::AbstractMatrix{<:Real})
-    if size(J, 1) == size(J, 2)
+function _sep_inv_normalize_logdet_method(method)::Symbol
+    method_sym = method isa Symbol ? method : Symbol(method)
+    method_sym in (:exact, :svd_pseudodet, :pseudodet) ||
+        error("Unsupported SEP inversion logdet method: $(method). Use :exact or :svd_pseudodet.")
+    return method_sym == :pseudodet ? :svd_pseudodet : method_sym
+end
+
+function _sep_inv_svd_logabsdet(J::AbstractMatrix{<:Real}; sv_tol::Float64 = sqrt(eps(Float64)))
+    sv = try
+        ℒ.svdvals(Matrix{Float64}(J))
+    catch
+        return (NaN, Float64[], 0)
+    end
+    kept = sv[sv .> sv_tol]
+    isempty(kept) && return (NaN, sv, 0)
+    return (sum(log, kept), sv, length(kept))
+end
+
+function _sep_inv_logabsdet(J::AbstractMatrix{<:Real};
+                            method = :exact,
+                            sv_tol::Float64 = sqrt(eps(Float64)))
+    method_sym = _sep_inv_normalize_logdet_method(method)
+    if method_sym == :exact && size(J, 1) == size(J, 2)
         try
             return ℒ.logabsdet(Matrix{Float64}(J))[1]
         catch
             return NaN
         end
     end
-    sv = try
-        ℒ.svdvals(Matrix{Float64}(J))
-    catch
-        return NaN
+    logabsdet, _, _ = _sep_inv_svd_logabsdet(J; sv_tol = sv_tol)
+    return logabsdet
+end
+
+function _sep_inv_logdet_diagnostics(J::AbstractMatrix{<:Real};
+                                     method = :exact,
+                                     sv_tol::Float64 = sqrt(eps(Float64)))
+    method_sym = _sep_inv_normalize_logdet_method(method)
+    logabsdet = _sep_inv_logabsdet(J; method = method_sym, sv_tol = sv_tol)
+    _, sv, rank = _sep_inv_svd_logabsdet(J; sv_tol = sv_tol)
+    d = Dict{String,Any}(
+        "sep_inv_logdet_method" => String(method_sym),
+        "sep_inv_logdet_sv_tol" => sv_tol,
+        "sep_inv_logdet_rank" => rank,
+        "sep_inv_logdet_singular_values" => sv,
+        "sep_inv_logdet_logabsdet" => logabsdet,
+    )
+    if !isempty(sv)
+        d["sep_inv_logdet_min_singular_value"] = minimum(sv)
+        d["sep_inv_logdet_max_singular_value"] = maximum(sv)
     end
-    sv_tol = sqrt(eps(Float64))
-    sv = sv[sv .> sv_tol]
-    isempty(sv) && return NaN
-    return sum(log, sv)
+    return d
 end
 
 function _sep_inv_predict_step(sep_ctx::NamedTuple,
                                state_dev::AbstractVector{<:Real},
                                shocks_full::AbstractVector{<:Real},
                                obs_var_idx::AbstractVector{Int};
-                               initial_guess::Union{Nothing,Vector{Float64}} = nothing)
+                               initial_guess::Union{Nothing,Vector{Float64}} = nothing,
+                               solve_tol::Union{Nothing,Float64} = nothing)
     𝓂 = sep_ctx.model
     n_exo = length(𝓂.exo)
     length(shocks_full) == n_exo || error("SEP inversion shock length mismatch: expected $n_exo, got $(length(shocks_full)).")
@@ -294,12 +329,14 @@ function _sep_inv_predict_step(sep_ctx::NamedTuple,
     shock_sequence = zeros(Float64, sep_ctx.sep_periods, n_exo)
     shock_sequence[1, :] .= Float64.(shocks_full)
 
+    predict_tol = solve_tol === nothing ? Float64(sep_ctx.sep_tol) : Float64(solve_tol)
+
     sep_opts = SEPSolverOptions(
         periods = sep_ctx.sep_periods,
         order = sep_ctx.sep_order,
         nnodes = sep_ctx.sep_nnodes,
         maxit = sep_ctx.sep_maxit,
-        tol = sep_ctx.sep_tol,
+        tol = predict_tol,
         verbose = false,
         shock_scale = sep_ctx.sep_shock_scale,
         sparse_tree = sep_ctx.sep_sparse_tree,
@@ -320,7 +357,8 @@ function _sep_inv_predict_step(sep_ctx::NamedTuple,
                 state_next_dev = zeros(Float64, length(sep_ctx.yss)),
                 Y_guess = nothing,
                 sep_flag = result.flag,
-                sep_err = result.err)
+                sep_err = result.err,
+                sep_solve_tol = predict_tol)
     end
 
     layout = result.layout
@@ -330,7 +368,8 @@ function _sep_inv_predict_step(sep_ctx::NamedTuple,
                 state_next_dev = zeros(Float64, length(sep_ctx.yss)),
                 Y_guess = nothing,
                 sep_flag = result.flag,
-                sep_err = result.err)
+                sep_err = result.err,
+                sep_solve_tol = predict_tol)
     end
 
     y_next = result.Y[layout.voff[2] .+ (1:layout.ny_)]
@@ -342,7 +381,8 @@ function _sep_inv_predict_step(sep_ctx::NamedTuple,
             state_next_dev = y_next_dev,
             Y_guess = result.Y,
             sep_flag = result.flag,
-            sep_err = result.err)
+            sep_err = result.err,
+            sep_solve_tol = predict_tol)
 end
 
 function _sep_inv_fd_jacobian(sep_ctx::NamedTuple,
@@ -354,32 +394,49 @@ function _sep_inv_fd_jacobian(sep_ctx::NamedTuple,
     n_obs = length(obs_var_idx)
     n_struct = length(structural_idx)
     d_eps = length(sep_ctx.shock_sigmas)
+    predict_tol = Float64(get(sep_ctx, :sep_inv_predict_tol, min(Float64(sep_ctx.sep_tol), 1e-10)))
+    predict_tol = min(Float64(sep_ctx.sep_tol), predict_tol)
+    fd_retry_factor = 10.0
+    fd_max_retries = 2
 
     J = zeros(Float64, n_obs, n_struct)
     base_full = zeros(Float64, d_eps)
     base_full[structural_idx] .= Float64.(eps_struct)
-    base_eval = _sep_inv_predict_step(sep_ctx, state_dev, base_full, obs_var_idx; initial_guess = base_guess)
+    base_eval = _sep_inv_predict_step(sep_ctx, state_dev, base_full, obs_var_idx;
+                                      initial_guess = base_guess,
+                                      solve_tol = predict_tol)
     if !base_eval.ok
-        return (ok = false, J = J, base = base_eval)
+        return (ok = false, J = J, base = base_eval, predict_tol = predict_tol, retry_counts = zeros(Int, n_struct))
     end
 
+    retry_counts = zeros(Int, n_struct)
     for j in 1:n_struct
         step_scale = max(1.0, abs(Float64(eps_struct[j])), sep_ctx.shock_sigmas[structural_idx[j]])
-        h = cbrt(eps(Float64)) * step_scale
-        h = max(h, 1e-6)
-        pert = collect(Float64.(eps_struct))
-        pert[j] += h
+        h0 = max(cbrt(eps(Float64)) * step_scale, 1e-6)
+        col = zeros(Float64, n_obs)
+        for retry in 0:fd_max_retries
+            h = h0 * fd_retry_factor^retry
+            pert = collect(Float64.(eps_struct))
+            pert[j] += h
 
-        eps_full = zeros(Float64, d_eps)
-        eps_full[structural_idx] .= pert
-        eval_p = _sep_inv_predict_step(sep_ctx, state_dev, eps_full, obs_var_idx; initial_guess = base_eval.Y_guess)
-        if !eval_p.ok
-            return (ok = false, J = J, base = base_eval)
+            eps_full = zeros(Float64, d_eps)
+            eps_full[structural_idx] .= pert
+            eval_p = _sep_inv_predict_step(sep_ctx, state_dev, eps_full, obs_var_idx;
+                                           initial_guess = base_eval.Y_guess,
+                                           solve_tol = predict_tol)
+            if !eval_p.ok
+                return (ok = false, J = J, base = base_eval, predict_tol = predict_tol, retry_counts = retry_counts)
+            end
+            col .= (eval_p.obs_dev .- base_eval.obs_dev) ./ h
+            retry_counts[j] = retry
+            if any(x -> x != 0.0, col) || retry == fd_max_retries
+                break
+            end
         end
-        J[:, j] .= (eval_p.obs_dev .- base_eval.obs_dev) ./ h
+        J[:, j] .= col
     end
 
-    return (ok = true, J = J, base = base_eval)
+    return (ok = true, J = J, base = base_eval, predict_tol = predict_tol, retry_counts = retry_counts)
 end
 
 @stable default_mode = "disable" begin
@@ -432,6 +489,10 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
     step_tol = get(sep_ctx, :sep_inv_step_tol, 1e-6)
     resid_tol = get(sep_ctx, :sep_inv_resid_tol, 1e-6)
     lambda = get(sep_ctx, :sep_inv_lambda, 1e-4)
+    logdet_method = _sep_inv_normalize_logdet_method(get(sep_ctx, :sep_inv_logdet_method, :exact))
+    logdet_sv_tol = Float64(get(sep_ctx, :sep_inv_logdet_sv_tol, sqrt(eps(Float64))))
+    sep_inv_predict_tol = min(Float64(sep_ctx.sep_tol),
+                              Float64(get(sep_ctx, :sep_inv_predict_tol, min(Float64(sep_ctx.sep_tol), 1e-10))))
 
     function fail_sep_inversion!(code::String;
                                  t_idx::Int = 0,
@@ -465,6 +526,9 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
             "sep_inv_step_tol" => step_tol,
             "sep_inv_resid_tol" => resid_tol,
             "sep_inv_lambda" => lambda,
+            "sep_inv_predict_tol" => sep_inv_predict_tol,
+            "sep_inv_logdet_method" => String(logdet_method),
+            "sep_inv_logdet_sv_tol" => logdet_sv_tol,
         )
         if msg !== nothing
             d["message"] = msg
@@ -498,6 +562,9 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
         if J !== nothing
             d["jacobian_finite"] = all(isfinite, J)
             d["jacobian_size"] = collect(size(J))
+            if code == "invalid_logabsdet"
+                merge!(d, _sep_inv_logdet_diagnostics(J; method = logdet_method, sv_tol = logdet_sv_tol))
+            end
         end
         if logabsdet !== nothing
             d["logabsdet"] = logabsdet
@@ -622,14 +689,14 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
 
         if t_idx > presample_periods
             J_std = final_J .* reshape(shock_sigmas[structural_idx], 1, :)
-            logabsdet = _sep_inv_logabsdet(J_std)
+            logabsdet = _sep_inv_logabsdet(J_std; method = logdet_method, sv_tol = logdet_sv_tol)
             if !isfinite(logabsdet)
                 return fail_sep_inversion!("invalid_logabsdet";
                                            t_idx = t_idx,
                                            iter = last_iter,
                                            pred = final_eval,
                                            resid = resid,
-                                           J = final_J,
+                                           J = J_std,
                                            logabsdet = logabsdet,
                                            msg = "Jacobian logabsdet is non-finite.")
             end
@@ -679,6 +746,9 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
         "sep_inv_step_tol" => step_tol,
         "sep_inv_resid_tol" => resid_tol,
         "sep_inv_lambda" => lambda,
+        "sep_inv_predict_tol" => sep_inv_predict_tol,
+        "sep_inv_logdet_method" => String(logdet_method),
+        "sep_inv_logdet_sv_tol" => logdet_sv_tol,
         "ll_total" => ll_total,
         "final_state_finite" => all(isfinite, state_dev),
     ))

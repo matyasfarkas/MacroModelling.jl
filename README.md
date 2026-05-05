@@ -1,4 +1,4 @@
-# Structural Bias from Linearization in DSGE Estimation
+# Investment Adjustment Costs and the Nonlinear Posterior of Smets-Wouters
 
 **Replication Package** | **Paper & Code** | **Mátyás Farkas (2026)**
 
@@ -6,13 +6,13 @@
 
 This repository contains the complete replication package for the paper:
 
-> **"Structural Bias from Linearization in DSGE Estimation"**
+> **"Investment Adjustment Costs and the Nonlinear Posterior of Smets-Wouters"**
 >
-> This paper decomposes the gap between full nonlinear and linearly-approximated DSGE dynamics, discovering that investment adjustment costs account for 69% of the total nonlinearity—not the zero-lower bound or pricing constraints typically emphasized. First-order perturbation renders the investment adjustment cost invisible because it satisfies $S(1) = S'(1) = 0$ at steady state.
+> This paper decomposes the gap between full nonlinear and linearly-approximated DSGE dynamics in a Smets-Wouters model, finding that investment adjustment costs account for 69% of the measured nonlinearity, not the zero-lower bound or pricing constraints typically emphasized. First-order perturbation renders the investment adjustment cost invisible because it satisfies $S(1) = S'(1) = 0$ at steady state.
 >
 > To estimate the nonlinear Smets-Wouters model on US data, I develop a **neural network surrogate** that learns the residual between nonlinear and linear transitions, coupled with a **regime-switching filter** that activates the nonlinear correction only during periods of large displacement from steady state. The methodology provides explicit control over approximation error with formal consistency bounds on posterior distortion.
 >
-> Bayesian estimation via NUTS-HMC completes in **2.4 hours** (on Apple M4) with zero divergent transitions. Compared to linear estimation, nonlinear results show doubled risk-premium volatility, 80% compression of wage markup persistence, and dramatically reduced shock sizes to fit COVID-19 data—revealing an economy driven more by endogenous investment-channel amplification than canonically estimated.
+> Bayesian estimation via NUTS-HMC completes in **2.4 hours** (on Apple M4) with zero divergent transitions in the baseline run. The empirical posterior comparison is conditional on the HLT specification, the warm-started high-likelihood surrogate mode, the gate design, and COVID out-of-distribution risk; within that benchmark, the nonlinear posterior shifts shock volatilities and persistence in ways consistent with investment-channel amplification. A quiet-sample OOS pilot fails under the original gate, but a fixed-posterior q95 gate diagnostic reduces the aggregate RMSE ratio from **2.37** to **1.04**; gate calibration is now localized but still needs a production re-estimation pass.
 
 ---
 
@@ -32,8 +32,16 @@ This repository contains the complete replication package for the paper:
 
 ### Extended Sample (through 2025Q1)
 - Linear model requires **56σ risk-premium shocks** for COVID collapse
-- Nonlinear model fits same data with **49% smaller shocks** via endogenous amplification
-- Risk-premium volatility **falls** to 0.09 in extended sample
+- Warm-started nonlinear mode improves posterior-mean LL by **35.92 nats** (`-1,781.68` vs. `-1,817.59`)
+- Fixed-parameter no-NN ablation shows the gate/inversion architecture alone lowers LL; the NN residual correction drives the positive gain
+- Risk-premium volatility **falls** to 0.092 in the extended sample
+- Caveat: restored ARMA(1,1) markup terms improve the baseline linear LL by 34 nats, comparable in scale
+
+### OOS Gate Diagnostic
+- COVID-window OOS: switching surrogate reduces aggregate RMSE by **16%** over 2020Q1-2021Q2
+- Quiet-sample pilot: estimating through 1994Q4 and forecasting 1995Q1-2007Q4 gives aggregate RMSE ratio **2.37** (switch/ROM1), with hard-gate activation in **26.9%** of holdout quarters
+- Fixed-posterior recalibration: stricter q95 gate thresholds lower the quiet aggregate ratio to **1.04** and hard-gate activation to **1.9%**
+- Interpretation: the default gate can help under COVID stress but over-activates in calm samples; the blocker is now specifically gate calibration/re-estimation, not the nonlinear transition alone
 
 ---
 
@@ -66,7 +74,7 @@ Uses **Stochastic Extended Path (SEP)** method with occasionally binding constra
 | Offline: Surrogate training | ~12 hours | Apple M4 |
 | Online: NUTS-HMC estimation (1000 draws) | ~2.4 hours | Apple M4 |
 | **Total** | **~14.4 hours** | - |
-| Particle filter baseline | diverges | asymptotes to 7 orders of magnitude error |
+| Particle filter baseline | degenerates | bootstrap PF LL magnitude is roughly four orders worse than Kalman at 5,000 particles |
 
 ---
 
@@ -212,12 +220,12 @@ Mátyás Farkas extends MacroModelling.jl with:
 
 - **Surrogate validation**: `RRMSE < 0.1%` on held-out test set
 - **Posterior coverage**: Formal consistency bounds on posterior RMSE distortion (Appendix, main paper)
-- **Convergence diagnostics**: $\hat{R} < 1.01$ across all parameters; zero divergent transitions
-- **Sensitivity analysis**: Results robust to network architecture, training sample size, and regime threshold
+- **Convergence diagnostics**: warm-started surrogate chains have max $\hat{R} \approx 1.05$ and zero divergent transitions; cold-start failures are documented
+- **Sensitivity/provenance status**: supported surrogate accuracy, convergence, mode-sensitivity, linear+gate ablation, quiet-sample OOS, bounded SEP-sensitivity pilot, and the HLT direct-SEP/MH validation harness are included. The HLT harness now returns a finite direct SEP likelihood with the exact determinant after tightening inversion finite-difference prediction solves. Archived Galí surrogate assets and direct SEP solve/loglikelihood smokes are documented, but the requested Galí direct SEP-HMC vs. surrogate-HMC posterior comparison remains pending.
 
 **Monte Carlo Coverage**: `scripts/monte_carlo_coverage.jl` demonstrates posterior coverage distortion empirically.
 
-**Particle Filter Baseline**: `scripts/particle_filter_benchmark.jl` reproduces the degeneracy issue (log-likelihood 7 orders of magnitude below true value).
+**Particle Filter Baseline**: `scripts/particle_filter_benchmark.jl` reproduces the degeneracy issue (bootstrap PF log-likelihood magnitude roughly four orders worse than Kalman at 5,000 particles).
 
 ---
 
@@ -278,7 +286,7 @@ If you use this replication package in your research, please cite:
 
 ```bibtex
 @article{farkas2026structural,
-  title={Structural Bias from Linearization in DSGE Estimation},
+  title={Investment Adjustment Costs and the Nonlinear Posterior of Smets-Wouters},
   author={Farkas, M\'aty\'as},
   year={2026}
 }

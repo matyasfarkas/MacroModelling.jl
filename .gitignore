@@ -114,3 +114,16 @@ docs/paper/*.fdb_latexmk
 docs/paper/*.synctex.gz
 docs/paper/*.bak
 docs/paper/*.backup*
+
+docs/SurrogateNN_paper/**/*.aux
+docs/SurrogateNN_paper/**/*.bbl
+docs/SurrogateNN_paper/**/*.blg
+docs/SurrogateNN_paper/**/*.log
+docs/SurrogateNN_paper/**/*.out
+docs/SurrogateNN_paper/**/*.toc
+docs/SurrogateNN_paper/**/*.fls
+docs/SurrogateNN_paper/**/*.fdb_latexmk
+docs/SurrogateNN_paper/**/*.synctex.gz
+docs/SurrogateNN_paper/**/*.bak
+docs/SurrogateNN_paper/**/*.backup*
+
