@@ -503,7 +503,7 @@ else
     println("  " * "-" ^ 60)
 end
 
-coverage_count = 0
+coverage_flags = Bool[]
 for i in 1:n_theta
     post_mean = mean(θ_post[:, i])
     post_std = std(θ_post[:, i])
@@ -513,7 +513,7 @@ for i in 1:n_theta
     if has_true
         true_val = theta_true[i]
         covered = q025 < true_val < q975
-        coverage_count += covered
+        push!(coverage_flags, covered)
         @printf("  %-12s %8.4f %8.4f %8.4f %8.4f %8.4f %5s\n",
                 theta_names[i], true_val, post_mean, post_std, q025, q975,
                 covered ? "yes" : "NO")
@@ -523,6 +523,7 @@ for i in 1:n_theta
     end
 end
 if has_true
+    coverage_count = count(identity, coverage_flags)
     println("  " * "-" ^ 68)
     println("  Coverage: $coverage_count / $n_theta ($(round(100*coverage_count/n_theta, digits=0))%)")
 else

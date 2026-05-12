@@ -108,6 +108,10 @@ if test_set == "hlt_acceptance_smoke"
     include("test_hlt_acceptance_smoke.jl")
 end
 
+if test_set == "gali_direct_surrogate_validation_smoke"
+    include("test_gali_direct_surrogate_validation_smoke.jl")
+end
+
 if test_set == "higher_order"
     plots = true
     test_higher_order = true

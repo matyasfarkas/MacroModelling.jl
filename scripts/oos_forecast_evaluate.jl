@@ -41,6 +41,8 @@ end
 
 t_pre = parse(Int, parse_kv(ARGS, "--t-pre", "244"))  # last in-sample index (1-based)
 tag = parse_kv(ARGS, "--tag", t_pre == 244 ? "preCOVID" : "T$(t_pre)")
+out_dir = parse_kv(ARGS, "--out-dir", ".local_artifacts/oos_forecast")
+mkpath(out_dir)
 t_end_arg = parse_kv(ARGS, "--t-end", "")
 window_label = parse_kv(ARGS, "--window-label", t_pre == 244 ? "COVID" : "Early holdout")
 linear_chain    = parse_kv(ARGS, "--linear-chain",
@@ -279,33 +281,38 @@ end
 # Load full-sample gate calibration (we reuse it since gate stats cover 265 periods)
 gate_mask = trues(T_full)
 gate_probs = nothing
-if isfile(gate_path)
+if gate_path != ""
+    isfile(gate_path) || error("Gate calibration not found: $gate_path")
     g = MacroModelling.load_hlt_gate_calibration(gate_path)
-    if haskey(g, "e_stats") && haskey(g, "f_stats") &&
-       length(g["e_stats"]) >= T_full && length(g["f_stats"]) >= T_full
-        e_stat = Float64.(g["e_stats"][1:T_full])
-        f_stat = Float64.(g["f_stats"][1:T_full])
-        tau_eps = g["tau_eps"]; tau_y = g["tau_y"]
-        use_eps = get(g, "use_eps", true); use_y = get(g, "use_y", true)
-        eps_mask = use_eps ? (e_stat .> tau_eps) : falses(T_full)
-        y_mask   = use_y   ? (f_stat .> tau_y)   : falses(T_full)
-        base_mask = eps_mask .| y_mask
-        gate_mask = MacroModelling.apply_gate_padding(base_mask, gate_k_pre, gate_k_post, gate_min_len)
-        # Soft gate probabilities (match training script logic)
-        target_share = Float64(get(g, "target_share", mean(base_mask)))
-        prior_probs = clamp.(fill(target_share, T_full), 1e-4, 1.0 - 1e-4)
-        prior_logit = MacroModelling.logit.(prior_probs)
-        eps_scale = max(tau_eps, eps(Float64))
-        y_scale   = max(tau_y,   eps(Float64))
-        eps_score = use_eps ? ((e_stat .- tau_eps) ./ eps_scale) : zeros(T_full)
-        y_score   = use_y   ? ((f_stat .- tau_y)   ./ y_scale)   : zeros(T_full)
-        score = eps_score .+ y_score
-        gate_bias = MacroModelling.calibrate_gate_bias(score .+ prior_logit, target_share)
-        gate_probs = clamp.(MacroModelling.logistic.(gate_bias .+ score .+ prior_logit),
-                            1e-4, 1.0 - 1e-4)
-        println("  Gate: hard $(count(gate_mask))/$T_full periods; " *
-                "soft mean prob $(round(mean(gate_probs), sigdigits=3))")
+    if !(haskey(g, "e_stats") && haskey(g, "f_stats") &&
+         length(g["e_stats"]) >= T_full && length(g["f_stats"]) >= T_full)
+        error("Gate calibration `$gate_path` has insufficient cached statistics for OOS evaluation. " *
+              "Expected at least $T_full periods in e_stats/f_stats; got " *
+              "$(haskey(g, "e_stats") ? length(g["e_stats"]) : 0)/" *
+              "$(haskey(g, "f_stats") ? length(g["f_stats"]) : 0).")
     end
+    e_stat = Float64.(g["e_stats"][1:T_full])
+    f_stat = Float64.(g["f_stats"][1:T_full])
+    tau_eps = g["tau_eps"]; tau_y = g["tau_y"]
+    use_eps = get(g, "use_eps", true); use_y = get(g, "use_y", true)
+    eps_mask = use_eps ? (e_stat .> tau_eps) : falses(T_full)
+    y_mask   = use_y   ? (f_stat .> tau_y)   : falses(T_full)
+    base_mask = eps_mask .| y_mask
+    gate_mask = MacroModelling.apply_gate_padding(base_mask, gate_k_pre, gate_k_post, gate_min_len)
+    # Soft gate probabilities (match training script logic)
+    target_share = Float64(get(g, "target_share", mean(base_mask)))
+    prior_probs = clamp.(fill(target_share, T_full), 1e-4, 1.0 - 1e-4)
+    prior_logit = MacroModelling.logit.(prior_probs)
+    eps_scale = max(tau_eps, eps(Float64))
+    y_scale   = max(tau_y,   eps(Float64))
+    eps_score = use_eps ? ((e_stat .- tau_eps) ./ eps_scale) : zeros(T_full)
+    y_score   = use_y   ? ((f_stat .- tau_y)   ./ y_scale)   : zeros(T_full)
+    score = eps_score .+ y_score
+    gate_bias = MacroModelling.calibrate_gate_bias(score .+ prior_logit, target_share)
+    gate_probs = clamp.(MacroModelling.logistic.(gate_bias .+ score .+ prior_logit),
+                        1e-4, 1.0 - 1e-4)
+    println("  Gate: hard $(count(gate_mask))/$T_full periods; " *
+            "soft mean prob $(round(mean(gate_probs), sigdigits=3))")
 end
 
 # Run inversion filter through the full sample using θ_sur → get state trajectory
@@ -454,7 +461,7 @@ println("\n" * "-" ^ 72)
 println("Writing LaTeX table...")
 println("-" ^ 72)
 
-tex_path = ".local_artifacts/oos_forecast/oos_comparison_$(tag).tex"
+tex_path = joinpath(out_dir, "oos_comparison_$(tag).tex")
 open(tex_path, "w") do io
     println(io, "% Out-of-sample 1-step-ahead forecast RMSE: ROM1 (linear Kalman) vs regime-switching surrogate")
     println(io, "% Generated $(now())")
@@ -493,7 +500,7 @@ end
 println("  Wrote: $tex_path")
 
 # Companion markdown
-md_path = ".local_artifacts/oos_forecast/oos_comparison_$(tag).md"
+md_path = joinpath(out_dir, "oos_comparison_$(tag).md")
 open(md_path, "w") do io
     println(io, "# OOS forecast RMSE (1-step ahead)")
     println(io, "")
@@ -531,7 +538,8 @@ println("  Wrote: $md_path")
 # ============================================================================
 # Save raw arrays
 # ============================================================================
-serialize(".local_artifacts/oos_forecast/oos_innovations_$(tag).jls", Dict(
+raw_path = joinpath(out_dir, "oos_innovations_$(tag).jls")
+serialize(raw_path, Dict(
     "v_linear"      => v_linear,
     "v_surrogate"   => v_surrogate,
     "obs_data"      => obs_data,
@@ -570,7 +578,7 @@ serialize(".local_artifacts/oos_forecast/oos_innovations_$(tag).jls", Dict(
 # Headline summary
 # ============================================================================
 
-summary_path = ".local_artifacts/oos_forecast/OOS_SUMMARY_$(tag).md"
+summary_path = joinpath(out_dir, "OOS_SUMMARY_$(tag).md")
 covid_ratio = agg_sur_covid / agg_lin_covid
 full_ratio  = agg_sur_full  / agg_lin_full
 post_ratio  = agg_sur_post  / agg_lin_post
@@ -608,7 +616,7 @@ open(summary_path, "w") do io
     println(io, "")
     println(io, "- LaTeX table: `$tex_path`")
     println(io, "- Markdown per-obs table: `$md_path`")
-    println(io, "- Raw innovations: `.local_artifacts/oos_forecast/oos_innovations_$(tag).jls`")
+    println(io, "- Raw innovations: `$raw_path`")
     println(io, "- Linear chain: `$linear_chain`")
     println(io, "- Surrogate chain: `$surrogate_chain`")
     println(io, "")

@@ -37,8 +37,10 @@ function parse_candidates(s::AbstractString)
     return String.(strip.(split(s, ",")))
 end
 
-const out_dir = ".local_artifacts/oos_gate_recalibration"
+const out_dir = parse_kv(ARGS, "--out-dir", ".local_artifacts/oos_gate_recalibration")
+const oos_out_dir = parse_kv(ARGS, "--oos-out-dir", ".local_artifacts/oos_forecast")
 mkpath(out_dir)
+mkpath(oos_out_dir)
 
 t_pre = parse(Int, parse_kv(ARGS, "--t-pre", "144"))
 t_end = parse(Int, parse_kv(ARGS, "--t-end", "196"))
@@ -128,12 +130,13 @@ function run_evaluator(c::Candidate, gate_path::String)
         --gate-calibration=$gate_path
         --gate-k-pre=$(c.k_pre)
         --gate-k-post=$(c.k_post)
-        --gate-min-len=$(c.min_len)`
+        --gate-min-len=$(c.min_len)
+        --out-dir=$oos_out_dir`
     println("\nRunning candidate $(c.name):")
     println("  $cmd")
     run(cmd)
-    return ".local_artifacts/oos_forecast/oos_innovations_$(tag).jls",
-           ".local_artifacts/oos_forecast/OOS_SUMMARY_$(tag).md"
+    return joinpath(oos_out_dir, "oos_innovations_$(tag).jls"),
+           joinpath(oos_out_dir, "OOS_SUMMARY_$(tag).md")
 end
 
 function ratio_summary(raw_path::String)
@@ -190,6 +193,7 @@ open(summary_path, "w") do io
     println(io)
     println(io, "- Estimation cutoff: `T_pre=$t_pre`")
     println(io, "- Forecast window: `$(t_pre + 1)..$t_end`")
+    println(io, "- Base gate payload: `$base_gate`")
     println(io, "- Chains are fixed from the quiet-sample OOS pilot; this is a gate-policy diagnostic, not a re-estimated posterior.")
     println(io)
     println(io, "| Candidate | q | padding | Full ratio | $window_label ratio | Remaining ratio | Hard gate full | Hard gate remaining | Soft mean full |")
@@ -212,7 +216,7 @@ open(summary_path, "w") do io
     println(io)
     println(io, "## Interpretation")
     println(io)
-    println(io, "The original quiet-sample failure is largely a gate-stickiness problem: retaining the original thresholds but removing padding is directly comparable to the published quiet pilot and isolates the effect of the `k_pre/k_post/min_len` expansion. Stricter quantile gates test whether calm-period activation can be suppressed without changing the posterior draws.")
+    println(io, "The diagnostic localizes the quiet-sample failure to gate policy: candidate gates are evaluated holding posterior draws fixed. The baseline no-padding row uses the stored baseline gate statistics without temporal expansion; q95/q98 rows reset thresholds on the first `T_pre` periods. These are gate-policy diagnostics, not re-estimated posteriors.")
     println(io)
     println(io, "## Raw Artifacts")
     println(io)

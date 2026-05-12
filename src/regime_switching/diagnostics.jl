@@ -179,8 +179,45 @@ function run_chunked_sampling(total_samples::Integer,
     return samps
 end
 
+function _chain_parameter_symbols(chain)
+    try
+        return Symbol.(names(chain, :parameters))
+    catch
+        return Symbol[]
+    end
+end
+
+function _resolve_theta_symbols(chain, theta_syms::AbstractVector{Symbol})
+    available = _chain_parameter_symbols(chain)
+    isempty(available) && return collect(theta_syms)
+
+    by_normalized_name = Dict(replace(string(sym), " " => "") => sym for sym in available)
+    resolved = Symbol[]
+    for (i, sym) in enumerate(theta_syms)
+        candidates = (
+            string(sym),
+            "theta_vec[$i]",
+            "theta_vec[$i,1]",
+        )
+        match_sym = nothing
+        for candidate in candidates
+            key = replace(candidate, " " => "")
+            if haskey(by_normalized_name, key)
+                match_sym = by_normalized_name[key]
+                break
+            end
+        end
+        if match_sym === nothing
+            error("Could not resolve parameter symbol $sym in chain. Available parameters: $(available)")
+        end
+        push!(resolved, match_sym)
+    end
+    return resolved
+end
+
 function theta_draws(chain, theta_syms::AbstractVector{Symbol})
-    arr = Array(chain[:, theta_syms, :])
+    resolved_syms = _resolve_theta_symbols(chain, theta_syms)
+    arr = Array(chain[:, resolved_syms, :])
     return reshape(arr, :, length(theta_syms))
 end
 

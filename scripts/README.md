@@ -1,6 +1,8 @@
 # Scripts overview
 
-This folder contains runnable entry points. The main workflows are organized by task.
+This folder contains runnable entry points. For the curated replication
+workflow, start with `REPLICATION.md` at the repository root and
+`scripts/replication_smoke.sh`.
 
 ## HLT SEP surrogate + regime switching
 - `scripts/hlt_sep_surrogate_dataset_generate.jl` — build SEP training data (supports stable-prefix sampling).
@@ -12,6 +14,11 @@ This folder contains runnable entry points. The main workflows are organized by 
 - `scripts/hlt_sep_surrogate_chain_report.jl` — posterior report (LaTeX).
 - `scripts/hlt_sep_surrogate_validate_hlt3.jl` — reproducible HLT 3-parameter smoke/benchmark harness (writes run manifest + summary).
 - `scripts/hlt_sep_surrogate_fom_benchmark.jl` — direct-SEP FOM benchmark utility for chain/synthetic outputs (records failures if direct FOM eval is unavailable).
+- `scripts/hlt_direct_sep_surrogate_posterior_validation.jl` — bounded HLT direct-SEP/MH smoke against the surrogate validation bundle.
+- `scripts/decompose_ll_gap.jl` — extended-sample LL decomposition and linear+gate ablation.
+- `scripts/mode_sensitivity_report.jl` — chain-level mode sensitivity report.
+- `scripts/oos_forecast_evaluate.jl` and `scripts/oos_gate_recalibration.jl` — quiet-sample OOS and gate recalibration diagnostics.
+- `scripts/sep_sensitivity_study.jl` — bounded SEP tolerance/node sensitivity study.
 
 ## SEP / Dynare comparisons
 - `scripts/HLT_comparison.jl` — HLT IRF comparison (perturbation vs SEP).

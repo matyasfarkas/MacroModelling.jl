@@ -20,6 +20,15 @@ using Printf, Dates
 using MacroModelling
 using AxisKeys
 
+function parse_kv_string(args, key, default)
+    for arg in args
+        if startswith(arg, "$key=")
+            return split(arg, "=", limit=2)[2]
+        end
+    end
+    return default
+end
+
 # Tunables (match the HMC runners' production calls)
 const SEED            = 42
 const INV_MAXIT       = 10
@@ -42,7 +51,7 @@ const SUR_CHAIN_PATHS = [
 ]
 const SURROGATE_PATH = ".local_artifacts/hlt_18param_validation_v2_combined/hlt_sep_surrogate_trained_with_zlb.jls"
 const GATE_PATH      = ".local_artifacts/hlt_18param_realdata/gate_calibration_extended_18p.jls"
-const OUT_DIR        = ".local_artifacts/ll_decomposition"
+const OUT_DIR        = parse_kv_string(ARGS, "--out-dir", ".local_artifacts/ll_decomposition")
 
 Random.seed!(SEED)
 

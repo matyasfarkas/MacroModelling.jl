@@ -467,13 +467,13 @@ if gate_path != ""
 
     # Use cached gate statistics (e_stats, f_stats) from calibration
     if haskey(gate_calib, "e_stats") && haskey(gate_calib, "f_stats") &&
-       length(gate_calib["e_stats"]) == T_obs && length(gate_calib["f_stats"]) == T_obs
-        e_stat = vec(Float64.(gate_calib["e_stats"]))
-        f_stat = vec(Float64.(gate_calib["f_stats"]))
+       length(gate_calib["e_stats"]) >= T_obs && length(gate_calib["f_stats"]) >= T_obs
+        e_stat = vec(Float64.(gate_calib["e_stats"][1:T_obs]))
+        f_stat = vec(Float64.(gate_calib["f_stats"][1:T_obs]))
         println("  Using cached gate statistics from calibration payload")
     else
         error("Gate calibration missing e_stats/f_stats or dimension mismatch. " *
-              "Re-run gate calibration with --gate-use-cached-stats.")
+              "Expected at least $T_obs periods in the cached gate statistics.")
     end
 
     # Compute gate mask: periods where shocks or forecast errors exceed thresholds
@@ -804,7 +804,7 @@ else
     println("  " * "-" ^ 60)
 end
 
-coverage_count = 0
+coverage_flags = Bool[]
 for i in 1:n_theta
     post_mean = mean(θ_post[:, i])
     post_std = std(θ_post[:, i])
@@ -814,7 +814,7 @@ for i in 1:n_theta
     if has_true
         true_val = theta_true[i]
         covered = q025 < true_val < q975
-        coverage_count += covered
+        push!(coverage_flags, covered)
         @printf("  %-12s %8.4f %8.4f %8.4f %8.4f %8.4f %5s\n",
                 theta_names[i], true_val, post_mean, post_std, q025, q975,
                 covered ? "yes" : "NO")
@@ -824,6 +824,7 @@ for i in 1:n_theta
     end
 end
 if has_true
+    coverage_count = count(identity, coverage_flags)
     println("  " * "-" ^ 68)
     println("  Coverage: $coverage_count / $n_theta ($(round(100*coverage_count/n_theta, digits=0))%)")
 else

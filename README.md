@@ -12,7 +12,7 @@ This repository contains the complete replication package for the paper:
 >
 > To estimate the nonlinear Smets-Wouters model on US data, I develop a **neural network surrogate** that learns the residual between nonlinear and linear transitions, coupled with a **regime-switching filter** that activates the nonlinear correction only during periods of large displacement from steady state. The methodology provides explicit control over approximation error with formal consistency bounds on posterior distortion.
 >
-> Bayesian estimation via NUTS-HMC completes in **2.4 hours** (on Apple M4) with zero divergent transitions in the baseline run. The empirical posterior comparison is conditional on the HLT specification, the warm-started high-likelihood surrogate mode, the gate design, and COVID out-of-distribution risk; within that benchmark, the nonlinear posterior shifts shock volatilities and persistence in ways consistent with investment-channel amplification. A quiet-sample OOS pilot fails under the original gate, but a fixed-posterior q95 gate diagnostic reduces the aggregate RMSE ratio from **2.37** to **1.04**; gate calibration is now localized but still needs a production re-estimation pass.
+> Bayesian estimation via NUTS-HMC completes in **2.4 hours** (on Apple M4) with zero divergent transitions in the baseline run. The empirical posterior comparison is conditional on the HLT specification, the warm-started high-likelihood surrogate mode, the gate design, and COVID out-of-distribution risk; within that benchmark, the nonlinear posterior shifts shock volatilities and persistence in ways consistent with investment-channel amplification. A quiet-sample OOS pilot fails under the original gate, but a fixed-posterior q95 padded-gate diagnostic reduces the aggregate RMSE ratio from **2.40** to **1.04**. Re-estimating the surrogate chain under that q95 gate gives **1.09** overall, **0.70** in the early quiet window, and **1.19** thereafter, so the issue is localized but not closed.
 
 ---
 
@@ -32,16 +32,17 @@ This repository contains the complete replication package for the paper:
 
 ### Extended Sample (through 2025Q1)
 - Linear model requires **56σ risk-premium shocks** for COVID collapse
-- Warm-started nonlinear mode improves posterior-mean LL by **35.92 nats** (`-1,781.68` vs. `-1,817.59`)
+- Warm-started nonlinear mode improves the posterior-mean profiled objective by **35.92 nats** (`-1,781.68` vs. `-1,817.59`)
 - Fixed-parameter no-NN ablation shows the gate/inversion architecture alone lowers LL; the NN residual correction drives the positive gain
 - Risk-premium volatility **falls** to 0.092 in the extended sample
 - Caveat: restored ARMA(1,1) markup terms improve the baseline linear LL by 34 nats, comparable in scale
 
 ### OOS Gate Diagnostic
 - COVID-window OOS: switching surrogate reduces aggregate RMSE by **16%** over 2020Q1-2021Q2
-- Quiet-sample pilot: estimating through 1994Q4 and forecasting 1995Q1-2007Q4 gives aggregate RMSE ratio **2.37** (switch/ROM1), with hard-gate activation in **26.9%** of holdout quarters
-- Fixed-posterior recalibration: stricter q95 gate thresholds lower the quiet aggregate ratio to **1.04** and hard-gate activation to **1.9%**
-- Interpretation: the default gate can help under COVID stress but over-activates in calm samples; the blocker is now specifically gate calibration/re-estimation, not the nonlinear transition alone
+- Quiet-sample pilot: estimating through 1994Q4 and scoring conditional predictions for 1995Q1-2007Q4 gives aggregate RMSE ratio **2.40** (switch/ROM1), with the original hard gate active throughout the holdout
+- Fixed-posterior recalibration: stricter q95 padded-gate thresholds lower the quiet aggregate ratio to **1.04** and hard-gate activation to **1.9%**
+- q95 re-estimation: a 150-draw surrogate chain under the q95 padded gate gives quiet aggregate ratio **1.09**, early-window ratio **0.70**, and remaining-window ratio **1.19**
+- Interpretation: the default gate can help under COVID stress but over-activates in calm samples; q95 gate calibration sharply reduces the failure but does not yet make calm-period predictive performance uniformly better than ROM1
 
 ---
 
@@ -83,8 +84,9 @@ Uses **Stochastic Extended Path (SEP)** method with occasionally binding constra
 ```
 .
 ├── README.md                            # This file
+├── REPLICATION.md                       # Curated replication workflow
 ├── CREDITS.md                           # Attribution to MacroModelling.jl
-├── Project.toml                         # Julia dependencies
+├── Project.toml / Manifest.toml         # Julia dependencies and pinned environment
 ├── LICENSE                              # MIT License
 │
 ├── src/                                 # Main package code
@@ -100,23 +102,26 @@ Uses **Stochastic Extended Path (SEP)** method with occasionally binding constra
 │   ├── SurrogateNN_paper/               # Replication paper
 │   │   ├── SurrogateNN_paper.tex        # Main paper
 │   │   ├── SurrogateNN_paper.bib        # Bibliography
-│   │   ├── figures*/                    # Generated figures & tables
-│   │   └── generated/                   # Empirical results tables
+│   │   ├── figures/                     # Versioned paper figure snapshots
+│   │   └── generated/                   # Versioned paper table snapshots
 │   │
 │   └── [documentation]
 │
 ├── scripts/                             # Replication scripts
-│   ├── hlt_real_data_update_pipeline.jl # Full pipeline (1959-2025Q1)
-│   ├── hlt_surrogate/                   # Surrogate training
-│   │   ├── hlt_surrogate_training.jl    # Train neural network
-│   │   ├── hlt_surrogate_validation.jl  # Validation diagnostics
-│   │   └── hlt_model_loader_utils.jl
-│   ├── monte_carlo_coverage.jl          # Posterior coverage diagnostics
-│   ├── particle_filter_benchmark.jl     # PF degeneracy demonstration
+│   ├── replication_smoke.sh             # Fast package verification
+│   ├── hlt_sep_surrogate_dataset_generate.jl
+│   ├── hlt_sep_surrogate_train.jl
+│   ├── run_linear_hmc_advancedhmc.jl
+│   ├── run_surrogate_hmc_advancedhmc.jl
+│   ├── decompose_ll_gap.jl
+│   ├── mode_sensitivity_report.jl
+│   ├── oos_forecast_evaluate.jl
+│   ├── sep_sensitivity_study.jl
+│   ├── hlt_surrogate/                   # Shared surrogate utilities
 │   └── [analysis scripts]
 │
-├── data/                                # Empirical datasets
-│   └── hlt_**/                          # Timestamped dataset snapshots
+├── test/data/                           # Small empirical input snapshots
+├── .local_artifacts/                    # Local heavy outputs (ignored)
 │
 ├── test/                                # Unit tests & validation
 │   ├── data/usmodel_update.csv          # US macroeconomic data (1959-2025Q1)
@@ -128,63 +133,47 @@ Uses **Stochastic Extended Path (SEP)** method with occasionally binding constra
 
 ---
 
-## Quick Start: Running the Replication
+## Quick Start
 
-### Environment Setup
+The curated replication guide is [REPLICATION.md](REPLICATION.md). The commands
+below are the recommended minimal entry points.
+
+### Environment
 
 ```bash
 cd /path/to/SurrogateNN_Estimation.jl
-julia --project=. -e 'using Pkg; Pkg.instantiate()'
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 ```
 
-### Full End-to-End Pipeline (with Offline Training)
+### Smoke Verification
 
 ```bash
-julia --project=. scripts/hlt_surrogate/hlt_surrogate_training.jl \
-  --design-size=22080 \
-  --batch-size=1024
-  
-julia --project=. scripts/hlt_real_data_update_pipeline.jl \
-  --run-dir=.local_artifacts/hlt_real_data_runs/hlt_update_$(date +%Y%m%d_%H%M%S)
+bash scripts/replication_smoke.sh
 ```
 
-This creates:
-- `.local_artifacts/hlt_*/dataset/` – Synthetic training data for surrogate
-- `.local_artifacts/hlt_*/real_data/` – NUTS-HMC posterior samples
-- `.local_artifacts/hlt_*/tables/` – Posterior summaries & decomposition tables
-- `.local_artifacts/hlt_*/diagnostics/` – Convergence diagnostics & sensitivity analysis
-
-### Generating Paper Figures & Tables
+To skip the paper compile during smoke checks:
 
 ```bash
-julia --project=. scripts/generate_paper_output.jl \
-  --run-dir=.local_artifacts/hlt_real_data_runs/[your_run]
+RUN_PAPER=0 bash scripts/replication_smoke.sh
 ```
 
-### Key Configuration Parameters
+### Paper Build
 
-**Surrogate Training:**
-```julia
-design_size = 22080              # Parameter-state-shock combinations
-model_order = 1                  # SEP order (quadratic pruning)
-network_width = [128, 128, 64]  # Hidden layer sizes
-validation_fraction = 0.2        # Test set for RRMSE
+```bash
+bash docs/SurrogateNN_paper/compile.sh
 ```
 
-**Estimation:**
-```julia
-sampler = "nuts"                 # NUTS-HMC (required for smooth surrogates)
-n_samples = 1000                 # Posterior samples per chain
-n_chains = 4                      # Parallel chains
-target_acceptance = 0.8          # HMC step size tuning
-```
+The paper build uses versioned figure snapshots in
+`docs/SurrogateNN_paper/figures/` and versioned table snapshots in
+`docs/SurrogateNN_paper/generated/`. Heavy `.jls` chains and timestamped
+outputs are intentionally regenerated under `.local_artifacts/`.
 
-**Data:**
-```julia
-data_file = "test/data/usmodel_update.csv"
-sample_window = 47:290           # 1959Q1:2004Q4 (baseline)
-sample_window = 47:409           # 1959Q1:2025Q1 (extended)
-```
+### Heavy Replication Runs
+
+Use [REPLICATION.md](REPLICATION.md) for the supported commands to regenerate
+SEP datasets, train the surrogate, rerun linear/surrogate HMC, recompute
+likelihood decomposition, mode sensitivity, OOS diagnostics, SEP sensitivity,
+and direct-SEP smoke artifacts.
 
 ---
 

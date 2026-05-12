@@ -467,6 +467,10 @@ using MCMCChains
         θdraws = MacroModelling.theta_draws(toy_chain, [:cprobp])
         @test size(θdraws) == (2, 1)
         @test vec(θdraws[:, 1]) == [0.6, 0.7]
+        theta_vec_chain = Chains(chain_arr[:, 1:1, :], [Symbol("theta_vec[1]")])
+        θdraws_vec = MacroModelling.theta_draws(theta_vec_chain, [:cprobp])
+        @test size(θdraws_vec) == (2, 1)
+        @test vec(θdraws_vec[:, 1]) == [0.6, 0.7]
         eps_means = MacroModelling.epsilon_means_from_chain(toy_chain)
         @test size(eps_means) == (2, 2)
         @test eps_means[1, 1] ≈ 2.0
