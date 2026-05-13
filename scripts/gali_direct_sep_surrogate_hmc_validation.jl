@@ -77,6 +77,7 @@ Base.@kwdef struct CliOptions
     hmc_objectives::Symbol = :both
     direct_objective::Symbol = :measurement_error
     direct_logdet_method::Symbol = :exact
+    direct_audit_draws::Int = 0
 end
 
 struct RandomFeatureSurrogate
@@ -162,6 +163,7 @@ function parse_args(args)
         hmc_objectives = hmc_objectives,
         direct_objective = direct_objective,
         direct_logdet_method = direct_logdet_method,
+        direct_audit_draws = parse(Int, get(values, "direct-audit-draws", string(opts.direct_audit_draws))),
     )
 end
 
@@ -1398,6 +1400,86 @@ function comparison_payload(direct_chains, surrogate_chains)
     return Dict{String,Any}("direct" => ds, "surrogate" => ss, "rows" => rows)
 end
 
+function stacked_theta_post(chains::Vector{Dict{String,Any}})
+    return vcat([c["theta_post"] for c in chains]...)
+end
+
+function select_audit_thetas(surrogate_chains::Vector{Dict{String,Any}}, n_draws::Int; seed::Int)
+    theta_post = stacked_theta_post(surrogate_chains)
+    n_post = size(theta_post, 1)
+    n_take = min(max(n_draws, 0), n_post)
+    selected = Vector{Vector{Float64}}()
+    labels = String[]
+
+    push!(selected, copy(THETA_TRUE))
+    push!(labels, "theta_true")
+    push!(selected, copy(THETA_BASELINE))
+    push!(labels, "prior_center")
+
+    n_take == 0 && return selected, labels
+    rng = MersenneTwister(seed)
+    draw_idx = sort(randperm(rng, n_post)[1:n_take])
+    for idx in draw_idx
+        push!(selected, vec(theta_post[idx, :]))
+        push!(labels, "surrogate_draw_$idx")
+    end
+    return selected, labels
+end
+
+function direct_audit_payload(direct_logpost_z::Function, surrogate_logpost_z::Function,
+                              surrogate_chains::Vector{Dict{String,Any}}, n_draws::Int; seed::Int)
+    thetas, labels = select_audit_thetas(surrogate_chains, n_draws; seed = seed)
+    rows = Vector{Dict{String,Any}}()
+    direct_elapsed = 0.0
+    surrogate_elapsed = 0.0
+    for (label, theta) in zip(labels, thetas)
+        z = log.(theta)
+        local direct_lp, surrogate_lp
+        direct_t = @elapsed direct_lp = direct_logpost_z(z)
+        surrogate_t = @elapsed surrogate_lp = surrogate_logpost_z(z)
+        direct_elapsed += direct_t
+        surrogate_elapsed += surrogate_t
+        push!(rows, Dict{String,Any}(
+            "label" => label,
+            "theta" => theta,
+            "direct_logpost" => direct_lp,
+            "surrogate_logpost" => surrogate_lp,
+            "surrogate_minus_direct" => surrogate_lp - direct_lp,
+            "direct_elapsed_s" => direct_t,
+            "surrogate_elapsed_s" => surrogate_t,
+            "direct_diagnostics" => DIRECT_LAST_DIAGNOSTICS[] === nothing ? nothing : deepcopy(DIRECT_LAST_DIAGNOSTICS[]),
+        ))
+        println("  audit $label: direct=$(fmt(direct_lp)), surrogate=$(fmt(surrogate_lp)), diff=$(fmt(surrogate_lp - direct_lp)), direct_elapsed=$(round(direct_t, digits=2))s")
+    end
+    diffs = [row["surrogate_minus_direct"] for row in rows if isfinite(row["surrogate_minus_direct"])]
+    return Dict{String,Any}(
+        "n_requested_posterior_draws" => n_draws,
+        "n_rows" => length(rows),
+        "rows" => rows,
+        "mean_surrogate_minus_direct" => isempty(diffs) ? NaN : Statistics.mean(diffs),
+        "max_abs_surrogate_minus_direct" => isempty(diffs) ? NaN : maximum(abs.(diffs)),
+        "direct_elapsed_s" => direct_elapsed,
+        "surrogate_elapsed_s" => surrogate_elapsed,
+    )
+end
+
+latex_escape(s::AbstractString) = replace(s, "_" => "\\_")
+
+function write_direct_audit_table(path::String, audit::Dict{String,Any})
+    open(path, "w") do io
+        println(io, "\\begin{tabular}{lrrrrrr}")
+        println(io, "\\toprule")
+        println(io, "Point & \$\\sigma_a\$ & \$\\sigma_z\$ & \$\\sigma_\\nu\$ & Direct log post. & Surrogate log post. & Difference \\\\")
+        println(io, "\\midrule")
+        for row in audit["rows"]
+            theta = row["theta"]
+            println(io, "$(latex_escape(row["label"])) & $(fmt(theta[1])) & $(fmt(theta[2])) & $(fmt(theta[3])) & $(fmt(row["direct_logpost"])) & $(fmt(row["surrogate_logpost"])) & $(fmt(row["surrogate_minus_direct"])) \\\\")
+        end
+        println(io, "\\bottomrule")
+        println(io, "\\end{tabular}")
+    end
+end
+
 function write_manifest(path::String, opts::CliOptions, cfg::StageConfig, model)
     mkpath(path)
     manifest = Dict{String,Any}(
@@ -1435,6 +1517,7 @@ function write_manifest(path::String, opts::CliOptions, cfg::StageConfig, model)
         "rom_filter_anchor_repeats" => opts.surrogate_design == :local_path ? ROM_FILTER_ANCHOR_REPEATS : 0,
         "direct_objective" => string(opts.direct_objective),
         "direct_logdet_method" => string(opts.direct_logdet_method),
+        "direct_audit_draws" => opts.direct_audit_draws,
         "shock_scaling" => "none; supplied shocks are unit structural innovations",
         "artifact_schema" => [
             "manifest.toml",
@@ -1442,6 +1525,8 @@ function write_manifest(path::String, opts::CliOptions, cfg::StageConfig, model)
             "surrogate_bundle.jls",
             "direct_chains.jls",
             "surrogate_chains.jls",
+            "direct_audit_payload.jls",
+            "direct_audit_table.tex",
             "comparison_payload.jls",
             "SUMMARY.md",
             "comparison_table.tex",
@@ -1480,7 +1565,8 @@ end
 function write_summary(path::String, cfg::StageConfig, surrogate::RandomFeatureSurrogate,
                        checks::Vector{Dict{String,Any}}, cmp::Union{Nothing,Dict{String,Any}};
                        surrogate_design::Symbol = :unknown,
-                       path_diagnostics::Union{Nothing,Dict{String,Any}} = nothing)
+                       path_diagnostics::Union{Nothing,Dict{String,Any}} = nothing,
+                       direct_audit::Union{Nothing,Dict{String,Any}} = nothing)
     open(path, "w") do io
         println(io, "# Gali Direct SEP-HMC vs Surrogate-HMC Validation")
         println(io)
@@ -1523,6 +1609,23 @@ function write_summary(path::String, cfg::StageConfig, surrogate::RandomFeatureS
                 resid_norm = get(diag, "mean_residual_norm", "missing")
                 shock_norm = get(diag, "mean_shock_norm", "missing")
                 println(io, "  - direct diagnostics: kind=`$kind`, status=`$status`, failure_code=`$code`, logdet_method=`$method`, rank=`$rank`, jacobian_size=`$jsize`, max_iteration=`$max_iter`, mean_residual_norm=`$resid_norm`, mean_shock_norm=`$shock_norm`")
+            end
+        end
+        if direct_audit !== nothing
+            println(io)
+            println(io, "## Direct SEP Audit")
+            println(io)
+            println(io, "- Requested surrogate posterior draws: $(direct_audit["n_requested_posterior_draws"])")
+            println(io, "- Audit rows including reference points: $(direct_audit["n_rows"])")
+            println(io, "- Mean surrogate-minus-direct log posterior: $(fmt(direct_audit["mean_surrogate_minus_direct"]))")
+            println(io, "- Max absolute surrogate-minus-direct log posterior: $(fmt(direct_audit["max_abs_surrogate_minus_direct"]))")
+            println(io, "- Direct audit elapsed time: $(fmt(direct_audit["direct_elapsed_s"], digits=4)) seconds")
+            println(io)
+            println(io, "| Point | `std_a` | `std_z` | `std_nu` | Direct log post. | Surrogate log post. | Difference |")
+            println(io, "|---|---:|---:|---:|---:|---:|---:|")
+            for row in direct_audit["rows"]
+                theta = row["theta"]
+                println(io, "| $(row["label"]) | $(fmt(theta[1])) | $(fmt(theta[2])) | $(fmt(theta[3])) | $(fmt(row["direct_logpost"])) | $(fmt(row["surrogate_logpost"])) | $(fmt(row["surrogate_minus_direct"])) |")
             end
         end
         cmp === nothing && return
@@ -1696,6 +1799,7 @@ function run_validation(opts::CliOptions)
 
     direct_chains = nothing
     surrogate_chains = nothing
+    direct_audit = nothing
     if opts.hmc_objectives in (:both, :direct)
         direct_chains = run_hmc_objective("direct_sep", direct_logpost_z, cfg; seed = opts.seed + 100)
         serialize(joinpath(out_dir, "direct_chains.jls"), direct_chains)
@@ -1703,6 +1807,22 @@ function run_validation(opts::CliOptions)
     if opts.hmc_objectives in (:both, :surrogate)
         surrogate_chains = run_hmc_objective("surrogate", surrogate_logpost_z, cfg; seed = opts.seed + 200)
         serialize(joinpath(out_dir, "surrogate_chains.jls"), surrogate_chains)
+    end
+    if opts.direct_audit_draws > 0
+        if surrogate_chains === nothing
+            @warn "direct-audit-draws was requested, but no surrogate chains are available; skipping direct audit."
+        else
+            println("  Running direct SEP audit on surrogate posterior draws: requested=$(opts.direct_audit_draws)")
+            direct_audit = direct_audit_payload(
+                direct_logpost_z,
+                surrogate_logpost_z,
+                surrogate_chains,
+                opts.direct_audit_draws;
+                seed = opts.seed + 300,
+            )
+            serialize(joinpath(out_dir, "direct_audit_payload.jls"), direct_audit)
+            write_direct_audit_table(joinpath(out_dir, "direct_audit_table.tex"), direct_audit)
+        end
     end
 
     cmp = nothing
@@ -1722,7 +1842,8 @@ function run_validation(opts::CliOptions)
     end
     write_summary(joinpath(out_dir, "SUMMARY.md"), cfg, surrogate, checks, cmp;
                   surrogate_design = opts.surrogate_design,
-                  path_diagnostics = path_diagnostics)
+                  path_diagnostics = path_diagnostics,
+                  direct_audit = direct_audit)
     println("Wrote summary: $(joinpath(out_dir, "SUMMARY.md"))")
     return Dict{String,Any}("out_dir" => out_dir, "checks" => checks, "comparison" => cmp, "partial" => partial)
 end

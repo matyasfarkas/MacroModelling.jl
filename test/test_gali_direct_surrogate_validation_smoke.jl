@@ -32,8 +32,10 @@ include(joinpath(@__DIR__, "..", "scripts", "gali_direct_sep_surrogate_hmc_valid
         @test manifest_disk["hmc_objectives"] == "both"
         @test manifest_disk["surrogate_design"] == "local_path"
         @test manifest_disk["rom_filter_anchor_repeats"] == ROM_FILTER_ANCHOR_REPEATS
+        @test manifest_disk["direct_audit_draws"] == 0
         @test manifest_disk["hmc_initial_step_size"] > 0
         @test "synthetic_dgp.jls" in manifest_disk["artifact_schema"]
+        @test "direct_audit_payload.jls" in manifest_disk["artifact_schema"]
         @test "comparison_table.tex" in manifest_disk["artifact_schema"]
     end
 
