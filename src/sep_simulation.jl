@@ -4,6 +4,40 @@
 using Random
 using LinearAlgebra
 
+function _sep_solution_acceptable(sep_sol, accept_threshold::Float64)
+    return sep_sol !== nothing &&
+           isfinite(sep_sol.final_error) &&
+           (sep_sol.convergence_flag == 0 || sep_sol.final_error <= accept_threshold)
+end
+
+function _sep_solution_warmstartable(sep_sol)
+    return sep_sol !== nothing &&
+           hasproperty(sep_sol, :Y) &&
+           hasproperty(sep_sol, :layout) &&
+           !isempty(sep_sol.Y) &&
+           all(isfinite, sep_sol.Y)
+end
+
+function _lift_sep_path_to_layout(source_sol, target_layout)
+    _sep_solution_warmstartable(source_sol) || return nothing
+    source_layout = source_sol.layout
+    source_Y = source_sol.Y
+    target_Y = zeros(Float64, target_layout.voff[target_layout.T + 2])
+
+    for t in 0:target_layout.T
+        source_t = min(t, source_layout.T)
+        source_group = 1
+        source_idx = index_y(source_layout, source_t, source_group)
+        last(source_idx) <= length(source_Y) || return nothing
+        source_state = view(source_Y, source_idx)
+        for g in 1:target_layout.G[t + 1]
+            target_Y[index_y(target_layout, t, g)] .= source_state
+        end
+    end
+
+    return target_Y
+end
+
 # ── ZLB enforcement via OBC anticipated-shock optimization ──────────────
 #
 # When enforce_zlb=true, after each period's SEP solve we check whether
@@ -330,6 +364,8 @@ function simulate_sep_extended_path(
     sep_lm_lambda_max::Float64=1e4,
     sep_accept_tol::Union{Nothing,Float64}=nothing,
     sep_shock_scale::Float64=1.0,
+    sep_recovery::Bool=false,
+    sep_recovery_scales::Vector{Float64}=[0.0, 0.1, 0.25, 0.5, 0.75, 1.0],
     shock_scaling::Symbol=:none,
     random_seed::Union{Nothing,Int}=nothing,
     sep_yss::Union{Nothing,Vector{Float64}}=nothing,
@@ -472,6 +508,7 @@ function simulate_sep_extended_path(
     failure_period = nothing
     # RISK-1: Track per-period SEP residual for training data quality weighting
     sep_errors = fill(NaN, total_periods)
+    sep_recovery_log = Any[]
 
     # Clear any cached SEP solution to prevent warm-start contamination from
     # a previous failed simulation (e.g., during retry with a different seed).
@@ -479,11 +516,25 @@ function simulate_sep_extended_path(
     push!(𝓂.solution.outdated_algorithms, :stochastic_extended_path)
 
     # ── Helper: run one SEP solve with given shock_sequence ────────────
-    function _run_sep_solve!(shock_seq, state_col)
+    function _record_recovery!(period::Int, stage::String, scale::Float64, sep_sol, accepted::Bool)
+        push!(sep_recovery_log, Dict{String,Any}(
+            "period" => period,
+            "stage" => stage,
+            "shock_scale" => scale,
+            "accepted" => accepted,
+            "final_error" => sep_sol === nothing ? NaN : sep_sol.final_error,
+            "convergence_flag" => sep_sol === nothing ? missing : sep_sol.convergence_flag,
+        ))
+    end
+
+    function _run_sep_solve!(shock_seq, state_col;
+                             order::Int=sep_order,
+                             shock_scale::Float64=sep_shock_scale,
+                             initial_guess::Union{Nothing,Vector{Float64}}=nothing)
         solve!(𝓂,
                algorithm = :stochastic_extended_path,
                sep_periods = sep_horizon,
-               sep_order = sep_order,
+               sep_order = order,
                sep_nnodes = sep_nnodes,
                sep_maxit = sep_maxit,
                sep_tol = sep_tol,
@@ -501,7 +552,8 @@ function simulate_sep_extended_path(
                sep_lm_lambda_scale = sep_lm_lambda_scale,
                sep_lm_lambda_min = sep_lm_lambda_min,
                sep_lm_lambda_max = sep_lm_lambda_max,
-               sep_shock_scale = sep_shock_scale,
+               sep_shock_scale = shock_scale,
+               sep_initial_guess = initial_guess,
                sep_initial_state = state_col,
                sep_deterministic_shocks = shock_seq,
                sep_expectation_method = sep_expectation_method,
@@ -519,6 +571,88 @@ function simulate_sep_extended_path(
                subdiff_verbose = subdiff_verbose,
                silent = silent)
         return 𝓂.solution.perturbation.stochastic_extended_path
+    end
+
+    function _recover_sep_solve!(failed_sol, shock_seq, state_col, accept_threshold::Float64, period::Int)
+        best_sol = failed_sol
+        target_layout = failed_sol !== nothing ? failed_sol.layout : nothing
+        current_guess = _sep_solution_warmstartable(failed_sol) ? copy(failed_sol.Y) : nothing
+
+        # First continue from the failed iterate itself.  A max-iteration failure
+        # can still be close enough that another Newton block reaches tolerance.
+        if current_guess !== nothing
+            continued = _run_sep_solve!(shock_seq, state_col;
+                                        order = sep_order,
+                                        shock_scale = sep_shock_scale,
+                                        initial_guess = current_guess)
+            accepted = _sep_solution_acceptable(continued, accept_threshold)
+            _record_recovery!(period, "failed_iterate", sep_shock_scale, continued, accepted)
+            accepted && return continued
+            if _sep_solution_warmstartable(continued)
+                best_sol = continued
+                current_guess = copy(continued.Y)
+                target_layout = continued.layout
+            end
+        end
+
+        # Next solve the deterministic perfect-foresight trunk.  Its path is not
+        # accepted as stochastic evidence; it is lifted onto the stochastic tree
+        # and used only as an initial guess for stochastic SEP.
+        pf_sol = _run_sep_solve!(shock_seq, state_col;
+                                 order = 0,
+                                 shock_scale = 0.0,
+                                 initial_guess = nothing)
+        pf_ok = _sep_solution_acceptable(pf_sol, accept_threshold)
+        _record_recovery!(period, "perfect_foresight", 0.0, pf_sol, pf_ok)
+
+        if target_layout !== nothing && _sep_solution_warmstartable(pf_sol)
+            lifted = _lift_sep_path_to_layout(pf_sol, target_layout)
+            current_guess = lifted === nothing ? current_guess : lifted
+        end
+
+        # If there was no failed stochastic layout to lift onto, a zero-variance
+        # stochastic solve creates the correct tree layout from a cold start.
+        if current_guess === nothing
+            zero_tree = _run_sep_solve!(shock_seq, state_col;
+                                        order = sep_order,
+                                        shock_scale = 0.0,
+                                        initial_guess = nothing)
+            zero_ok = _sep_solution_acceptable(zero_tree, accept_threshold)
+            _record_recovery!(period, "zero_variance_tree", 0.0, zero_tree, zero_ok)
+            if _sep_solution_warmstartable(zero_tree)
+                best_sol = zero_tree
+                current_guess = copy(zero_tree.Y)
+            end
+        end
+
+        current_guess === nothing && return best_sol
+
+        scale_fracs = sort(unique(vcat(0.0, clamp.(sep_recovery_scales, 0.0, 1.0), 1.0)))
+        for frac in scale_fracs
+            scale = sep_shock_scale * frac
+            # The deterministic order-0 solve already handled the trunk; now
+            # solve the stochastic tree at increasing expectation variance.
+            cont = _run_sep_solve!(shock_seq, state_col;
+                                   order = sep_order,
+                                   shock_scale = scale,
+                                   initial_guess = current_guess)
+            accepted = _sep_solution_acceptable(cont, accept_threshold)
+            _record_recovery!(period, "shock_scale_continuation", scale, cont, accepted)
+
+            if _sep_solution_warmstartable(cont)
+                best_sol = cont
+                current_guess = copy(cont.Y)
+            else
+                return best_sol
+            end
+
+            if isapprox(scale, sep_shock_scale; atol = max(eps(Float64), abs(sep_shock_scale) * 1e-12)) &&
+               accepted
+                return cont
+            end
+        end
+
+        return best_sol
     end
 
     # ── Main simulation loop ───────────────────────────────────────────
@@ -539,6 +673,14 @@ function simulate_sep_extended_path(
         accept_threshold = isnothing(sep_accept_tol) ? sep_tol : sep_accept_tol
         converged = sep_sol !== nothing && isfinite(sep_sol.final_error) &&
                     (sep_sol.convergence_flag == 0 || sep_sol.final_error <= accept_threshold)
+        if !converged && sep_recovery
+            !silent && println("  SEP failed at period $t; attempting recovery ladder.")
+            sep_sol = _recover_sep_solve!(sep_sol, shock_sequence, Y_sim[:, t], accept_threshold, t)
+            sep_errors[t] = sep_sol !== nothing && isfinite(sep_sol.final_error) ? sep_sol.final_error : sep_errors[t]
+            converged = _sep_solution_acceptable(sep_sol, accept_threshold)
+            !silent && println("  SEP recovery at period $t: $(converged ? "accepted" : "failed")" *
+                               " (err=$(sep_sol === nothing ? NaN : sep_sol.final_error))")
+        end
         if !converged
             errorflag = true
             failure_period = t
@@ -693,7 +835,8 @@ function simulate_sep_extended_path(
             errorflag = errorflag,
             failure_period = failure_period,
             zlb_periods = zlb_count,
-            sep_errors = errors_trimmed)
+            sep_errors = errors_trimmed,
+            sep_recovery_log = sep_recovery_log)
 end
 
 

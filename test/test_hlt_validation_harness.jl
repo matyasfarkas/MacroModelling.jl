@@ -50,6 +50,23 @@ end
     end
 end
 
+@testset "HLT Validation Harness (bare boolean flags)" begin
+    mktempdir() do d
+        script = joinpath(@__DIR__, "..", "scripts", "hlt_sep_surrogate_validate_hlt3.jl")
+        run(`julia --project=$(joinpath(@__DIR__, "..")) $script --dry-run --quick-smoke --skip-fom --artifact-root=$d --mode=smoke`)
+
+        run_dirs = filter(name -> startswith(name, "hlt3_"), readdir(d))
+        @test !isempty(run_dirs)
+        run_dir = joinpath(d, first(run_dirs))
+        manifest = TOML.parsefile(joinpath(run_dir, "manifests", "run_manifest.toml"))
+
+        @test manifest["dry_run"] == true
+        @test manifest["quick_smoke"] == true
+        @test !haskey(manifest["steps"], "fom_benchmark")
+        @test manifest["steps"]["dataset_generate"]["status"] == "planned"
+    end
+end
+
 @testset "HLT Validation Harness (quick-smoke FOM config)" begin
     mktempdir() do d
         script = joinpath(@__DIR__, "..", "scripts", "hlt_sep_surrogate_validate_hlt3.jl")

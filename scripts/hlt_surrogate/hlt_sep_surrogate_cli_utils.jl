@@ -36,9 +36,14 @@ end
 
 function parse_arg_bool(args::Vector{String}, key::String, default::Bool)
     for arg in args
+        if arg == key
+            return true
+        end
         if startswith(arg, key * "=")
-            value = lowercase(split(arg, "=", limit = 2)[2])
-            return value in ("1", "true", "yes", "y")
+            value = lowercase(strip(split(arg, "=", limit = 2)[2]))
+            value in ("1", "true", "yes", "y", "on") && return true
+            value in ("0", "false", "no", "n", "off") && return false
+            error("Invalid boolean value for $(key): $(value)")
         end
     end
     return default

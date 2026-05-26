@@ -190,7 +190,7 @@ Two properties distinguish this approach from other recent surrogate methods \ci
 
 The decomposition results in Sections~\ref{sec:invisibility}--\ref{sec:decomposition} are deterministic, computed from the nonlinear solver without MCMC. The posterior comparison in Section~\ref{sec:inference_consequences} is conditional on a single model, a single U.S. sample, one high-likelihood warm-started surrogate mode, the profiled inversion objective, the surrogate approximation, and the gate design. The out-of-sample evidence is mixed: the switching surrogate improves COVID-window conditional predictions but fails a quiet-sample 1995Q1--2007Q4 pilot under the original gate, where aggregate RMSE is 2.40 times ROM1. A stricter q95 gate diagnostic using the same posterior draws reduces the ratio to 1.04 and hard-gate activation to 1.9 percent. Re-estimating the surrogate chain under this q95 gate gives a 1.09 ratio: much better than the original gate and better than ROM1 in the early quiet window, but still worse over the full calm holdout. The failure appears substantially gate-related, but calm-period performance remains an implementation risk rather than a resolved strength.
 
-The paper draws on three literatures. For the nonlinear solver, I use the stochastic extended path method \citep{fair1983solution,adjemian2025stochastic}, which handles occasionally binding constraints natively and scales to medium-scale models, unlike projection \citep{judd1992projection} or sparse grids \citep{krueger2004computing,winschel2010solving}; \citet{richter2017nonlinear} provides a survey of nonlinear solution methods with OBC. For the surrogate, I build on multi-fidelity methods from engineering \citep{peherstorfer2018survey} and the model-discrepancy framework of \citet{kennedy2001bayesian}. The residual formulation is related to \citet{koop2022bayesian} and \citet{naubert2025differentiable} but approximates the transition map rather than the likelihood; compared to \citet{kase2025estimating}, it learns a two-orders-of-magnitude smaller target and supplies smooth gradients for HMC. \citet{janssens2025efficient} achieve large speed gains via time-varying local linearization, but their first-order Taylor expansion cannot capture the $S' \times p^k \times \xi_{t+1}/\xi_t$ cross-terms that drive the investment-channel nonlinearity. For sampling, I extend the filter-free HMC framework of \citet{childers2022filter} and \citet{farkas2020bayesian} to the nonlinear setting. This sidesteps the particle-filter weight degeneracy documented in \citet{herbst2019tempered} and \citet{cubaborda2019likelihood}. Recent nonlinear estimation work---\citet{gust2012effects}, \citet{boehl2022monetary}, \citet{fernandezvillaverde2021estimating}, \citet{basu2017uncertainty}---faces either this degeneracy or the restriction to piecewise-linear approximations. The theoretical underpinnings of likelihood-based inference with computed nonlinear solutions are developed in \citet{fernandezvillaverde2006convergence}, whose convergence results motivate the formal consistency theory in Appendix~\ref{sec:formal_consistency}.
+The paper draws on three literatures. For the nonlinear solver, I use the stochastic extended path method \citep{fair1983solution,adjemian2025stochastic}, which handles occasionally binding constraints natively and scales to medium-scale models, unlike projection \citep{judd1992projection} or sparse grids \citep{krueger2004computing,winschel2010solving}; \citet{richter2017nonlinear} provides a survey of nonlinear solution methods with OBC. For the surrogate, I build on multi-fidelity methods from engineering \citep{peherstorfer2018survey} and the model-discrepancy framework of \citet{kennedy2001bayesian}. The residual formulation is related to \citet{koop2022bayesian} and \citet{naubert2025differentiable} but approximates the transition-map correction rather than the likelihood; compared to \citet{kase2025estimating}, it learns a two-orders-of-magnitude smaller target and supplies smooth gradients for HMC. \citet{janssens2025efficient} achieve large speed gains via time-varying local linearization, but their first-order Taylor expansion cannot capture the $S' \times p^k \times \xi_{t+1}/\xi_t$ cross-terms that drive the investment-channel nonlinearity. For sampling, I extend the filter-free HMC framework of \citet{childers2022filter} and \citet{farkas2020bayesian} to the nonlinear setting. This sidesteps the particle-filter weight degeneracy documented in \citet{herbst2019tempered} and \citet{cubaborda2019likelihood}. Recent nonlinear estimation work---\citet{gust2012effects}, \citet{boehl2022monetary}, \citet{fernandezvillaverde2021estimating}, \citet{basu2017uncertainty}---faces either this degeneracy or the restriction to piecewise-linear approximations. The theoretical underpinnings of likelihood-based inference with computed nonlinear solutions are developed in \citet{fernandezvillaverde2006convergence}, whose convergence results motivate the formal consistency theory in Appendix~\ref{sec:formal_consistency}.
 
 % ============================================================================
 % SECTION 3: THE INVISIBILITY PROPERTY
@@ -269,7 +269,7 @@ p(\theta \given y_{1:T}^{\text{obs}}) \propto p(y_{1:T}^{\text{obs}} \given \the
 \end{equation}
 where $p(y_{1:T}^{\text{obs}} \given \theta)$ is the likelihood and $p(\theta)$ is the prior.
 
-A common DSGE estimation benchmark linearizes \eqref{eq:equilibrium} around steady state, evaluates the likelihood with a Kalman filter, and samples \eqref{eq:posterior} with random-walk Metropolis--Hastings or related MCMC methods. I keep the nonlinear structure at every stage. I solve \eqref{eq:equilibrium} globally using the stochastic extended path method on a design set $\{\theta^{(i)}\}_{i=1}^{N_\theta}$, train a neural network $\hat{g}(s_{t-1}, \eps_t, \theta; w)$ to approximate the transition map, and sample the augmented posterior $p(\theta, s_0, \eps_{1:T} \given y_{1:T}^{\text{obs}})$ with Hamiltonian Monte Carlo.
+A common DSGE estimation benchmark linearizes \eqref{eq:equilibrium} around steady state, evaluates the likelihood with a Kalman filter, and samples \eqref{eq:posterior} with random-walk Metropolis--Hastings or related MCMC methods. I keep the nonlinear structure at every stage. I solve \eqref{eq:equilibrium} globally using the stochastic extended path method on a design set $\{\theta^{(i)}\}_{i=1}^{N_\theta}$, train a neural network $\hat{\Delta}(s_{t-1}, \eps_t, \theta; w)$ to approximate the nonlinear-minus-linear transition residual, and sample the augmented posterior $p(\theta, s_0, \eps_{1:T} \given y_{1:T}^{\text{obs}})$ with Hamiltonian Monte Carlo.
 
 Instead of integrating out the shocks via a particle filter, I treat them as explicit unknowns:
 \begin{equation*}
@@ -284,7 +284,7 @@ The Gal\'i (2015) New Keynesian model is used as a negative-control model becaus
 \[
 R_t = \max\{1, (R_{ss})^{1-\rho_R}(\Pi_t/\Pi_{ss})^{(1-\rho_R)\phi_\pi}(Y_t/Y_{ss})^{(1-\rho_R)\phi_y}R_{t-1}^{\rho_R}e^{\varepsilon_t^R}\},
 \]
-where the $\max\{1,\cdot\}$ operator enforces the ZLB. The direct SEP-HMC versus surrogate-HMC validation on this model is a planned validation exercise rather than a result reported here; Appendix~\ref{sec:validation_design} records its design and current status. Full equations are in Appendix~\ref{app:model}.
+where the $\max\{1,\cdot\}$ operator enforces the ZLB. Appendix~\ref{sec:validation_design} reports a two-parameter hard-ELB validation package for the ROM1-residual, inversion-filter, and matched-HMC layers on the maintained Gal\'i OBC implementation; the full three-parameter direct-SEP HMC comparison remains a scaling target rather than a reported result. Full equations are in Appendix~\ref{app:model}.
 
 The 18-parameter analysis uses SW07-HLT: habit formation, capital accumulation, investment adjustment costs, variable utilization, Kimball demand, and the ZLB. The specification has 66 variables (26 states), 7 shocks, and 18 estimated parameters covering shock processes and the price/wage setting block $(\xi_p, \iota_p, \varepsilon_p, \xi_w)$. See Appendix~\ref{app:sw07_model} for details.
 
@@ -317,7 +317,7 @@ Y^{(j+1)} = Y^{(j)} - \alpha^{(j)} \left[\frac{\partial R}{\partial Y}(Y^{(j)}; 
 \end{equation}
 where $\alpha^{(j)} \in (0,1]$ is a step-size parameter (chosen by line search to ensure progress) and the Jacobian is computed via automatic differentiation.
 
-Convergence is quadratic in smooth regions and slows near constraint boundaries where the equations have a kink. Warm-starting from a nearby previous solution reduces Newton iterations from approximately 20 (cold start) to 3--5 when no constraints change status. Once the system converges, the solved tree defines a deterministic transition function $s_{t+1} = g_\theta(s_t, \eps_t)$ for each shock realization---the object I approximate with a neural network.
+Convergence is quadratic in smooth regions and slows near constraint boundaries where the equations have a kink. Warm-starting from a nearby previous solution reduces Newton iterations from approximately 20 (cold start) to 3--5 when no constraints change status. Once the system converges, the solved tree defines a deterministic transition function $s_{t+1} = g_\theta(s_t, \eps_t)$ for each shock realization. The neural network approximates the residual of this transition relative to ROM1, not the full transition itself.
 
 A single SEP solve takes about 0.8 seconds. Embedding SEP directly in MCMC would require 30--60 evaluations per NUTS leapfrog step, making 1,000 draws infeasible (100--200 days). The surrogate pays the SEP cost once offline and evaluates in milliseconds during inference---a five-order-of-magnitude speedup that makes Bayesian estimation tractable.
 
@@ -514,7 +514,7 @@ Removing $S(\cdot)$ does not shrink the gap; in this counterfactual specificatio
 \section{Consequences for Inference}
 \label{sec:inference_consequences}
 
-The local validation harness exercises the HLT surrogate pipeline on synthetic data and includes a bounded direct-SEP/MCMC comparison script for the HLT legacy three-parameter block. The repository currently has finite direct-SEP inversion checks, but it does not contain the matched Gal\'i SEP-HMC versus surrogate-HMC posterior comparison described in Appendix~\ref{sec:validation_design}. I therefore do not use the Gal\'i recovery exercise as evidence here. I now turn to the 18-parameter estimation on U.S. data.
+The local validation harness exercises the HLT surrogate pipeline on synthetic data and includes a bounded direct SEP/MCMC comparison script for the HLT legacy three-parameter block. The repository also contains a Gal\'i hard-ELB validation package that activates the ROM1-residual, inversion-filter, and matched-HMC layers: one-parameter smoke checks pass, and the two-parameter $(\sigma_z,\sigma_a)$ direct/surrogate HMC comparison passes on an actual-floor path. The package does not report the full three-shock direct-SEP HMC comparison, and the $\sigma_\nu$ probes behave as expected identification failures rather than surrogate-approximation failures. I therefore use the Gal\'i recovery exercises as pipeline diagnostics, not as main empirical evidence. I now turn to the 18-parameter estimation on U.S. data.
 
 \subsection{18-Parameter Real-Data Estimation}
 \label{subsec:results_18param_kalman}
@@ -604,7 +604,7 @@ Bootstrap PF + SEP ($N_p\!=\!100$, 100 cores) & $\approx 147$ & $\approx 1.7$ da
 
 A bootstrap particle filter \citep{gordon1993novel} collapses to a single effective particle in every period at all particle counts tested ($N_p$ up to $5{,}000$), producing a log-likelihood magnitude roughly four orders worse than the exact Kalman value at $N_p=5{,}000$ (Table~\ref{tab:pf_benchmark}). In a 7-dimensional observation space, the number of particles required for reliable importance sampling grows exponentially \citep{snyder2008obstacles}. Advanced particle filters---tempered \citep{herbst2019tempered}, conditionally optimal \citep{aruoba2021piecewise}---alleviate degeneracy in smaller models but remain far below the Kalman benchmark in the comparisons reported here. The filter-free formulation sidesteps this problem by treating shocks as explicit unknowns.
 
-The offline cost of the surrogate is 12 hours (10 hours dataset generation, 2 hours training). The same surrogate serves multiple estimation runs without retraining, since the transition map $g_\theta(s, \varepsilon)$ does not depend on observed data. A 1,000-draw NUTS run achieves a $2{,}450\times$ speedup over direct SEP evaluation.
+The offline cost of the surrogate is 12 hours (10 hours dataset generation, 2 hours training). The same residual surrogate serves multiple estimation runs without retraining, since the nonlinear-minus-linear transition residual $\Delta g_\theta(s, \varepsilon)$ does not depend on observed data. A 1,000-draw NUTS run achieves a $2{,}450\times$ speedup over direct SEP evaluation.
 
 
 \subsection{Extended-Sample Estimation Through 2025}
@@ -785,7 +785,7 @@ Three extensions follow naturally. First, extending the invisibility analysis to
 \section{Full Model Specification}
 \label{app:model}
 
-This appendix presents the complete equilibrium system for the Gal\'i (2015) New Keynesian model with occasionally binding zero lower bound. It serves as a negative-control specification and as the planned target for the direct SEP-HMC versus surrogate-HMC validation; numerical recovery results from that exercise are not reported in this paper. The 18-parameter analysis in Section~\ref{subsec:nonlinearity_sources} uses the richer \citet{smets2007shocks} specification, detailed in Appendix~\ref{app:sw07_model} below.
+This appendix presents the complete equilibrium system for the Gal\'i (2015) New Keynesian model with occasionally binding zero lower bound. It serves as a negative-control specification and as the source model for the hard-ELB validation package in Appendix~\ref{sec:validation_design}; the full three-parameter direct-SEP HMC comparison remains unreported. The 18-parameter analysis in Section~\ref{subsec:nonlinearity_sources} uses the richer \citet{smets2007shocks} specification, detailed in Appendix~\ref{app:sw07_model} below.
 
 
 \subsection{Household Problem}
@@ -1118,20 +1118,21 @@ This appendix describes neural network architecture, training procedure, and hyp
 
 \subsection{Data Standardization}
 
-All inputs and outputs are standardized to zero mean and unit variance before training:
+All inputs and residual targets are standardized to zero mean and unit variance before training:
 \begin{align}
 \tilde{s}_{-1} &= (s_{-1} - \mu_{s_{-1}})/\sigma_{s_{-1}}, \\
 \tilde{\eps} &= (\eps - \mu_\eps)/\sigma_\eps = \eps/\sigma_\eps \quad (\text{since } \mu_\eps=0), \\
 \tilde{\theta} &= (\theta - \mu_\theta)/\sigma_\theta,
 \end{align}
-where $\mu$ and $\sigma$ are computed from the training set. Outputs are similarly standardized:
+where $\mu$ and $\sigma$ are computed from the training set. The output target is the nonlinear-minus-ROM residual, $\Delta s = s^{\rm SEP} - s^{\rm ROM1}$, standardized as:
 \begin{equation}
-\tilde{s} = (s - \mu_s)/\sigma_s.
+\widetilde{\Delta s} = (\Delta s - \mu_{\Delta})/\sigma_{\Delta}.
 \end{equation}
 
 During inference, I invert the transformation:
 \begin{equation}
-s = \mu_s + \sigma_s \cdot \text{MLP}(\tilde{s}_{-1}, \tilde{\eps}, \tilde{\theta}).
+\widehat{\Delta s} = \mu_{\Delta} + \sigma_{\Delta} \cdot \text{MLP}(\tilde{s}_{-1}, \tilde{\eps}, \tilde{\theta}), \qquad
+\hat{s} = s^{\rm ROM1} + \widehat{\Delta s}.
 \end{equation}
 
 
@@ -1142,12 +1143,12 @@ The baseline MLP architecture for the 3-parameter case is:
 \text{Input layer:} \quad & \mathbb{R}^{28} \quad (22 \text{ state} + 3 \text{ shock} + 3 \text{ parameter}), \\
 \text{Hidden layer 1:} \quad & \mathbb{R}^{256}, \quad \text{tanh activation}, \\
 \text{Hidden layer 2:} \quad & \mathbb{R}^{128}, \quad \text{tanh activation}, \\
-\text{Output layer:} \quad & \mathbb{R}^{22} \quad (\text{next state}).
+\text{Output layer:} \quad & \mathbb{R}^{22} \quad (\text{ROM1 residual correction}).
 \end{align}
 
 Total parameters: $(28 \times 256) + 256 + (256 \times 128) + 128 + (128 \times 22) + 22 = 43{,}158$.
 
-For the 18-parameter case, the input dimension increases to $\mathbb{R}^{51}$ ($26$ states $+ 7$ shocks $+ 18$ parameters), the output dimension is $\mathbb{R}^{26}$ (next state), and I replace tanh with SiLU ($x \cdot \text{sigmoid}(x)$, where $\text{sigmoid}(x) = 1/(1+e^{-x})$) to avoid saturation when the filter visits states far from the training mean. The hidden layer widths remain 256 and 128, yielding $51 \times 256 + 256 + 256 \times 128 + 128 + 128 \times 26 + 26 = 49{,}562$ parameters.
+For the 18-parameter case, the input dimension increases to $\mathbb{R}^{69}$ ($44$ states $+ 7$ shocks $+ 18$ parameters in the current HLT bundle), and the output is the corresponding ROM1 residual correction for observables and selected state variables. In the regime-switching likelihood, observable residuals enter the batch likelihood correction, while state residuals are used only in gate-on periods where sequential state propagation is required. I replace tanh with SiLU ($x \cdot \text{sigmoid}(x)$, where $\text{sigmoid}(x) = 1/(1+e^{-x})$) to avoid saturation when the filter visits states far from the training mean.
 
 
 \subsection{Training Procedure}
@@ -1160,9 +1161,9 @@ where $\hat{m}$ and $\hat{v}$ are bias-corrected first and second moment estimat
 
 \paragraph{Gradient clipping.} I clip the global gradient norm to a ceiling of 5.0: if $\|\nabla\mathcal{L}\|_2 > 5.0$, all gradients are rescaled by $5.0 / \|\nabla\mathcal{L}\|_2$. This prevents occasional exploding gradients that arise when the training set includes near-ZLB observations with large residual targets.
 
-\paragraph{Loss function.} Mean squared error on standardized outputs:
+\paragraph{Loss function.} Mean squared error on standardized residual targets:
 \begin{equation}
-\mathcal{L}(\theta_{\text{NN}}) = \frac{1}{N_{\text{train}}} \sum_{i=1}^{N_{\text{train}}} \|\text{MLP}(\tilde{s}_{-1}^{(i)}, \tilde{\eps}^{(i)}, \tilde{\theta}^{(i)}) - \tilde{s}^{(i)}\|^2.
+\mathcal{L}(\theta_{\text{NN}}) = \frac{1}{N_{\text{train}}} \sum_{i=1}^{N_{\text{train}}} \|\text{MLP}(\tilde{s}_{-1}^{(i)}, \tilde{\eps}^{(i)}, \tilde{\theta}^{(i)}) - \widetilde{\Delta s}^{(i)}\|^2.
 \end{equation}
 
 \paragraph{Batch size.} I use an adaptive heuristic: $B = \min(512,\, \max(32,\, \lfloor N/20 \rfloor))$, which targets approximately 5\% of the dataset per batch. The floor of 32 avoids high gradient variance in small datasets; the ceiling of 512 limits memory usage.
@@ -1374,9 +1375,9 @@ where $\mathcal{S}$ indexes the structural shocks and the constant is $c = (n_y 
 \subsection{Batch NN Correction}
 \label{app:batch_nn}
 
-In Phase~2, I exploit the fact that all $T$ periods are available simultaneously to batch the NN evaluations. I construct the input matrix $X_{\text{nn}} = [s_{t-1};\, \varepsilon_t;\, \theta] \in \R^{d_{\text{in}} \times T}$ and evaluate $\hat{\Delta} = \text{MLP}(X_{\text{nn}}) \in \R^{(d_{\text{obs}} + d_{\text{state}}) \times T}$ in a single BLAS-3 matrix multiplication per layer, which is 50--70\% faster than $T$ sequential vector evaluations due to cache efficiency and SIMD utilization. Only the first $d_{\text{obs}}$ rows of $\hat{\Delta}$ correct the observables; the state dimensions are discarded (obs-only mode). I optionally clamp the correction: $|\hat{\Delta}_j| \leq 3 \times \text{RMSE}_j^{\text{val}}$, where $\text{RMSE}_j^{\text{val}}$ is the per-dimension validation RMSE. This prevents outlier NN predictions from dominating the likelihood at individual periods, a failure mode I observed when the network extrapolated to unseen state--parameter combinations during early HMC warmup.
+In Phase~2, I exploit the fact that all $T$ periods are available simultaneously to batch the NN evaluations. I construct the input matrix $X_{\text{nn}} = [s_{t-1};\, \varepsilon_t;\, \theta] \in \R^{d_{\text{in}} \times T}$ and evaluate $\hat{\Delta} = \text{MLP}(X_{\text{nn}})$ in a single BLAS-3 matrix multiplication per layer, which is 50--70\% faster than $T$ sequential vector evaluations due to cache efficiency and SIMD utilization. For non-gate periods, only the first $d_{\text{obs}}$ rows of $\hat{\Delta}$ correct the observables and state propagation remains ROM1. I optionally clamp the correction: $|\hat{\Delta}_j| \leq 3 \times \text{RMSE}_j^{\text{val}}$, where $\text{RMSE}_j^{\text{val}}$ is the per-dimension validation RMSE. This prevents outlier NN predictions from dominating the likelihood at individual periods, a failure mode I observed when the network extrapolated to unseen state--parameter combinations during early HMC warmup.
 
-When the regime-switching gate is active, I use a hybrid strategy: gate periods ($g_t = 1$) receive per-period NN evaluation (since these periods need both observable and state corrections), while non-gate periods are batch-corrected via a single BLAS-3 call over the $T - \sum g_t$ non-gate indices.
+When the regime-switching gate is active, I use a hybrid strategy: gate periods ($g_t = 1$) receive per-period NN evaluation, using both observable and state residuals when the trained bundle supplies them, while non-gate periods are batch-corrected via a single BLAS-3 call over the $T - \sum g_t$ non-gate indices.
 
 
 \section{Regime-Switching Gate}
@@ -1947,7 +1948,7 @@ The coverage distortion in \eqref{eq:coverage_bound} scales as $\sqrt{T} \cdot \
   \;\leq\; \frac{0.019}{\sqrt{265}} \cdot \frac{\sqrt{50}}{1}
   \;\approx\; 0.0082 \;=\; 0.82 \text{ percentage points}.
 \]
-The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this conservative theoretical bound reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The bound applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The direct Gal\'i SEP-HMC comparison remains the required posterior-validation exercise for the surrogate.
+The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this conservative theoretical bound reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The bound applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The Gal\'i hard-ELB package supplies a passing two-parameter posterior diagnostic for the ROM1-residual/inversion/HMC pipeline, while the full three-parameter direct-SEP HMC comparison remains an unreported scaling target.
 \end{remark}
 
 \subsection{Discussion}
@@ -1965,40 +1966,42 @@ Theorem~\ref{thm:posterior_consistency} requires $\delta_T = o(T^{-1/2})$, a con
 \section{Validation Design}
 \label{sec:validation_design}
 
-The validation target is a direct SEP-HMC versus surrogate-HMC comparison on the Gal\'i (2015) synthetic model in Section~\ref{subsec:gali_model}. The DGP should use the same SEP solution and priors for both samplers, with identical data, seeds, and chain lengths. The comparison is acceptable if posterior means are within Monte Carlo error, 90 percent intervals materially overlap, and no systematic coverage distortion appears.
+The validation target is a direct SEP-HMC versus surrogate-HMC comparison on the Gal\'i (2015) synthetic model in Section~\ref{subsec:gali_model}. The DGP should use the same SEP solution and priors for both samplers, with identical data, seeds, and chain lengths. The comparison is acceptable if posterior means are within Monte Carlo error, 90 percent intervals materially overlap, and no systematic coverage distortion appears. The current package verifies this logic in a smaller hard-ELB OBC exercise; it does not yet complete the full three-shock SEP-HMC target.
 
-I do not report that matched Gal\'i direct-HMC comparison here. Existing Gal\'i diagnostics show that the SEP engine solves the model at a cached true parameter value and that a smaller surrogate-HMC validation path exists, but they do not constitute the requested three-parameter direct SEP-HMC versus surrogate-HMC posterior comparison. I therefore treat the Gal\'i exercise as a design target rather than as posterior-validating evidence.
+I do not report the full requested Gal\'i three-parameter direct-SEP HMC comparison here. Existing Gal\'i diagnostics show that the SEP engine solves the model at a cached true parameter value, but the full three-parameter direct-SEP HMC run remains too computationally expensive for this draft. I therefore treat that exercise as a design target rather than as posterior-validating evidence. The replication package now includes narrower actual-floor diagnostics using the maintained Gal\'i OBC model. First, an adverse $\eps_z$ shock block generates a six-period floor episode with falling output and inflation, and a local known-shock grid over $\sigma_z$ confirms that a residual surrogate can reproduce the direct OBC posterior on that path. Second, a one-parameter inversion-grid check recovers shocks with the linear ROM1 inversion filter and evaluates the common recovered shocks under direct OBC and ROM1 plus the residual surrogate. That run has zero solver warnings, finite support at all 18 grid points, direct and surrogate posterior means of $0.050053$, and true-value coverage in both 90 percent intervals. Third, a matched one-parameter HMC smoke on the same inversion objective runs direct and surrogate NUTS with identical seeds, 30 post-warmup draws, zero numerical errors, overlapping intervals, true-value coverage, and a posterior-mean difference of 0.21 combined MCSE units. Fourth, a two-parameter matched-HMC check estimates $(\sigma_z,\sigma_a)$ on a 24-period actual-floor path with post-ELB identification blocks. In the extended four-chain run, the grid/training stage has zero solver warnings, actual-floor binding in 9 of 24 periods, finite support at all 36 grid points, and holdout residual RMSE approximately zero. The matched-HMC posterior comparison uses 4,000 post-warmup draws per objective; direct and surrogate 90 percent intervals overlap for both parameters, both true values are covered, and posterior-mean differences are $-0.45$ and $-0.46$ combined MCSE units for $\sigma_z$ and $\sigma_a$. The direct sampler records six numerical-error proposals out of 4,000 post-warmup draws, while the surrogate sampler records zero; the negligible-issue diagnostic and the overall validation flag both pass. Fifth, $\sigma_\nu$ probes are retained as expected identification-failure diagnostics: direct and surrogate objectives agree, but both push the parameter toward the local grid boundary, so the failure is not evidence of surrogate approximation bias. These are transition-map, inversion-layer, and sampler checks, not substitutes for the requested three-parameter direct-SEP HMC exercise.
 
 I also maintain a bounded HLT direct-SEP/MH versus surrogate/MH harness targeting the SW07-HLT legacy three-parameter price block $(\xi_p,\iota_p,\varepsilon_p)$ rather than the Gal\'i shock-volatility vector $(\sigma_A,\sigma_\mu,\sigma_R)$. This is a diagnostic harness, not a posterior validation pass: the direct SEP side returns a finite objective, while the historical surrogate bundle is not a current-runtime posterior comparison.
 
-I therefore do not report numerical posterior recovery results from the Gal\'i validation or the full direct posterior comparison here. Reproducibility details for the available diagnostics belong in the replication package rather than in the manuscript.
+I therefore do not report the missing full three-parameter direct posterior comparison here. Reproducibility details for the available diagnostics belong in the replication package rather than in the manuscript.
 
 \section{Validation Status}
 \label{app:validation_results}
 
-Table~\ref{tab:param_recovery} summarizes the current validation status. It separates finite direct-SEP diagnostics from the matched Gal\'i direct SEP-HMC versus surrogate-HMC comparison that remains necessary for submission-grade posterior validation.
+Table~\ref{tab:param_recovery} summarizes the current validation status. It separates the package-level hard-ELB pipeline audit from the full three-parameter direct-SEP HMC comparison that remains a scaling target.
 
 \begin{table}[htbp]
 \centering
-\caption{Direct posterior-validation status}
+\caption{Gal\'i validation package and remaining direct-SEP target}
 \label{tab:param_recovery}
 \small
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.34\textwidth}>{\raggedright\arraybackslash}p{0.58\textwidth}}
 \toprule
 Item & Status \\
 \midrule
-Common Gal\'i SEP DGP & Existing synthetic data found; direct posterior DGP not reported \\
-Direct SEP likelihood HMC & Not reported for the matched three-parameter comparison \\
-Surrogate likelihood HMC & Existing two-parameter run found; requested three-parameter run not reported \\
-Common priors, seeds, and chain lengths & Not reported \\
-Posterior mean and interval comparison & Not reported \\
-Coverage and distortion diagnostic & Not reported \\
+Hard-ELB validation package & Passes package audit for the maintained Gal\'i OBC pipeline \\
+Actual-floor residual-grid smoke & Clean local $\sigma_z$ known-shock check passes; verifies the ROM1-residual target on a floor-binding path \\
+Actual-floor inversion-grid smoke & Clean local $\sigma_z$ ROM1-inversion check passes; common recovered shocks produce matching direct and surrogate objectives \\
+One-parameter inversion-HMC smoke & Clean local $\sigma_z$ direct/surrogate NUTS smoke passes with common seeds and chain design \\
+Two-parameter inversion-HMC diagnostic & $(\sigma_z,\sigma_a)$ direct/surrogate HMC posterior comparison passes with actual floor binding; six direct numerical-error proposals out of 4,000 post-warmup draws, zero surrogate numerical errors \\
+$\sigma_\nu$ probes & Expected identification failures: direct and surrogate objectives agree, but both push $\sigma_\nu$ toward the local grid boundary \\
+Full Gal\'i three-parameter direct SEP-HMC & Not reported; remains a scaling target rather than a result in this draft \\
+Full Gal\'i three-parameter surrogate-HMC comparison & Not reported on the same direct-SEP DGP, priors, seeds, and chain lengths \\
 HLT direct-SEP/MH fallback harness & Implemented; direct SEP objective is finite in a diagnostic check \\
 Historical HLT direct-FOM diagnostic & Available as a diagnostic check, not a posterior comparison \\
 \bottomrule
 \end{tabular}
 \smallskip
-\tablenotes{\textit{Notes}: The repository has Gal\'i surrogate assets, HLT three-parameter validation assets, and direct SEP diagnostic checks, but not the Gal\'i direct SEP-HMC versus surrogate-HMC run required for submission-grade posterior validation.}
+\tablenotes{\textit{Notes}: The package-level audit validates the ROM1-residual, inversion-filter, and matched-HMC layers in a smaller hard-ELB Gal\'i OBC exercise. It should not be read as a full three-shock direct-SEP HMC certificate. The $\sigma_\nu$ probes are reported as identification diagnostics rather than approximation failures.}
 \end{table}
 
 
@@ -2419,7 +2422,7 @@ Tail (75-100th) & 1,250 & 0.00135 & 0.00231 & Real rate \\
 
 \subsection{Omitted Validation Tables}
 
-Earlier seed-sensitivity, prior-sensitivity, simplified 18-parameter validation, and sample-length recovery tables are omitted from this paper because the current replication package does not contain reproducible runs supporting those numerical claims. They should be restored only after the underlying runs are regenerated and documented. The required direct Gal\'i SEP-HMC versus surrogate-HMC comparison is tracked in Appendix~\ref{sec:validation_design}.
+Earlier seed-sensitivity, prior-sensitivity, simplified 18-parameter validation, and sample-length recovery tables are omitted from this paper because the current replication package does not contain reproducible runs supporting those numerical claims. They should be restored only after the underlying runs are regenerated and documented. Appendix~\ref{sec:validation_design} tracks the passing hard-ELB Gal\'i package audit and the remaining full three-parameter direct-SEP HMC scaling target.
 
 \subsection{Surrogate Architecture Comparison}
 

@@ -198,12 +198,55 @@ julia --project=. scripts/oos_forecast_evaluate.jl \
 
 ### 8. SEP Sensitivity
 
+Completed bounded pilot currently used by the paper:
+
 ```bash
 julia --project=. scripts/sep_sensitivity_study.jl \
   --out-dir=.local_artifacts/sep_sensitivity
 ```
 
-### 9. HLT Direct-SEP Smoke
+Completed full 265-period production rerun:
+
+```bash
+julia --project=. scripts/sep_sensitivity_study.jl \
+  --n-draws=10 \
+  --cap-draws=5 \
+  --periods=265 \
+  --sep-horizon=40 \
+  --sep-maxit=200 \
+  --out-dir=.local_artifacts/sep_sensitivity/full_265_20260521
+```
+
+Inspect the completed artifact with:
+
+```bash
+tail -n 120 .local_artifacts/sep_sensitivity/logs/full_265_20260521.log
+sed -n '1,220p' .local_artifacts/sep_sensitivity/full_265_20260521/SEP_SENSITIVITY_SUMMARY.md
+```
+
+The status/provenance note is
+`docs/review/SEP_265_RUN_STATUS.md`. The full-window run completed with all
+cells converged, but `K=3` differs from the `K=5` reference by RMSE `1.08e-02`,
+just above the pre-specified `1e-2` screen. Treat it as evidence of tolerance
+stability with mild quadrature-node sensitivity, not as an unconditional clean
+pass.
+
+### 9. Galí Hard-ELB Validation Package
+
+```bash
+julia --project=. scripts/gali_validation_package.jl \
+  --run-id=gali_validation_package_20260521
+```
+
+The package-level report is written under
+`.local_artifacts/gali_validation_package/<run-id>/`. The current report audits
+the hard-ELB stress path, ROM1-residual grid, ROM1-inversion grid,
+one-parameter HMC smoke, two-parameter `std_z,std_a` HMC validation,
+`std_nu` identification probes, and the direct-SEP feasibility smoke. It is a
+positive validation of the maintained two-parameter ROM1-residual/inversion/HMC
+pipeline, not a completed three-parameter direct-SEP HMC certificate.
+
+### 10. HLT Direct-SEP Smoke
 
 ```bash
 julia --project=. scripts/hlt_direct_sep_surrogate_posterior_validation.jl \
@@ -230,13 +273,20 @@ exact-determinant value under the bounded HLT three-parameter harness.
 | OOS forecast | `scripts/oos_forecast_evaluate.jl` | `.local_artifacts/oos_forecast/` |
 | Gate recalibration | `scripts/oos_gate_recalibration.jl` | `.local_artifacts/oos_gate_recalibration/` |
 | SEP sensitivity | `scripts/sep_sensitivity_study.jl` | `.local_artifacts/sep_sensitivity/` |
+| Galí hard-ELB validation package | `scripts/gali_validation_package.jl` | `.local_artifacts/gali_validation_package/` |
 | Direct SEP smoke | `scripts/hlt_direct_sep_surrogate_posterior_validation.jl` | `.local_artifacts/hlt_direct_sep_surrogate_validation/` |
 
 ## Known Heavy-Run Caveats
 
-- The Galí direct SEP-HMC versus surrogate-HMC posterior comparison is still a
-  pending contribution. Current direct likelihood smokes are finite, but the
-  matched HMC artifact is not yet part of the package.
+- The Galí validation package passes for the maintained hard-ELB,
+  two-parameter ROM1-residual/inversion/HMC design. The original
+  three-parameter direct-SEP HMC comparison remains a scaling target; current
+  `std_nu` probes indicate weak local identification in the short Galí design,
+  not a surrogate approximation failure.
+- The full 265-period SEP sensitivity rerun completed under
+  `.local_artifacts/sep_sensitivity/full_265_20260521/`. All cells converged,
+  and `accept_tol` is stable within each fixed `K`; however, moving from `K=5`
+  to `K=3` gives RMSE `1.08e-02`, just above the original `1e-2` screen.
 - The quiet-sample OOS results identify a gate-calibration issue. The original
   hard gate is active throughout the quiet holdout. The package
   documents that pilot, a fixed-posterior q95 padded-gate diagnostic, and a

@@ -173,7 +173,7 @@ outputs are intentionally regenerated under `.local_artifacts/`.
 Use [REPLICATION.md](REPLICATION.md) for the supported commands to regenerate
 SEP datasets, train the surrogate, rerun linear/surrogate HMC, recompute
 likelihood decomposition, mode sensitivity, OOS diagnostics, SEP sensitivity,
-and direct-SEP smoke artifacts.
+the Galí hard-ELB validation package, and direct-SEP smoke artifacts.
 
 ---
 
@@ -210,7 +210,7 @@ Mátyás Farkas extends MacroModelling.jl with:
 - **Surrogate validation**: `RRMSE < 0.1%` on held-out test set
 - **Posterior coverage**: Formal consistency bounds on posterior RMSE distortion (Appendix, main paper)
 - **Convergence diagnostics**: warm-started surrogate chains have max $\hat{R} \approx 1.05$ and zero divergent transitions; cold-start failures are documented
-- **Sensitivity/provenance status**: supported surrogate accuracy, convergence, mode-sensitivity, linear+gate ablation, quiet-sample OOS, bounded SEP-sensitivity pilot, and the HLT direct-SEP/MH validation harness are included. The HLT harness now returns a finite direct SEP likelihood with the exact determinant after tightening inversion finite-difference prediction solves. Archived Galí surrogate assets and direct SEP solve/loglikelihood smokes are documented, but the requested Galí direct SEP-HMC vs. surrogate-HMC posterior comparison remains pending.
+- **Sensitivity/provenance status**: supported surrogate accuracy, convergence, mode-sensitivity, linear+gate ablation, quiet-sample OOS, bounded SEP-sensitivity pilot, and the HLT direct-SEP/MH validation harness are included. The HLT harness now returns a finite direct SEP likelihood with the exact determinant after tightening inversion finite-difference prediction solves. The maintained Galí hard-ELB validation package passes for the ROM1-residual/inversion/HMC pipeline on the locally identified two-parameter design; the full three-parameter direct-SEP HMC comparison remains a documented scaling target. The full 265-period SEP-sensitivity production run completed under `.local_artifacts/sep_sensitivity/full_265_20260521/`: all cells converge and tolerance is stable within each fixed `K`, while the `K=3` cells sit just above the original `1e-2` RMSE screen against the `K=5` reference.
 
 **Monte Carlo Coverage**: `scripts/monte_carlo_coverage.jl` demonstrates posterior coverage distortion empirically.
 

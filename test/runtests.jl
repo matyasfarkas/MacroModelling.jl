@@ -112,6 +112,30 @@ if test_set == "gali_direct_surrogate_validation_smoke"
     include("test_gali_direct_surrogate_validation_smoke.jl")
 end
 
+if test_set == "gali_elb_rom1_residual_validation"
+    include("test_gali_elb_rom1_residual_validation.jl")
+end
+
+if test_set == "gali_obc_stress_plot_smoke"
+    include("test_gali_obc_stress_plot_smoke.jl")
+end
+
+if test_set == "gali_obc_actual_floor_validation_smoke"
+    include("test_gali_obc_actual_floor_validation_smoke.jl")
+end
+
+if test_set == "gali_obc_actual_floor_inversion_validation_smoke"
+    include("test_gali_obc_actual_floor_inversion_validation_smoke.jl")
+end
+
+if test_set == "gali_obc_twoparam_inversion_validation_smoke"
+    include("test_gali_obc_twoparam_inversion_validation_smoke.jl")
+end
+
+if test_set == "gali_validation_package"
+    include("test_gali_validation_package.jl")
+end
+
 if test_set == "higher_order"
     plots = true
     test_higher_order = true

@@ -134,7 +134,7 @@
 \label{fig:sep_to_training}
 \begin{flushleft}
 \footnotesize
-\textbf{Notes}: Illustration of the dataset generation pipeline. For each parameter value $\theta^{(i)}$ in a Sobol-sequence grid, we simulate the model at $1{,}000$ randomly sampled state-shock pairs $(s_{-1}, \varepsilon)$. Each SEP solution produces a training pair $(x, y) = ((s_{-1}, \varepsilon, \theta), s_t)$. The complete dataset contains $\approx 5$ million input-output pairs, capturing the parameter-conditional transition map $g_\theta(s_{-1}, \varepsilon)$ across the prior support.
+\textbf{Notes}: Illustration of the dataset generation pipeline. For each parameter value $\theta^{(i)}$ in a Sobol-sequence grid, we simulate the model at randomly sampled state-shock pairs $(s_{-1}, \varepsilon)$. Each SEP solution is paired with the ROM1 prediction at the same input to produce a residual target $\Delta s_t = s_t^{\rm SEP} - s_t^{\rm ROM1}$. The complete dataset captures the parameter-conditional nonlinear correction across the prior support.
 \end{flushleft}
 \end{figure}
 
@@ -184,7 +184,7 @@
   $\mathbb{R}^{22}$
 };
 
-\node[below=1mm of output, font=\footnotesize] {$s_t$ (next state)};
+\node[below=1mm of output, font=\footnotesize] {$\Delta s_t$ (ROM1 residual)};
 
 % Connections
 \draw[arrow] (input) -- (hidden1) node[midway, above, font=\footnotesize] {$W_1 \in \mathbb{R}^{256 \times 29}$};
@@ -213,7 +213,7 @@
 \label{fig:mlp_architecture}
 \begin{flushleft}
 \footnotesize
-\textbf{Notes}: Schematic of the feedforward multilayer perceptron (MLP) used to approximate the SEP transition map. The network takes as input the previous state $s_{-1}$ (22 variables), current shock $\varepsilon$ (4 variables), and structural parameters $\theta$ (3 estimated parameters), for a total input dimension of 29. Two hidden layers with 256 and 128 neurons (tanh activation) provide nonlinear feature extraction. The output layer produces the next state $s_t$ (22 variables). All inputs and outputs are standardized to zero mean and unit variance during training.
+\textbf{Notes}: Schematic of the feedforward multilayer perceptron (MLP) used to approximate the SEP-minus-ROM1 residual. The network takes as input the previous state $s_{-1}$, current shock $\varepsilon$, and structural parameters $\theta$. Two hidden layers provide nonlinear feature extraction. The output layer produces the residual correction $\Delta s_t$ that is added back to the ROM1 prediction. All inputs and residual targets are standardized to zero mean and unit variance during training.
 \end{flushleft}
 \end{figure}
 

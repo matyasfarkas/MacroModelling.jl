@@ -18,7 +18,7 @@ workflow, start with `REPLICATION.md` at the repository root and
 - `scripts/decompose_ll_gap.jl` — extended-sample LL decomposition and linear+gate ablation.
 - `scripts/mode_sensitivity_report.jl` — chain-level mode sensitivity report.
 - `scripts/oos_forecast_evaluate.jl` and `scripts/oos_gate_recalibration.jl` — quiet-sample OOS and gate recalibration diagnostics.
-- `scripts/sep_sensitivity_study.jl` — bounded SEP tolerance/node sensitivity study.
+- `scripts/sep_sensitivity_study.jl` — SEP tolerance/node sensitivity study; the checked paper artifact is the bounded 40-period pilot, and the completed full 265-period rerun is documented in `docs/review/SEP_265_RUN_STATUS.md`.
 
 ## SEP / Dynare comparisons
 - `scripts/HLT_comparison.jl` — HLT IRF comparison (perturbation vs SEP).
@@ -26,6 +26,13 @@ workflow, start with `REPLICATION.md` at the repository root and
 - `scripts/rbcii_sep_simulation_comparison.jl` — SEP extended‑path simulation vs Dynare.
 - `scripts/rbcii_filter_diagnostic.jl` — KF vs inversion filter diagnostic on RBC‑II synthetic data.
 - `scripts/rbcii_surrogate_filter_diagnostic.jl` — RBC‑II surrogate diagnostic (KF vs inversion vs surrogate inversion).
+
+## Galí OBC validation
+- `scripts/gali_obc_stochastic_comparison_plot.jl` — corrected adverse `eps_z` same-shock OBC versus linear stress path.
+- `scripts/gali_obc_actual_floor_residual_grid_validation.jl` — one-parameter known-shock actual-floor residual-grid validation for `std_z`.
+- `scripts/gali_obc_actual_floor_inversion_grid_validation.jl` — one-parameter ROM1-inversion actual-floor residual-grid validation for `std_z`, with optional matched one-parameter HMC smoke via `--hmc-draws`.
+- `scripts/gali_obc_actual_floor_twoparam_inversion_grid_validation.jl` — two-parameter ROM1-inversion actual-floor residual-grid and matched HMC validation for `std_z` plus a configurable second shock scale; the clean current design uses `std_a` and post-ELB identification blocks.
+- `scripts/gali_validation_package.jl` — consolidated Galí hard-ELB validation package; audits the curated stress-path, residual-grid, inversion-grid, HMC, `std_nu` identification-probe, and direct-SEP smoke artifacts and writes a package-level report/manifest.
 
 ## Diagnostics
 - `scripts/diagnostics/HLT_sep_residual_audit.jl` — residual hotspot audit for SEP convergence.
