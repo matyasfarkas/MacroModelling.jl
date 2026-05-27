@@ -21,6 +21,7 @@ include(joinpath(@__DIR__, "..", "scripts", "hlt_surrogate", "parameter_config.j
 
     @testset "investment bridge parameter sets" begin
         @test get_parameter_names(:investment_4p) == [:crhob, :crhoqs, :z_eb, :z_eqs]
+        @test get_parameter_names(:investment_4p_supported) == [:crhob, :crhoqs, :z_eb, :z_eqs]
         @test get_parameter_names(:investment_curvature_5p) == [:csadjcost, :crhob, :crhoqs, :z_eb, :z_eqs]
 
         bounds = get_parameter_bounds(:investment_4p)
@@ -28,6 +29,12 @@ include(joinpath(@__DIR__, "..", "scripts", "hlt_surrogate", "parameter_config.j
         @test bounds[:crhoqs] == (0.60, 0.85)
         @test bounds[:z_eb][1] > 0.0
         @test bounds[:z_eqs][1] > 0.0
+
+        supported_bounds = get_parameter_bounds(:investment_4p_supported)
+        @test supported_bounds[:crhob] == bounds[:crhob]
+        @test supported_bounds[:crhoqs] == bounds[:crhoqs]
+        @test supported_bounds[:z_eqs] == bounds[:z_eqs]
+        @test supported_bounds[:z_eb] == (1.20, 1.85)
 
         baseline = get_phase1_18param_baseline()
         @test baseline[:csadjcost] == 6.0144

@@ -473,6 +473,48 @@ function get_investment_4p_specs()
 end
 
 """
+    get_investment_4p_supported_specs()
+
+Returns the reduced investment bridge block restricted to the finite direct-SEP
+support mapped by the 2026-05-27 bridge smoke runs. The only trimmed dimension
+is risk-premium shock volatility: the 3-point support map solved all tested
+cells at `z_eb <= 1.85` and failed all tested cells at `z_eb = 2.50`.
+"""
+function get_investment_4p_supported_specs()
+    specs = ParameterSpec[]
+
+    push!(specs, ParameterSpec(
+        :crhob, :Normal,
+        (μ=0.5799, σ=0.06),
+        (0.45, 0.75),
+        "Risk premium shock persistence"
+    ))
+
+    push!(specs, ParameterSpec(
+        :crhoqs, :Normal,
+        (μ=0.7165, σ=0.06),
+        (0.60, 0.85),
+        "Investment-specific shock persistence"
+    ))
+
+    push!(specs, ParameterSpec(
+        :z_eb, :Normal,
+        (μ=1.8513, σ=0.20),
+        (1.20, 1.85),
+        "Risk premium shock volatility, trimmed to mapped SEP support"
+    ))
+
+    push!(specs, ParameterSpec(
+        :z_eqs, :Normal,
+        (μ=0.6017, σ=0.12),
+        (0.35, 0.90),
+        "Investment-specific shock volatility"
+    ))
+
+    return specs
+end
+
+"""
     get_investment_curvature_5p_specs()
 
 Adds investment adjustment-cost curvature to the bridge block for stress tests.
@@ -505,6 +547,7 @@ Get parameter specifications for a given parameter set.
   - `:phase1_18params` - Phase 1: 18 parameters (wide priors for estimation)
   - `:phase1_18params_narrow` - Phase 1: 18 parameters (narrow priors for SEP dataset)
   - `:investment_4p` - Reduced investment/risk-premium bridge block
+  - `:investment_4p_supported` - Bridge block trimmed to mapped direct-SEP support
   - `:investment_curvature_5p` - Bridge block plus adjustment-cost curvature
 
 # Returns
@@ -525,10 +568,12 @@ function get_parameter_specs(set::Symbol)
         return get_phase1_18param_narrow_specs()
     elseif set == :investment_4p
         return get_investment_4p_specs()
+    elseif set == :investment_4p_supported
+        return get_investment_4p_supported_specs()
     elseif set == :investment_curvature_5p
         return get_investment_curvature_5p_specs()
     else
-        error("Unknown parameter set: $set. Valid options: :legacy_3params, :phase1_18params, :phase1_18params_narrow, :investment_4p, :investment_curvature_5p")
+        error("Unknown parameter set: $set. Valid options: :legacy_3params, :phase1_18params, :phase1_18params_narrow, :investment_4p, :investment_4p_supported, :investment_curvature_5p")
     end
 end
 

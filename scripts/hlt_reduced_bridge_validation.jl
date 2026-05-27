@@ -20,6 +20,7 @@ include(joinpath(@__DIR__, "hlt_surrogate", "hlt_model_loader_utils.jl"))
 
 const BRIDGE_PARAMETER_BLOCKS = Dict(
     "investment_4p" => ["crhob", "crhoqs", "z_eb", "z_eqs"],
+    "investment_4p_supported" => ["crhob", "crhoqs", "z_eb", "z_eqs"],
     "investment_curvature_5p" => ["csadjcost", "crhob", "crhoqs", "z_eb", "z_eqs"],
     "price_legacy_3p" => ["cprobp", "cindp", "curvp"],
 )

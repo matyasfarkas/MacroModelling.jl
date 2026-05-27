@@ -108,6 +108,25 @@ direct NUTS run before finite objective support is proven.
   confirms that failures are concentrated at the high `z_eb=2.5` edge, while
   the tested `crhob`, `crhoqs`, and `z_eqs` ranges remain represented among
   successful cells.
+- Completed the 3-point support map: 54 of 81 cells solved, all finite residuals
+  among successful cells, median residual `3.450e-9`, maximum residual
+  `9.771e-6`. The map confirms the support boundary: all cells with
+  `z_eb=1.20` or `1.85` solved; all cells with `z_eb=2.50` failed at period 1.
+- Trained a bridge-specific ROM1-residual obs-only surrogate on the 54-sample
+  3-point feasible grid. The validation RMSE improves on the ROM1 baseline in
+  all seven output dimensions by roughly 34--43 percent. This is a meaningful
+  reduced-support training smoke, but it is still too small to be the final
+  posterior-validation artifact.
+- Added `investment_4p_supported`, which keeps the same four bridge parameters
+  but trims `z_eb` to `[1.20, 1.85]`, the mapped direct-SEP support from the
+  3-point run.
+- Re-ran the reduced bridge test suite after adding the supported block:
+  `26/26` tests passed.
+- Launched the first finite-support expansion run over
+  `investment_4p_supported`, using a 4-point grid, one period, one sample per
+  theta, ROM1 residual outputs, and the same SEP smoke settings. Its artifact
+  directory is
+  `.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/`.
 - Next bridge step: expand the support adaptively around the posterior-relevant
   region, then run a local direct/surrogate/ROM1 posterior grid comparison.
 

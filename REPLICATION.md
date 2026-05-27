@@ -293,7 +293,9 @@ The executable test path is gated behind
 `RUN_HLT_BRIDGE_EXEC_SMOKE=1 julia --project=. test/test_hlt_reduced_bridge_validation.jl`.
 The same reduced block is available to dataset-generation and estimation
 scripts as `--param-set=investment_4p`; the curvature stress block is
-`--param-set=investment_curvature_5p`.
+`--param-set=investment_curvature_5p`. After support mapping, the finite-support
+bridge block is available as `--param-set=investment_4p_supported`, which keeps
+the same four parameters but trims `z_eb` to `[1.20, 1.85]`.
 
 Tiny bridge dataset smoke:
 
@@ -360,6 +362,28 @@ Summarize the numerical support map:
 ```bash
 julia --project=. scripts/hlt_bridge_support_report.jl \
   .local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid2/hlt_sep_surrogate_dataset.jls
+```
+
+Finite-support bridge run after trimming:
+
+```bash
+julia --project=. scripts/hlt_sep_surrogate_dataset_generate.jl \
+  --param-set=investment_4p_supported \
+  --theta-sampling=grid \
+  --grid=4 \
+  --samples-per-theta=1 \
+  --burn-in=1 \
+  --sample-length=1 \
+  --sample-start=47 \
+  --rom-orders=1 \
+  --sep-horizon=2 \
+  --sep-maxit=30 \
+  --sep-accept-tol=1e-2 \
+  --shock-scale=0.05 \
+  --use-obc \
+  --theta-attempts-per-theta=2 \
+  --retry-on-early-failure=true \
+  --output-dir=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4
 ```
 
 ## Artifact Map
