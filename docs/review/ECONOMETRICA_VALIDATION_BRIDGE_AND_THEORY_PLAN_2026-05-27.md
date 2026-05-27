@@ -92,8 +92,19 @@ direct NUTS run before finite objective support is proven.
 - Verified the next smoke hop by training a tiny ROM1-residual obs-only bridge
   surrogate on that dataset. This is a metadata/pipeline check, not an accuracy
   result because the dataset has one sample.
-- Next bridge step: expand the direct grid and train a bridge-specific
-  ROM1-residual surrogate over the reduced investment block.
+- Ran the next deterministic support check on a 2-point-per-axis
+  `investment_4p` grid. The run generated finite SEP residuals for 8 of 16
+  grid cells, with median residual `2.243e-8` and maximum residual `8.87e-7`.
+  The failing cells are the high-stress corners, so the bridge should proceed
+  with an adaptive or trimmed support rather than treating the full rectangle
+  as numerically feasible.
+- Trained a bridge-specific ROM1-residual obs-only surrogate on the feasible
+  8-sample grid payload. This confirms the training path and residual target
+  work on the current HLT bridge data. It is still only a smoke result: the
+  validation RMSE improves on the ROM baseline in all seven reported output
+  dimensions, but the dataset is too small for an accuracy claim.
+- Next bridge step: expand the support adaptively around the posterior-relevant
+  region, then run a local direct/surrogate/ROM1 posterior grid comparison.
 
 ## Theory Cleanup
 

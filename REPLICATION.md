@@ -328,6 +328,33 @@ julia --project=. scripts/hlt_sep_surrogate_train.jl \
   --out=.local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid_smoke/hlt_sep_surrogate_trained_smoke.jls
 ```
 
+Bridge support expansion smoke:
+
+```bash
+julia --project=. scripts/hlt_sep_surrogate_dataset_generate.jl \
+  --param-set=investment_4p \
+  --theta-sampling=grid \
+  --grid=2 \
+  --samples-per-theta=1 \
+  --burn-in=1 \
+  --sample-length=1 \
+  --sample-start=47 \
+  --rom-orders=1 \
+  --sep-horizon=2 \
+  --sep-maxit=30 \
+  --sep-accept-tol=1e-2 \
+  --shock-scale=0.05 \
+  --use-obc \
+  --theta-attempts-per-theta=2 \
+  --retry-on-early-failure=true \
+  --output-dir=.local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid2
+```
+
+The 2026-05-27 run produced finite SEP residuals for 8 of 16 grid cells
+(median `2.243e-8`, maximum `8.87e-7`). Treat this as a support-mapping check:
+the full rectangular bridge support includes high-stress corners that should be
+trimmed or reached by adaptive continuation before any posterior comparison.
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |

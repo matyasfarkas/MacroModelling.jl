@@ -1695,12 +1695,26 @@ The quantitatively meaningful comparison for likelihood-based inference is the p
 \section{Identification and Approximation Error}
 \label{sec:identification}
 
-The surrogate introduces a bias into the log-likelihood. Let $\ell(\theta) = \sum_t \log p(y_t \mid s_t^{\text{FOM}})$ be the true nonlinear log-likelihood and $\hat{\ell}(\theta) = \sum_t \log p(y_t \mid s_t^{\text{surr}})$ be the surrogate approximation. The per-period error is bounded by
+The surrogate perturbs the log-likelihood. Let $\ell(\theta) = \sum_t \log p(y_t \mid s_t^{\text{FOM}})$ be the true nonlinear log-likelihood and $\hat{\ell}(\theta) = \sum_t \log p(y_t \mid s_t^{\text{surr}})$ be the surrogate approximation. With Gaussian measurement error, define the observation error $e_t(\theta) = H(s_t^{\text{FOM}} - s_t^{\text{surr}})$ and the midpoint residual $r_t(\theta) = y_t - H(s_t^{\text{FOM}} + s_t^{\text{surr}})/2$. The exact per-period identity is $\ell_t-\hat\ell_t = r_t'\Sigmay^{-1}e_t$. Therefore the deterministic pathwise perturbation is first order in the approximation error:
 \begin{equation}
-|\ell_t - \hat{\ell}_t| \leq \frac{\|H\|^2}{2\sigma_{\min}^2(\Sigmay)} \|s_t^{\text{FOM}} - s_t^{\text{surr}}\|^2,
+|\ell_t - \hat{\ell}_t|
+\leq
+\frac{\|r_t(\theta)\|\,\|H\|_{\mathrm{op}}}{\lambda_{\min}(\Sigmay)}
+\|s_t^{\text{FOM}} - s_t^{\text{surr}}\|,
 \label{eq:ll_bias_bound}
 \end{equation}
-where $H$ is the observation matrix and $\sigma_{\min}^2(\Sigmay)$ is the smallest measurement error variance. The realized gap at posterior means is 18 nats ($-1{,}045$ vs.\ $-1{,}027$); the detailed numerical evaluation is in Remark~\ref{rem:numerical_bound}.
+Here, $H$ maps states to observables. The scalar $\lambda_{\min}(\Sigmay)$ denotes the minimum eigenvalue of $\Sigmay$. Under independent measurement error and the orthogonality condition
+\[
+E\left[\eta_t'\Sigmay^{-1}e_t(\theta)\right]=0,
+\]
+the expected surrogate-induced bias is second order in mean-square error,
+\[
+\left|E_{\theta_0}\left[\ell_t-\hat\ell_t\right]\right|
+\leq
+\frac{1}{2\lambda_{\min}(\Sigmay)}
+E_{\theta_0}\left[\|e_t(\theta)\|^2\right],
+\]
+as formalized in Proposition~\ref{prop:ll_bias_bound}. The realized gap at posterior means is 18 nats ($-1{,}045$ vs.\ $-1{,}027$); the detailed numerical evaluation is in Remark~\ref{rem:numerical_bound}.
 
 The 18-nat gap reflects multiple sources: surrogate approximation error, the profiled inversion objective, and genuine nonlinear effects. A direct SEP comparison at twenty subsampled posterior draws indicates that nonlinear effects are substantial: the per-variable RMSE between ROM1 and SEP predictions at data-consistent shock sequences averages 1.04 across the seven observables, with labor (3.07), investment (1.03), and the interest rate (0.86) showing the largest gaps. Relative to the inflated observation standard errors, the ROM1--SEP gap exceeds $3\sigma_y$ for labor and the interest rate, supporting the view that the nonlinear correction is economically material at these posterior parameter values. The direction of the 18-nat baseline gap---the nonlinear objective is lower---is consistent with the surrogate slightly overfitting to training-set parameter regions, the inversion objective differing from the exact likelihood, or the surrogate underperforming at the posterior mode.
 
