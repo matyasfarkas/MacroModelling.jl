@@ -476,18 +476,21 @@ if resume
 else
     mkpath(output_dir)
     if theta_sampling == :grid
-        # Grid sampling (legacy mode, only for 3 parameters)
-        if param_set != :legacy_3params
-            error("Grid sampling (--theta-sampling=grid) only supported for --param-set=legacy_3params")
-        end
-        # Julia's range(start, stop, length=1) requires identical endpoints.
-        # For a 1-point probe grid, use the interval midpoint for each parameter.
+        # Grid sampling. Legacy 3-parameter mode keeps the historical CLI
+        # bounds; all configured multi-parameter sets use parameter_config.jl.
         grid_axis(minv, maxv, n) = n == 1 ? [0.5 * (minv + maxv)] : collect(range(minv, maxv, length = n))
-        cprobp_grid = grid_axis(cprobp_min, cprobp_max, grid_points)
-        cindp_grid = grid_axis(cindp_min, cindp_max, grid_points)
-        curvp_grid = grid_axis(curvp_min, curvp_max, grid_points)
-        for cprobp in cprobp_grid, cindp in cindp_grid, curvp in curvp_grid
-            push!(theta_grid, [cprobp, cindp, curvp])
+        if param_set == :legacy_3params
+            cprobp_grid = grid_axis(cprobp_min, cprobp_max, grid_points)
+            cindp_grid = grid_axis(cindp_min, cindp_max, grid_points)
+            curvp_grid = grid_axis(curvp_min, curvp_max, grid_points)
+            for cprobp in cprobp_grid, cindp in cindp_grid, curvp in curvp_grid
+                push!(theta_grid, [cprobp, cindp, curvp])
+            end
+        else
+            axes = [grid_axis(param_bounds_dict[name]..., grid_points) for name in theta_names]
+            for tup in Iterators.product(axes...)
+                push!(theta_grid, Float64[x for x in tup])
+            end
         end
 
     elseif theta_sampling == :lhs

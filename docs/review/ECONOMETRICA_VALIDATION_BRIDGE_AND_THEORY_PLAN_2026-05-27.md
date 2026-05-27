@@ -85,6 +85,10 @@ direct NUTS run before finite objective support is proven.
 - Verified the minimal finite-support smoke on 2026-05-27 with one period, one
   grid cell, and observables `dy,dinve,robs`: ROM1/inversion log likelihood
   `-3.459`, direct SEP/inversion log likelihood `-2.793`, status `pass`.
+- Generalized deterministic grid sampling in
+  `hlt_sep_surrogate_dataset_generate.jl` to configured multi-parameter sets and
+  verified a one-theta `investment_4p` dataset smoke. The resulting single
+  sample had finite SEP residual `4.411e-7`.
 - Next bridge step: expand the direct grid and train a bridge-specific
   ROM1-residual surrogate over the reduced investment block.
 
