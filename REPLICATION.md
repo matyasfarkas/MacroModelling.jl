@@ -355,6 +355,13 @@ The 2026-05-27 run produced finite SEP residuals for 8 of 16 grid cells
 the full rectangular bridge support includes high-stress corners that should be
 trimmed or reached by adaptive continuation before any posterior comparison.
 
+Summarize the numerical support map:
+
+```bash
+julia --project=. scripts/hlt_bridge_support_report.jl \
+  .local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid2/hlt_sep_surrogate_dataset.jls
+```
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |
@@ -362,6 +369,7 @@ trimmed or reached by adaptive continuation before any posterior comparison.
 | Paper build | `docs/SurrogateNN_paper/compile.sh` | `docs/SurrogateNN_paper/` |
 | Surrogate dataset | `scripts/hlt_sep_surrogate_dataset_generate.jl` | `data/` or `--output-dir` |
 | Surrogate training | `scripts/hlt_sep_surrogate_train.jl` | `--out` path |
+| HLT bridge support report | `scripts/hlt_bridge_support_report.jl` | beside input dataset |
 | Linear HMC | `scripts/run_linear_hmc_advancedhmc.jl` | `--out` path |
 | Surrogate HMC | `scripts/run_surrogate_hmc_advancedhmc.jl` | `--out` path |
 | LL decomposition | `scripts/decompose_ll_gap.jl` | `.local_artifacts/ll_decomposition/` |

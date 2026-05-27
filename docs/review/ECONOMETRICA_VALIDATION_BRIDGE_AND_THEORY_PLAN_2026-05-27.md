@@ -103,6 +103,11 @@ direct NUTS run before finite objective support is proven.
   work on the current HLT bridge data. It is still only a smoke result: the
   validation RMSE improves on the ROM baseline in all seven reported output
   dimensions, but the dataset is too small for an accuracy claim.
+- Added `scripts/hlt_bridge_support_report.jl` to convert dataset metadata into
+  a reproducible finite-support report. On the 2-point grid, the support report
+  confirms that failures are concentrated at the high `z_eb=2.5` edge, while
+  the tested `crhob`, `crhoqs`, and `z_eqs` ranges remain represented among
+  successful cells.
 - Next bridge step: expand the support adaptively around the posterior-relevant
   region, then run a local direct/surrogate/ROM1 posterior grid comparison.
 
