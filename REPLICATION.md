@@ -259,6 +259,23 @@ This is a provenance smoke test, not a submission-grade posterior comparison.
 It verifies that the direct SEP inversion likelihood now returns a finite
 exact-determinant value under the bounded HLT three-parameter harness.
 
+### 11. Reduced HLT Validation Bridge
+
+Econometrica development starts from a reduced SW07-HLT investment-block bridge:
+
+```bash
+julia --project=. scripts/hlt_reduced_bridge_validation.jl \
+  --stage=design \
+  --dry-run=true \
+  --run-id=econometrica_bridge_design
+```
+
+The default bridge block is `crhob`, `crhoqs`, `z_eb`, and `z_eqs`, with
+observables `dyobs`, `dinveobs`, `labobs`, `pinfobs`, and `robs`. This scaffold
+does not yet launch direct SEP evaluations; it writes the manifest and
+acceptance gates for the medium-scale benchmark that should bridge the Galí
+hard-ELB package and the full 18-parameter HLT application.
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |
@@ -275,6 +292,7 @@ exact-determinant value under the bounded HLT three-parameter harness.
 | SEP sensitivity | `scripts/sep_sensitivity_study.jl` | `.local_artifacts/sep_sensitivity/` |
 | Galí hard-ELB validation package | `scripts/gali_validation_package.jl` | `.local_artifacts/gali_validation_package/` |
 | Direct SEP smoke | `scripts/hlt_direct_sep_surrogate_posterior_validation.jl` | `.local_artifacts/hlt_direct_sep_surrogate_validation/` |
+| Reduced HLT validation bridge | `scripts/hlt_reduced_bridge_validation.jl` | `.local_artifacts/hlt_reduced_bridge_validation/` |
 
 ## Known Heavy-Run Caveats
 

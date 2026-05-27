@@ -108,6 +108,10 @@ if test_set == "hlt_acceptance_smoke"
     include("test_hlt_acceptance_smoke.jl")
 end
 
+if test_set == "hlt_reduced_bridge_validation"
+    include("test_hlt_reduced_bridge_validation.jl")
+end
+
 if test_set == "gali_direct_surrogate_validation_smoke"
     include("test_gali_direct_surrogate_validation_smoke.jl")
 end

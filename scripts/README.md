@@ -15,6 +15,7 @@ workflow, start with `REPLICATION.md` at the repository root and
 - `scripts/hlt_sep_surrogate_validate_hlt3.jl` — reproducible HLT 3-parameter smoke/benchmark harness (writes run manifest + summary).
 - `scripts/hlt_sep_surrogate_fom_benchmark.jl` — direct-SEP FOM benchmark utility for chain/synthetic outputs (records failures if direct FOM eval is unavailable).
 - `scripts/hlt_direct_sep_surrogate_posterior_validation.jl` — bounded HLT direct-SEP/MH smoke against the surrogate validation bundle.
+- `scripts/hlt_reduced_bridge_validation.jl` — Econometrica validation-bridge scaffold for a reduced SW07-HLT investment block, intended to bridge the Galí package and the full HLT application.
 - `scripts/decompose_ll_gap.jl` — extended-sample LL decomposition and linear+gate ablation.
 - `scripts/mode_sensitivity_report.jl` — chain-level mode sensitivity report.
 - `scripts/oos_forecast_evaluate.jl` and `scripts/oos_gate_recalibration.jl` — quiet-sample OOS and gate recalibration diagnostics.
