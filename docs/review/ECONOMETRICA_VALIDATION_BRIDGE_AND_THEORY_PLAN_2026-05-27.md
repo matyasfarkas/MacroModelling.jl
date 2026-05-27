@@ -127,6 +127,12 @@ direct NUTS run before finite objective support is proven.
   theta, ROM1 residual outputs, and the same SEP smoke settings. Its artifact
   directory is
   `.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/`.
+- Completed that finite-support expansion run: all 256 cells solved, with
+  finite SEP residuals in every cell. The residual min/median/max were
+  `2.384e-12 / 1.517e-9 / 9.745e-6`.
+- Trained the obs-only ROM1-residual surrogate on the 256-cell supported grid.
+  Validation RMSE improved relative to ROM1 in all seven output dimensions by
+  roughly 89--93 percent.
 - Next bridge step: expand the support adaptively around the posterior-relevant
   region, then run a local direct/surrogate/ROM1 posterior grid comparison.
 

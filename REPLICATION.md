@@ -386,6 +386,13 @@ julia --project=. scripts/hlt_sep_surrogate_dataset_generate.jl \
   --output-dir=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4
 ```
 
+The 2026-05-27 finite-support run over
+`.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/`
+solved all 256 grid cells. SEP residuals were finite in all cells, with
+min/median/max `2.384e-12 / 1.517e-9 / 9.745e-6`. The corresponding obs-only
+ROM1-residual surrogate training smoke improved validation RMSE relative to
+ROM1 in all seven output dimensions by roughly 89--93 percent.
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |
