@@ -133,8 +133,19 @@ direct NUTS run before finite objective support is proven.
 - Trained the obs-only ROM1-residual surrogate on the 256-cell supported grid.
   Validation RMSE improved relative to ROM1 in all seven output dimensions by
   roughly 89--93 percent.
-- Next bridge step: expand the support adaptively around the posterior-relevant
-  region, then run a local direct/surrogate/ROM1 posterior grid comparison.
+- Added and ran `scripts/hlt_bridge_posterior_grid_compare.jl`, a one-period
+  known-feature posterior-grid comparison over the finite HLT bridge support.
+  In the noisy comparison with `obs-sigma-scale=1.0` and
+  `dgp-noise-scale=0.25`, the truth point is held out by the surrogate training
+  split, surrogate posterior intervals overlap direct SEP for all four bridge
+  parameters, and ROM1 intervals also overlap only under this looser noise
+  calibration.
+- The same comparison strongly favors the surrogate over ROM1 as a likelihood
+  surface approximation: prediction RMSE against direct SEP falls from `0.1427`
+  to `0.00564`, and log-posterior surface RMSE falls from `86.48` to `0.36`.
+- Next bridge step: move from known-feature one-period posterior grids to an
+  inversion-filter bridge comparison over a short multi-period synthetic HLT
+  panel.
 
 ## Theory Cleanup
 

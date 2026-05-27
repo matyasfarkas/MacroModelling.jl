@@ -393,6 +393,26 @@ min/median/max `2.384e-12 / 1.517e-9 / 9.745e-6`. The corresponding obs-only
 ROM1-residual surrogate training smoke improved validation RMSE relative to
 ROM1 in all seven output dimensions by roughly 89--93 percent.
 
+One-period posterior-grid comparison on the supported bridge:
+
+```bash
+julia --project=. scripts/hlt_bridge_posterior_grid_compare.jl \
+  --dataset=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/hlt_sep_surrogate_dataset.jls \
+  --surrogate=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/hlt_sep_surrogate_trained_supported_grid4.jls \
+  --out-dir=.local_artifacts/hlt_reduced_bridge_validation/posterior_grid_compare_supported_grid4_sigma100_noise025_20260527 \
+  --param-set=investment_4p_supported \
+  --truth-mode=validation-nearest-center \
+  --obs-sigma-scale=1.0 \
+  --dgp-noise-scale=0.25
+```
+
+The noisy 2026-05-27 comparison passes: the held-out truth point is in the
+validation split, the surrogate posterior intervals overlap direct SEP for all
+four bridge parameters, prediction RMSE falls from `0.1427` under ROM1 to
+`0.00564` under the surrogate, and log-posterior surface RMSE falls from
+`86.48` under ROM1 to `0.36` under the surrogate. This is a finite-support
+known-feature grid comparison, not yet the full inversion-filter HMC bridge.
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |
@@ -401,6 +421,7 @@ ROM1 in all seven output dimensions by roughly 89--93 percent.
 | Surrogate dataset | `scripts/hlt_sep_surrogate_dataset_generate.jl` | `data/` or `--output-dir` |
 | Surrogate training | `scripts/hlt_sep_surrogate_train.jl` | `--out` path |
 | HLT bridge support report | `scripts/hlt_bridge_support_report.jl` | beside input dataset |
+| HLT bridge posterior grid | `scripts/hlt_bridge_posterior_grid_compare.jl` | `--out-dir` |
 | Linear HMC | `scripts/run_linear_hmc_advancedhmc.jl` | `--out` path |
 | Surrogate HMC | `scripts/run_surrogate_hmc_advancedhmc.jl` | `--out` path |
 | LL decomposition | `scripts/decompose_ll_gap.jl` | `.local_artifacts/ll_decomposition/` |
