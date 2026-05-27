@@ -143,9 +143,16 @@ direct NUTS run before finite objective support is proven.
 - The same comparison strongly favors the surrogate over ROM1 as a likelihood
   surface approximation: prediction RMSE against direct SEP falls from `0.1427`
   to `0.00564`, and log-posterior surface RMSE falls from `86.48` to `0.36`.
-- Next bridge step: move from known-feature one-period posterior grids to an
-  inversion-filter bridge comparison over a short multi-period synthetic HLT
-  panel.
+- Added `scripts/hlt_bridge_robustness_sweep.jl` to run a supported-grid
+  robustness pipeline end-to-end: dataset generation, support report, obs-only
+  ROM1-residual training, and posterior-grid comparison. A grid-5 supported
+  sweep was launched as a non-blocking robustness run; the paper claim remains
+  anchored to the completed 256-cell grid.
+- Added `scripts/hlt_bridge_inversion_filter_compare.jl`, the scaffold for the
+  next bridge step. The current dry-run verifies dataset/surrogate
+  compatibility, held-out truth selection, observation scaling, and artifact
+  schema for a short multi-period inversion-filter bridge. The executable
+  direct multi-period inversion evaluator is the next coding task.
 
 ## Theory Cleanup
 

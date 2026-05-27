@@ -413,6 +413,47 @@ four bridge parameters, prediction RMSE falls from `0.1427` under ROM1 to
 `86.48` under ROM1 to `0.36` under the surrogate. This is a finite-support
 known-feature grid comparison, not yet the full inversion-filter HMC bridge.
 
+Longer supported-grid robustness sweep:
+
+```bash
+julia --project=. scripts/hlt_bridge_robustness_sweep.jl \
+  --stage=full \
+  --run-id=investment4p_supported_grid5_full_sweep_20260527 \
+  --param-set=investment_4p_supported \
+  --grid=5 \
+  --epochs=500 \
+  --obs-sigma-scale=1.0 \
+  --dgp-noise-scale=0.25
+```
+
+The sweep wrapper runs dataset generation, support reporting, obs-only
+ROM1-residual training, and the posterior-grid comparison in sequence. It can
+also be launched with `--stage=postprocess --dataset-dir=<existing dataset dir>`
+to wait for an already-running dataset generator before training and comparing.
+This robustness sweep is non-blocking; the paper's locked-in claim rests on the
+completed 256-cell grid.
+
+Multi-period inversion bridge design scaffold:
+
+```bash
+julia --project=. scripts/hlt_bridge_inversion_filter_compare.jl \
+  --dataset=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/hlt_sep_surrogate_dataset.jls \
+  --surrogate=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid4_20260527/hlt_sep_surrogate_trained_supported_grid4.jls \
+  --out-dir=.local_artifacts/hlt_reduced_bridge_validation/inversion_bridge_grid4_design_20260527 \
+  --param-set=investment_4p_supported \
+  --periods=8 \
+  --direct-eval-points=25 \
+  --sep-horizon=4 \
+  --sep-maxit=80 \
+  --dry-run=true
+```
+
+This scaffold freezes the next validation step: a short multi-period
+inversion-filter bridge using a held-out validation truth point. The current
+mode verifies dataset/surrogate compatibility, split provenance, observation
+scaling, and artifact schema; it does not yet execute the direct multi-period
+inversion evaluator.
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |
@@ -422,6 +463,8 @@ known-feature grid comparison, not yet the full inversion-filter HMC bridge.
 | Surrogate training | `scripts/hlt_sep_surrogate_train.jl` | `--out` path |
 | HLT bridge support report | `scripts/hlt_bridge_support_report.jl` | beside input dataset |
 | HLT bridge posterior grid | `scripts/hlt_bridge_posterior_grid_compare.jl` | `--out-dir` |
+| HLT bridge robustness sweep | `scripts/hlt_bridge_robustness_sweep.jl` | `.local_artifacts/hlt_reduced_bridge_validation/` |
+| HLT multi-period inversion bridge | `scripts/hlt_bridge_inversion_filter_compare.jl` | `--out-dir` |
 | Linear HMC | `scripts/run_linear_hmc_advancedhmc.jl` | `--out` path |
 | Surrogate HMC | `scripts/run_surrogate_hmc_advancedhmc.jl` | `--out` path |
 | LL decomposition | `scripts/decompose_ll_gap.jl` | `.local_artifacts/ll_decomposition/` |
