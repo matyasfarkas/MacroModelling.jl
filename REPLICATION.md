@@ -315,6 +315,19 @@ julia --project=. scripts/hlt_sep_surrogate_dataset_generate.jl \
   --output-dir=.local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid_smoke
 ```
 
+Tiny bridge training smoke:
+
+```bash
+julia --project=. scripts/hlt_sep_surrogate_train.jl \
+  .local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid_smoke/hlt_sep_surrogate_dataset.jls \
+  --rom-residual=1 \
+  --obs-only \
+  --epochs=3 \
+  --hidden=16 \
+  --hidden2=8 \
+  --out=.local_artifacts/hlt_reduced_bridge_validation/investment4p_dataset_grid_smoke/hlt_sep_surrogate_trained_smoke.jls
+```
+
 ## Artifact Map
 
 | Result class | Script | Default artifact directory |

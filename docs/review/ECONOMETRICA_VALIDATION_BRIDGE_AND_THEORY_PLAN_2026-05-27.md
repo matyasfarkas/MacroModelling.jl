@@ -89,6 +89,9 @@ direct NUTS run before finite objective support is proven.
   `hlt_sep_surrogate_dataset_generate.jl` to configured multi-parameter sets and
   verified a one-theta `investment_4p` dataset smoke. The resulting single
   sample had finite SEP residual `4.411e-7`.
+- Verified the next smoke hop by training a tiny ROM1-residual obs-only bridge
+  surrogate on that dataset. This is a metadata/pipeline check, not an accuracy
+  result because the dataset has one sample.
 - Next bridge step: expand the direct grid and train a bridge-specific
   ROM1-residual surrogate over the reduced investment block.
 
