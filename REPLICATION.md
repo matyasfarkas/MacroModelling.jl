@@ -270,11 +270,27 @@ julia --project=. scripts/hlt_reduced_bridge_validation.jl \
   --run-id=econometrica_bridge_design
 ```
 
+Executable finite-support smoke:
+
+```bash
+julia --project=. scripts/hlt_reduced_bridge_validation.jl \
+  --stage=smoke \
+  --run-id=econometrica_bridge_smoke \
+  --periods=1 \
+  --grid-axis=1 \
+  --direct-eval-points=1 \
+  --sep-horizon=2 \
+  --sep-maxit=20 \
+  --observables=dy,dinve,robs
+```
+
 The default bridge block is `crhob`, `crhoqs`, `z_eb`, and `z_eqs`, with
-observables `dyobs`, `dinveobs`, `labobs`, `pinfobs`, and `robs`. This scaffold
-does not yet launch direct SEP evaluations; it writes the manifest and
-acceptance gates for the medium-scale benchmark that should bridge the Galí
-hard-ELB package and the full 18-parameter HLT application.
+observables `dy`, `dinve`, `labobs`, `pinfobs`, and `robs`. The design stage
+writes the manifest and acceptance gates. The smoke stage builds a tiny
+steady-state HLT panel and evaluates ROM1/inversion plus direct SEP/inversion
+on a local grid before any surrogate training or HMC bridge run is launched.
+The executable test path is gated behind
+`RUN_HLT_BRIDGE_EXEC_SMOKE=1 julia --project=. test/test_hlt_reduced_bridge_validation.jl`.
 
 ## Artifact Map
 

@@ -3,7 +3,7 @@ using TOML
 
 include(joinpath(@__DIR__, "..", "scripts", "hlt_reduced_bridge_validation.jl"))
 
-@testset "HLT reduced validation bridge scaffold" begin
+@testset "HLT reduced validation bridge" begin
     @testset "argument parsing and defaults" begin
         opts = parse_bridge_args(["--stage=design", "--dry-run", "--parameter-block=investment_4p"])
         cfg = apply_overrides(stage_defaults(opts.stage), opts)
@@ -27,7 +27,7 @@ include(joinpath(@__DIR__, "..", "scripts", "hlt_reduced_bridge_validation.jl"))
             "--run-id=test_bridge",
             "--periods=8",
             "--grid-axis=2",
-            "--observables=dyobs,dinveobs,robs",
+            "--observables=dy,dinve,robs",
         ])
         manifest = run_bridge(opts)
         run_dir = joinpath(out_dir, "test_bridge")
@@ -39,7 +39,30 @@ include(joinpath(@__DIR__, "..", "scripts", "hlt_reduced_bridge_validation.jl"))
         @test isfile(manifest_path)
         @test isfile(summary_path)
         @test disk["grid_points"] == 16
-        @test disk["observables"] == ["dyobs", "dinveobs", "robs"]
+        @test disk["observables"] == ["dy", "dinve", "robs"]
         @test occursin("Reduced SW07-HLT Validation Bridge", read(summary_path, String))
+    end
+
+    if get(ENV, "RUN_HLT_BRIDGE_EXEC_SMOKE", "0") == "1"
+        @testset "executable smoke stage" begin
+            out_dir = mktempdir()
+            opts = parse_bridge_args([
+                "--stage=smoke",
+                "--out-dir=$out_dir",
+                "--run-id=test_bridge_exec_smoke",
+                "--periods=1",
+                "--grid-axis=1",
+                "--direct-eval-points=1",
+                "--sep-horizon=2",
+                "--sep-maxit=20",
+                "--observables=dy,dinve,robs",
+            ])
+            manifest = run_bridge(opts)
+            run_dir = joinpath(out_dir, "test_bridge_exec_smoke")
+            @test manifest["smoke_linear_ok_count"] == 1
+            @test haskey(manifest, "smoke_direct_ok_count")
+            @test isfile(joinpath(run_dir, "direct_grid_payload.jls"))
+            @test isfile(joinpath(run_dir, "comparison_table.tex"))
+        end
     end
 end

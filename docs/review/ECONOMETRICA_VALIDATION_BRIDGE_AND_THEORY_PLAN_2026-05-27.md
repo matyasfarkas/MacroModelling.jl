@@ -35,7 +35,7 @@ Optional stress block:
 
 Default observables:
 
-- `dyobs`, `dinveobs`, `labobs`, `pinfobs`, `robs`
+- `dy`, `dinve`, `labobs`, `pinfobs`, `robs`
 
 The bridge should compare three objects on identical synthetic data and priors:
 
@@ -65,13 +65,25 @@ direct NUTS run before finite objective support is proven.
 
 1. Freeze the bridge design manifest with
    `scripts/hlt_reduced_bridge_validation.jl --stage=design`.
-2. Wire `--stage=smoke` to reuse current HLT quick-smoke artifacts and evaluate
-   finite direct SEP predictions over a tiny local grid.
+2. Wire `--stage=smoke` to build a tiny steady-state HLT panel and evaluate
+   finite ROM1/inversion and direct SEP/inversion likelihoods over a tiny local
+   grid.
 3. Add the reduced investment block to the HLT synthetic-estimation prior logic.
 4. Train a bridge residual surrogate over the reduced block, not the full
    18-parameter Sobol space.
 5. Produce a local direct/surrogate/ROM1 posterior grid table and contour plot.
 6. Only after the grid passes, launch a short matched HMC check.
+
+## Current Status
+
+- Implemented the executable bridge smoke stage.
+- Corrected the bridge observables to the maintained HLT model names:
+  `dy`, `dinve`, `labobs`, `pinfobs`, and `robs`.
+- Verified the minimal finite-support smoke on 2026-05-27 with one period, one
+  grid cell, and observables `dy,dinve,robs`: ROM1/inversion log likelihood
+  `-3.459`, direct SEP/inversion log likelihood `-2.793`, status `pass`.
+- Next bridge step: expand the direct grid and train a bridge-specific
+  ROM1-residual surrogate over the reduced investment block.
 
 ## Theory Cleanup
 
