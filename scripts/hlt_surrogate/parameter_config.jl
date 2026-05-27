@@ -428,6 +428,69 @@ function get_legacy_3param_specs()
 end
 
 # ============================================================================
+# Econometrica Bridge: Reduced Investment Block
+# ============================================================================
+
+"""
+    get_investment_4p_specs()
+
+Returns the reduced SW07-HLT investment-channel bridge block used for the
+medium-scale direct SEP validation between the Galí package and the full
+18-parameter HLT application.
+"""
+function get_investment_4p_specs()
+    specs = ParameterSpec[]
+
+    push!(specs, ParameterSpec(
+        :crhob, :Normal,
+        (μ=0.5799, σ=0.06),
+        (0.45, 0.75),
+        "Risk premium shock persistence"
+    ))
+
+    push!(specs, ParameterSpec(
+        :crhoqs, :Normal,
+        (μ=0.7165, σ=0.06),
+        (0.60, 0.85),
+        "Investment-specific shock persistence"
+    ))
+
+    push!(specs, ParameterSpec(
+        :z_eb, :Normal,
+        (μ=1.8513, σ=0.25),
+        (1.20, 2.50),
+        "Risk premium shock volatility"
+    ))
+
+    push!(specs, ParameterSpec(
+        :z_eqs, :Normal,
+        (μ=0.6017, σ=0.12),
+        (0.35, 0.90),
+        "Investment-specific shock volatility"
+    ))
+
+    return specs
+end
+
+"""
+    get_investment_curvature_5p_specs()
+
+Adds investment adjustment-cost curvature to the bridge block for stress tests.
+"""
+function get_investment_curvature_5p_specs()
+    specs = ParameterSpec[
+        ParameterSpec(
+            :csadjcost, :Normal,
+            (μ=6.0144, σ=1.0),
+            (4.0, 8.5),
+            "Investment adjustment-cost curvature"
+        ),
+    ]
+    append!(specs, get_investment_4p_specs())
+    return specs
+end
+
+# ============================================================================
 # Utility Functions
 # ============================================================================
 
@@ -441,6 +504,8 @@ Get parameter specifications for a given parameter set.
   - `:legacy_3params` - Original 3 parameters
   - `:phase1_18params` - Phase 1: 18 parameters (wide priors for estimation)
   - `:phase1_18params_narrow` - Phase 1: 18 parameters (narrow priors for SEP dataset)
+  - `:investment_4p` - Reduced investment/risk-premium bridge block
+  - `:investment_curvature_5p` - Bridge block plus adjustment-cost curvature
 
 # Returns
 - `Vector{ParameterSpec}`: Parameter specifications
@@ -458,8 +523,12 @@ function get_parameter_specs(set::Symbol)
         return get_phase1_18param_specs()
     elseif set == :phase1_18params_narrow
         return get_phase1_18param_narrow_specs()
+    elseif set == :investment_4p
+        return get_investment_4p_specs()
+    elseif set == :investment_curvature_5p
+        return get_investment_curvature_5p_specs()
     else
-        error("Unknown parameter set: $set. Valid options: :legacy_3params, :phase1_18params, :phase1_18params_narrow")
+        error("Unknown parameter set: $set. Valid options: :legacy_3params, :phase1_18params, :phase1_18params_narrow, :investment_4p, :investment_curvature_5p")
     end
 end
 
@@ -582,6 +651,8 @@ crhoa_baseline = baseline[:crhoa]  # 0.9977
 """
 function get_phase1_18param_baseline()
     return Dict{Symbol, Float64}(
+        :csadjcost => 6.0144,
+
         # Shock Persistence (7) - CORRECTED from actual HLT model
         :crhoa => 0.9977,
         :crhob => 0.5799,

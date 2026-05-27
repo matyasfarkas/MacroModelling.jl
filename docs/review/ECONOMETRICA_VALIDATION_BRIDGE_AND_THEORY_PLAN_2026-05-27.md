@@ -79,6 +79,9 @@ direct NUTS run before finite objective support is proven.
 - Implemented the executable bridge smoke stage.
 - Corrected the bridge observables to the maintained HLT model names:
   `dy`, `dinve`, `labobs`, `pinfobs`, and `robs`.
+- Added `investment_4p` and `investment_curvature_5p` to the shared HLT
+  parameter configuration so existing dataset-generation and estimation scripts
+  can target the bridge block directly.
 - Verified the minimal finite-support smoke on 2026-05-27 with one period, one
   grid cell, and observables `dy,dinve,robs`: ROM1/inversion log likelihood
   `-3.459`, direct SEP/inversion log likelihood `-2.793`, status `pass`.

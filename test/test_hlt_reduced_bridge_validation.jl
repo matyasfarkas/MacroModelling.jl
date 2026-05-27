@@ -2,6 +2,7 @@ using Test
 using TOML
 
 include(joinpath(@__DIR__, "..", "scripts", "hlt_reduced_bridge_validation.jl"))
+include(joinpath(@__DIR__, "..", "scripts", "hlt_surrogate", "parameter_config.jl"))
 
 @testset "HLT reduced validation bridge" begin
     @testset "argument parsing and defaults" begin
@@ -16,6 +17,21 @@ include(joinpath(@__DIR__, "..", "scripts", "hlt_reduced_bridge_validation.jl"))
         @test manifest["grid_points"] == 81
         @test "direct_grid_payload.jls" in manifest["artifact_schema"]
         @test occursin("Reduced SW07-HLT", manifest["purpose"])
+    end
+
+    @testset "investment bridge parameter sets" begin
+        @test get_parameter_names(:investment_4p) == [:crhob, :crhoqs, :z_eb, :z_eqs]
+        @test get_parameter_names(:investment_curvature_5p) == [:csadjcost, :crhob, :crhoqs, :z_eb, :z_eqs]
+
+        bounds = get_parameter_bounds(:investment_4p)
+        @test bounds[:crhob] == (0.45, 0.75)
+        @test bounds[:crhoqs] == (0.60, 0.85)
+        @test bounds[:z_eb][1] > 0.0
+        @test bounds[:z_eqs][1] > 0.0
+
+        baseline = get_phase1_18param_baseline()
+        @test baseline[:csadjcost] == 6.0144
+        @test baseline[:crhob] == 0.5799
     end
 
     @testset "dry run writes manifest and summary" begin

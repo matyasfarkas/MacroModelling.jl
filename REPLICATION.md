@@ -291,6 +291,9 @@ steady-state HLT panel and evaluates ROM1/inversion plus direct SEP/inversion
 on a local grid before any surrogate training or HMC bridge run is launched.
 The executable test path is gated behind
 `RUN_HLT_BRIDGE_EXEC_SMOKE=1 julia --project=. test/test_hlt_reduced_bridge_validation.jl`.
+The same reduced block is available to dataset-generation and estimation
+scripts as `--param-set=investment_4p`; the curvature stress block is
+`--param-set=investment_curvature_5p`.
 
 ## Artifact Map
 
