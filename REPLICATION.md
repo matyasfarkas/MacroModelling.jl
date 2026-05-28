@@ -430,10 +430,14 @@ The sweep wrapper runs dataset generation, support reporting, obs-only
 ROM1-residual training, and the posterior-grid comparison in sequence. It can
 also be launched with `--stage=postprocess --dataset-dir=<existing dataset dir>`
 to wait for an already-running dataset generator before training and comparing.
-This robustness sweep is non-blocking; the paper's locked-in claim rests on the
-completed 256-cell grid.
+The 2026-05-27 grid-5 sweep completed all 625 direct-SEP cells and passed the
+same posterior-grid comparison. Prediction RMSE against direct SEP fell from
+`0.140077` under ROM1 to `0.00252518` under the surrogate, and log-posterior
+surface RMSE fell from `78.3753` to `0.142396`. This strengthens the
+finite-support known-feature evidence, while the paper's locked-in claim remains
+anchored to the completed 256-cell grid.
 
-Multi-period inversion bridge design scaffold:
+Multi-period inversion bridge scaffold and bounded executable stress test:
 
 ```bash
 julia --project=. scripts/hlt_bridge_inversion_filter_compare.jl \
@@ -451,8 +455,32 @@ julia --project=. scripts/hlt_bridge_inversion_filter_compare.jl \
 This scaffold freezes the next validation step: a short multi-period
 inversion-filter bridge using a held-out validation truth point. The current
 mode verifies dataset/surrogate compatibility, split provenance, observation
-scaling, and artifact schema; it does not yet execute the direct multi-period
-inversion evaluator.
+scaling, and artifact schema.
+
+The bounded executable mode can be run on the completed grid-5 artifact:
+
+```bash
+julia --project=. scripts/hlt_bridge_inversion_filter_compare.jl \
+  --dataset=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid5_full_sweep_20260527/hlt_sep_surrogate_dataset.jls \
+  --surrogate=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid5_full_sweep_20260527/hlt_sep_surrogate_trained_investment4p_supported_grid5_full_sweep_20260527.jls \
+  --out-dir=.local_artifacts/hlt_reduced_bridge_validation/inversion_bridge_grid5_exec_smoke_20260527_retry4 \
+  --param-set=investment_4p_supported \
+  --periods=4 \
+  --direct-eval-points=5 \
+  --sep-horizon=2 \
+  --sep-maxit=40 \
+  --inversion-maxit=6 \
+  --dry-run=false
+```
+
+This 2026-05-27 executable stress test evaluated five nearby direct-SEP
+inversion anchors without numerical failure, but it did not pass the
+shape-matching criterion. The surrogate and direct objectives differ by a large
+mean surface offset (`35.13` nats), and after removing that offset the centered
+surface RMSE is `1.2067` for the surrogate versus `0.5169` for ROM1, with no
+local MAP agreement. Because the panel is assembled from held-out one-step
+bridge observations rather than a coherent synthetic time-series DGP, this is a
+plumbing/stress-test result, not a paper validation artifact.
 
 ## Artifact Map
 
