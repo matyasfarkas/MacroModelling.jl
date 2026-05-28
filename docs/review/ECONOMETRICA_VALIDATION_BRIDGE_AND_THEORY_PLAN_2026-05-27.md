@@ -145,11 +145,12 @@ direct NUTS run before finite objective support is proven.
   to `0.00564`, and log-posterior surface RMSE falls from `86.48` to `0.36`.
 - Added `scripts/hlt_bridge_robustness_sweep.jl` to run a supported-grid
   robustness pipeline end-to-end: dataset generation, support report, obs-only
-  ROM1-residual training, and posterior-grid comparison. The grid-5 supported
-  sweep completed all 625 direct-SEP cells and passed the same known-feature
-  posterior-grid comparison: prediction RMSE fell from `0.140077` under ROM1 to
-  `0.00252518` under the surrogate, and log-posterior surface RMSE fell from
-  `78.3753` to `0.142396`.
+  ROM1-residual training, and posterior-grid comparison. The grid-10 supported
+  sweep completed all 10,000 direct-SEP cells and passed the same known-feature
+  posterior-grid comparison. SEP residual min/median/max are
+  `2.700e-13 / 1.571e-9 / 9.996e-6`; prediction RMSE fell from `0.143574`
+  under ROM1 to `0.000749395` under the surrogate; and log-posterior surface
+  RMSE fell from `88.0719` to `0.0534526`.
 - Added and executed `scripts/hlt_bridge_inversion_filter_compare.jl`, the
   scaffold for the next bridge step. The bounded executable stress test
   evaluated five nearby direct-SEP inversion anchors without numerical failure,

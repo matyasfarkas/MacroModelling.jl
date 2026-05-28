@@ -413,15 +413,15 @@ four bridge parameters, prediction RMSE falls from `0.1427` under ROM1 to
 `86.48` under ROM1 to `0.36` under the surrogate. This is a finite-support
 known-feature grid comparison, not yet the full inversion-filter HMC bridge.
 
-Longer supported-grid robustness sweep:
+Dense supported-grid robustness sweep:
 
 ```bash
 julia --project=. scripts/hlt_bridge_robustness_sweep.jl \
   --stage=full \
-  --run-id=investment4p_supported_grid5_full_sweep_20260527 \
+  --run-id=investment4p_supported_grid10_full_sweep_20260527 \
   --param-set=investment_4p_supported \
-  --grid=5 \
-  --epochs=500 \
+  --grid=10 \
+  --epochs=600 \
   --obs-sigma-scale=1.0 \
   --dgp-noise-scale=0.25
 ```
@@ -430,12 +430,13 @@ The sweep wrapper runs dataset generation, support reporting, obs-only
 ROM1-residual training, and the posterior-grid comparison in sequence. It can
 also be launched with `--stage=postprocess --dataset-dir=<existing dataset dir>`
 to wait for an already-running dataset generator before training and comparing.
-The 2026-05-27 grid-5 sweep completed all 625 direct-SEP cells and passed the
-same posterior-grid comparison. Prediction RMSE against direct SEP fell from
-`0.140077` under ROM1 to `0.00252518` under the surrogate, and log-posterior
-surface RMSE fell from `78.3753` to `0.142396`. This strengthens the
-finite-support known-feature evidence, while the paper's locked-in claim remains
-anchored to the completed 256-cell grid.
+The 2026-05-27/28 grid-10 sweep completed all 10,000 direct-SEP cells and passed
+the same posterior-grid comparison. SEP residual min/median/max are
+`2.700e-13 / 1.571e-9 / 9.996e-6`. Prediction RMSE against direct SEP fell from
+`0.143574` under ROM1 to `0.000749395` under the surrogate, and log-posterior
+surface RMSE fell from `88.0719` to `0.0534526`. This is the paper's maintained
+finite-support HLT bridge artifact. It remains a one-period known-feature
+comparison, not the full inversion-filter HMC bridge.
 
 Multi-period inversion bridge scaffold and bounded executable stress test:
 
