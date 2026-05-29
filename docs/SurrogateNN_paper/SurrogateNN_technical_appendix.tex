@@ -1,0 +1,700 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{verbatim}
+\usepackage{caption}
+
+\onehalfspacing
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\N}{\mathcal{N}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\thetafull}{\theta}
+\newcommand{\given}{\,\middle|\,}
+\newcommand{\Sigmay}{\Sigma_y}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\rom}{\mathrm{ROM1}}
+\newcommand{\sep}{\mathrm{SEP}}
+\newcommand{\sur}{\mathrm{sur}}
+\newcommand{\obs}{\mathrm{obs}}
+\newcommand{\llik}{\ell}
+
+\newtheorem{protocol}{Protocol}
+\newtheorem{diagnostic}{Diagnostic}
+
+% Lightweight algorithm environment, avoiding extra package dependencies.
+\newcounter{algorithm}
+\newenvironment{algorithm}[1][]{%
+  \refstepcounter{algorithm}%
+  \par\medskip\noindent
+  \textbf{Algorithm \thealgorithm}\if\relax\detokenize{#1}\relax\else: #1\fi
+  \par\smallskip
+  \begin{enumerate}[leftmargin=2.2em,itemsep=0.25em]
+}{%
+  \end{enumerate}
+  \par\medskip
+}
+
+\title{Online Technical Appendix\\
+\large Computational Pipeline for ROM1-Residual Surrogate Estimation}
+\author{Matyas Farkas}
+\date{May 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This appendix documents the computational pipeline used to estimate nonlinear
+DSGE models with a ROM1-residual neural-network surrogate. The goal is
+replication and auditability. The appendix defines the likelihood objects,
+offline training design, stochastic extended path (SEP) data-generation step,
+ROM1-residual surrogate, inversion-filter objective, regime-switching gate,
+NUTS-HMC implementation, direct nonlinear validation checks, and artifact
+schema. It distinguishes three objects that are intentionally separate in the
+paper: a direct nonlinear transition benchmark, a surrogate approximation to
+that benchmark, and the profiled inversion objective used for empirical
+posterior comparisons.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Scope}
+\label{apptech:scope}
+
+This appendix is a technical companion to the paper. It is not a second
+empirical paper. Its role is to make the estimation pipeline inspectable enough
+that a reader can see which numerical objects are being compared and which
+claims each validation exercise supports.
+
+The core computational claim is narrow:
+\[
+  \text{ROM1} + \widehat{\Delta}
+  \quad\text{can approximate}\quad
+  \text{SEP}
+\]
+on explicitly documented state--shock--parameter support, where
+\(\widehat{\Delta}\) is a learned residual correction. The empirical posterior
+comparisons in the paper use this approximation inside a profiled inversion
+objective. They are therefore not marginal-likelihood comparisons unless an
+additional change-of-variables or Laplace determinant is supplied. The
+validation exercises below are designed around that distinction.
+
+\paragraph{Maintained components.}
+The maintained replication package contains three layers.
+\begin{enumerate}[leftmargin=2em,itemsep=0.2em]
+\item A direct nonlinear solver layer based on stochastic extended path
+      \citep{fair1983solution,adjemian2025stochastic}.
+\item A ROM1-residual surrogate layer trained on
+      \(g^{\sep}_\theta-g^{\rom}_\theta\), not on the full transition.
+\item An online inference layer using shock inversion, optional regime
+      switching, and NUTS-HMC \citep{hoffman2014nuts}.
+\end{enumerate}
+
+\paragraph{Main limitation.}
+The full 18-parameter Smets--Wouters--HLT application is not validated by a
+full direct-SEP HMC run. The current medium-scale bridge is a finite-support,
+one-period known-feature comparison over the investment block. It is strong
+evidence that the residual target is learned on the relevant nonlinear channel;
+it is not a complete certificate for the full multi-period inversion-filter
+posterior.
+
+\section{Notation and Objects}
+\label{apptech:notation}
+
+Let \(s_t\in\R^{n_s}\) denote the model state, \(\eps_t\in\R^{n_\eps}\) the
+structural shocks, \(y_t\in\R^{n_y}\) the observables, and
+\(\theta\in\Theta\subset\R^p\) the estimated parameter vector. The nonlinear
+one-step transition is
+\[
+  (x_t^{\sep},s_t^{\sep})
+  =
+  g^{\sep}_\theta(s_{t-1},\eps_t),
+\]
+where \(x_t^{\sep}\) stacks the quantities retained for the surrogate target.
+The first-order perturbation approximation is
+\[
+  (x_t^{\rom},s_t^{\rom})
+  =
+  g^{\rom}_\theta(s_{t-1},\eps_t).
+\]
+The surrogate does not approximate \(g^{\sep}_\theta\) directly. It approximates
+the residual
+\begin{equation}
+  \Delta_\theta(s_{t-1},\eps_t)
+  =
+  x_t^{\sep}-x_t^{\rom}.
+\label{eq:tech_residual_target}
+\end{equation}
+The online predictor is therefore
+\begin{equation}
+  \widehat{x}_t
+  =
+  x_t^{\rom}
+  +
+  \widehat{\Delta}_w(s_{t-1},\eps_t,\theta),
+\label{eq:tech_surrogate_predictor}
+\end{equation}
+with neural-network weights \(w\).
+
+The observation equation used for the inversion objective is
+\begin{equation}
+  y_t^{\obs}=H x_t + u_t,\qquad u_t\sim\N(0,\Sigmay).
+\label{eq:tech_obs_eq}
+\end{equation}
+In the HLT bridge and hard-ELB Gal\'i checks, \(\Sigmay\) is fixed by the
+validation design. In the empirical HLT estimation, \(\Sigmay\) is a calibrated
+measurement-error scale, with robustness checks tied to surrogate validation
+RMSE.
+
+\section{End-to-End Data Flow}
+\label{apptech:dataflow}
+
+\begin{algorithm}[Pipeline]
+\item Choose a model, parameter block, parameter support, observables, and
+      shock/state design.
+\item For each design point, compute a direct SEP transition and the
+      corresponding ROM1 transition at the same
+      \((s_{t-1},\eps_t,\theta)\).
+\item Save a training payload with inputs
+      \(X=[s_{t-1};\eps_t;\theta]\), direct outputs \(Y\), ROM1 outputs
+      \(Y^{\rom}\), solver residual diagnostics, observable indices, parameter
+      names, and git provenance.
+\item Train a neural network on \(Y-Y^{\rom}\). In the HLT bridge the reported
+      target is observation-only; in the broader estimation workflow the bundle
+      can also carry state corrections needed for propagation.
+\item Validate the surrogate out of sample by comparing
+      \(Y^{\rom}+\widehat{\Delta}\) to \(Y\), and by comparing posterior
+      surfaces against direct SEP on finite support.
+\item In empirical estimation, recover shocks period by period using the ROM1
+      inversion filter, evaluate the surrogate correction on gate periods, use
+      Kalman likelihood contributions on calm periods, and sample \(\theta\)
+      with NUTS-HMC.
+\end{algorithm}
+
+The artifact convention is deliberately simple. Raw payloads are serialized as
+Julia `.jls' files under `.local_artifacts/'. Human-readable summaries are
+stored as `SUMMARY.md' or `SUPPORT_REPORT.md'. Tables promoted to the paper are
+stored as `.tex' fragments under either the paper directory or the relevant
+artifact directory. The paper should not report a numerical result unless a
+matching raw payload and human-readable summary exist.
+
+\section{Direct SEP Data Generation}
+\label{apptech:sep_generation}
+
+The direct benchmark solves the nonlinear model with stochastic extended path.
+For each design point, the solver receives the current parameter vector, a
+finite shock path, and the previous state. It returns a nonlinear transition
+and a residual diagnostic. A sample is accepted for training or validation only
+if the relevant quantities are finite and the final SEP residual is below the
+stage-specific acceptance tolerance.
+
+\subsection{Input Design}
+
+The HLT training and bridge scripts use three types of parameter designs.
+\begin{enumerate}[leftmargin=2em,itemsep=0.2em]
+\item \emph{Prior/Sobol designs} for broad surrogate coverage.
+\item \emph{Deterministic grids} for support mapping and posterior-surface
+      validation.
+\item \emph{Trimmed supported grids} after direct SEP reveals infeasible
+      high-stress corners.
+\end{enumerate}
+
+For the medium-scale HLT bridge, the maintained parameter block is
+\[
+  (\rho_b,\rho_{qs},\sigma_b,\sigma_{qs})
+  \equiv
+  (\texttt{crhob},\texttt{crhoqs},\texttt{z\_eb},\texttt{z\_eqs}).
+\]
+The supported bridge trims the risk-premium shock scale to
+\[
+  z_{eb}\in[1.20,1.85],
+\]
+because the support map showed systematic direct-SEP failure at the
+high-stress \(z_{eb}=2.50\) edge. This is not imputation. The benchmark support
+is redefined to the region where direct nonlinear solutions are available.
+
+\subsection{ROM1 and SEP at Common Inputs}
+
+For every accepted sample \(j\), the dataset stores
+\[
+  X_j=[s_{j,-};\eps_j;\theta_j],\qquad
+  Y_j=g^{\sep}_{\theta_j}(s_{j,-},\eps_j),\qquad
+  Y^{\rom}_j=g^{\rom}_{\theta_j}(s_{j,-},\eps_j).
+\]
+The residual target is then \(Y_j-Y^{\rom}_j\). This common-input design is the
+reason the validation RMSE is meaningful: the network is judged against the
+direct nonlinear correction at the same state, shock, and parameter vector.
+
+\subsection{Warm Starts and Failure Handling}
+
+Across deterministic grids, the solver uses the previous converged solution as
+an initial guess for the next point. The warm start is accepted only when the
+previous solve converged. If the previous solve failed or exceeded tolerance,
+the next solve falls back to a cold start from the perturbation solution. This
+prevents failed trajectories from propagating across the grid.
+
+Nonfinite samples are dropped before training. Failed direct-SEP cells are
+recorded in support reports rather than silently replaced. A grid is promoted
+to validation only if its support is explicit: either every cell solves or the
+accepted support is trimmed and re-run.
+
+\section{ROM1-Residual Surrogate}
+\label{apptech:surrogate}
+
+\subsection{Residual Target}
+
+The trained object is a map
+\[
+  \widehat{\Delta}_w:\R^{n_s+n_\eps+p}\rightarrow\R^{d_o},
+\]
+where \(d_o\) is either the number of observables or the number of retained
+state/observable outputs. The HLT bridge uses observation-only output,
+\[
+  \widehat{\Delta}_{w,o}
+  \approx
+  H\{g^{\sep}_\theta(s,\eps)-g^{\rom}_\theta(s,\eps)\},
+\]
+because the posterior-grid comparison is a known-feature, one-period
+observable comparison. The empirical HLT estimation bundle also contains the
+state-propagation machinery needed by the inversion filter.
+
+Learning the residual rather than the full transition has two practical
+consequences. First, the target has a smaller scale because ROM1 captures the
+local dynamics near steady state. Second, a zero residual is an interpretable
+ablation: it gives the same gate and inversion architecture with no neural
+nonlinear correction.
+
+\subsection{Training Objective}
+
+Let \(D_{\mathrm{train}}\) be the training set. Inputs and targets are
+standardized dimension by dimension:
+\[
+  \widetilde{X}_{j,k}={X_{j,k}-\bar X_k\over s_{X,k}},\qquad
+  \widetilde{\Delta}_{j,\ell}=
+  {\Delta_{j,\ell}-\bar\Delta_\ell\over s_{\Delta,\ell}}.
+\]
+The default objective is mean squared error,
+\begin{equation}
+  \min_w
+  {1\over |D_{\mathrm{train}}|}
+  \sum_{j\in D_{\mathrm{train}}}
+  \norm{
+    \widehat{\Delta}_w(\widetilde X_j)
+    -
+    \widetilde{\Delta}_j
+  }^2.
+\label{eq:tech_training_loss}
+\end{equation}
+Training uses AdamW with gradient clipping, cosine learning-rate decay with
+warmup, and SiLU activation. The maintained MLP has two hidden layers in the HLT
+bridge runs; the utility layer also supports a residual network architecture
+for wider training designs.
+
+\subsection{Validation Metrics}
+
+For each output coordinate \(k\), the validation RMSE is
+\[
+  \mathrm{RMSE}_k^{\sur}
+  =
+  \left[
+    {1\over |D_{\mathrm{val}}|}
+    \sum_{j\in D_{\mathrm{val}}}
+    \left(
+      Y_{j,k}
+      -
+      Y^{\rom}_{j,k}
+      -
+      \widehat{\Delta}_{w,k}(X_j)
+    \right)^2
+  \right]^{1/2}.
+\]
+The improvement over ROM1 is
+\[
+  1-{\mathrm{RMSE}^{\sur}_k\over \mathrm{RMSE}^{\rom}_k}.
+\]
+The paper reports the aggregate RMSE and surface-RMSE diagnostics only after
+the validation point is held out from training.
+
+\section{Regime-Switching Inversion Objective}
+\label{apptech:inversion}
+
+The empirical HLT posterior uses a profiled inversion objective. The state
+dimension and shock sequence are too large to sample jointly with the
+18-dimensional parameter vector in the current implementation. The inversion
+filter reduces the online sampler to \(\theta\) by recovering shocks period by
+period.
+
+\subsection{Shock Recovery}
+
+Given \(s_{t-1}\), \(\theta\), and observed \(y_t^{\obs}\), the ROM1 inversion
+step solves
+\begin{equation}
+  \widehat{\eps}_t(\theta)
+  =
+  \arg\min_{\eps}
+  \left\|
+    {y_t^{\obs}-H g^{\rom}_\theta(s_{t-1},\eps)\over \sigma_y}
+  \right\|^2
+  +
+  \left\|
+    {\eps\over \sigma_\eps(\theta)}
+  \right\|^2 .
+\label{eq:tech_rom_inversion}
+\end{equation}
+The same recovered shock can then be evaluated under ROM1, direct SEP in
+validation exercises, or ROM1 plus the surrogate residual. This common-shock
+design is essential: it isolates the transition approximation from shock
+recovery.
+
+\subsection{Profiled Observation Objective}
+
+On a surrogate-evaluated period, the prediction is
+\[
+  \widehat y_t^{\sur}(\theta)
+  =
+  H\left[
+    g^{\rom}_\theta(s_{t-1},\widehat{\eps}_t)
+    +
+    \widehat{\Delta}_w(s_{t-1},\widehat{\eps}_t,\theta)
+  \right].
+\]
+The period contribution is the Gaussian observation objective
+\begin{equation}
+  \ell_t^{\sur}(\theta)
+  =
+  -{1\over 2}
+  \left[
+    (y_t^{\obs}-\widehat y_t^{\sur})'
+      \Sigmay^{-1}
+    (y_t^{\obs}-\widehat y_t^{\sur})
+    +
+    \log |2\pi \Sigmay|
+  \right].
+\label{eq:tech_sur_objective}
+\end{equation}
+Because \(\widehat{\eps}_t(\theta)\) is profiled out, this is not the exact
+marginal likelihood unless the determinant terms associated with the profiling
+step are added. The paper therefore refers to the reported values as profiled
+log objectives.
+
+\subsection{Gate}
+
+The regime switch is deterministic conditional on a gate-calibration payload.
+Let \(m_t\in\{0,1\}\) denote the hard gate, with \(m_t=1\) meaning that the
+surrogate correction is active. The gate is built from shock and forecast-error
+statistics, padded before and after detected stress periods, and filtered to
+avoid isolated one-period switches. With a hard gate,
+\[
+  \ell_T(\theta)
+  =
+  \sum_{t:m_t=1} \ell_t^{\sur}(\theta)
+  +
+  \sum_{t:m_t=0} \ell_t^{K}(\theta),
+\]
+where \(\ell_t^K\) is the Kalman contribution under ROM1. With a soft gate, the
+implementation uses precomputed probabilities \(p_t\in[10^{-4},1-10^{-4}]\)
+and combines period contributions by the maintained mixing routine. The q95
+gate diagnostic in the paper recalibrates this object to avoid classifying all
+quiet-sample periods as stressed.
+
+\section{Prior, Parameter Transform, and HMC}
+\label{apptech:hmc}
+
+Each estimated parameter has finite support \([a_i,b_i]\). NUTS operates on an
+unconstrained vector \(z\in\R^p\), with
+\[
+  \theta_i(z_i)
+  =
+  a_i + (b_i-a_i)\Lambda(z_i),
+  \qquad
+  \Lambda(z)={1\over 1+\exp(-z)}.
+\]
+The log posterior in unconstrained coordinates is
+\begin{equation}
+  \log \pi(z\given y)
+  =
+  \ell_T(\theta(z))
+  +
+  \log p_\Theta(\theta(z))
+  +
+  \sum_{i=1}^p
+  \log\{(b_i-a_i)\Lambda(z_i)[1-\Lambda(z_i)]\}.
+\label{eq:tech_unconstrained_posterior}
+\end{equation}
+Gradients are computed by finite differences in the maintained HLT estimation
+script. The sampler is AdvancedHMC.jl's multinomial NUTS implementation. The
+reported diagnostics are divergent transitions, numerical-error proposals,
+acceptance rate, split \(\widehat R\), and rank-normalized effective sample size
+\citep{vehtari2021rank}.
+
+\begin{protocol}[HMC comparability]
+When comparing direct and surrogate objectives in validation, the following
+quantities are held fixed: data, priors, bounded-to-unbounded transform,
+initial values, seeds, warmup length, post-warmup draws, finite-difference step,
+target acceptance rate, and tree-depth limit. A validation failure is therefore
+interpreted as an objective difference or numerical-stability difference, not as
+a sampler-design difference.
+\end{protocol}
+
+\section{Validation Package}
+\label{apptech:validation_package}
+
+The validation package has two complementary roles. The Gal\'i hard-ELB
+exercise validates pipeline layers in a small model where direct nonlinear
+evaluation is feasible. The reduced HLT bridge validates the residual target in
+the medium-scale model used for the main application.
+
+\subsection{Gal\'i Hard-ELB Package}
+
+The Gal\'i package uses the maintained current-repo Gal\'i OBC model and three
+observables: output, inflation, and the policy rate. It imposes an adverse
+\(\eps_z\) shock block that makes the lower bound bind for multiple periods,
+with output and inflation falling during the binding window. The package
+contains five checks.
+
+\begin{enumerate}[leftmargin=2em,itemsep=0.2em]
+\item A stress-path check verifying that the hard-ELB path is economically
+      meaningful.
+\item A known-shock residual-grid check over \(\sigma_z\).
+\item A one-parameter inversion-grid check using common ROM1-recovered shocks.
+\item A one-parameter matched-HMC smoke using direct and surrogate objectives.
+\item A two-parameter matched-HMC diagnostic over \((\sigma_z,\sigma_a)\).
+\end{enumerate}
+
+The extended two-parameter run is the strongest Gal\'i validation currently
+reported. It uses a 24-period actual-floor path, four chains per objective, and
+4,000 post-warmup draws per objective. Direct and surrogate 90 percent
+intervals overlap for both parameters, both true values are covered, and
+posterior mean differences are below one combined-MCSE unit in absolute value.
+Probes involving \(\sigma_\nu\) are retained as identification diagnostics:
+direct and surrogate objectives agree, but the parameter is pushed to the local
+grid boundary.
+
+\subsection{Reduced HLT Bridge}
+
+The reduced HLT bridge targets the investment and risk-premium block
+\[
+  (\texttt{crhob},\texttt{crhoqs},\texttt{z\_eb},\texttt{z\_eqs}),
+\]
+with observables
+\[
+  \texttt{dy},\quad \texttt{dinve},\quad \texttt{labobs},\quad
+  \texttt{pinfobs},\quad \texttt{robs}.
+\]
+The maintained 10-by-10-by-10-by-10 supported grid solves all 10,000 direct SEP
+cells. The support report records SEP residual min/median/max equal to
+\[
+  2.700\times 10^{-13},\qquad
+  1.571\times 10^{-9},\qquad
+  9.996\times 10^{-6}.
+\]
+The posterior-grid comparison selects a held-out truth point from the validation
+split. It constructs a Gaussian observation scale, computes direct SEP, ROM1,
+and surrogate log-posterior surfaces on the same grid, and summarizes marginal
+posterior intervals by discrete posterior weights.
+
+The maintained result is:
+\[
+  \mathrm{RMSE}(\rom,\sep)=0.143574,\qquad
+  \mathrm{RMSE}(\sur,\sep)=0.000749395,
+\]
+and
+\[
+  \mathrm{RMSE}_{\log p}(\rom,\sep)=88.0719,\qquad
+  \mathrm{RMSE}_{\log p}(\sur,\sep)=0.0534526.
+\]
+Surrogate 90 percent intervals overlap direct SEP intervals for all four bridge
+parameters. This validates the residual-learning target on finite HLT support.
+It does not validate full multi-period inversion-filter HMC for the
+18-parameter empirical posterior.
+
+\section{Acceptance Criteria}
+\label{apptech:criteria}
+
+\begin{table}[htbp]
+\centering
+\caption{Validation Criteria by Layer}
+\label{tab:tech_validation_criteria}
+\begin{tabular}{p{0.27\textwidth}p{0.62\textwidth}}
+\toprule
+Layer & Criterion \\
+\midrule
+SEP support & Direct nonlinear cells are finite and either all solve on the
+reported support or failures are explicitly mapped and the support is trimmed. \\
+Training payload & \(X\), \(Y\), \(Y^{\rom}\), metadata, observable indices,
+parameter names, solver residuals, and git provenance are saved. \\
+Surrogate accuracy & Held-out RMSE of \(Y^{\rom}+\widehat{\Delta}\) is reported
+against direct SEP; ROM1 baseline RMSE is reported on the same split. \\
+Posterior grid & Direct SEP and surrogate posterior intervals overlap for all
+reported bridge parameters; surrogate surface RMSE is materially below ROM1
+surface RMSE. \\
+Matched HMC & Direct and surrogate intervals overlap, posterior mean
+differences are within combined Monte Carlo error for the targeted parameters,
+and numerical-error proposals are zero or explicitly negligible. \\
+Empirical use & Any paper table has a raw payload, human-readable summary, and
+provenance note. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Artifact Schema and Replication Entry Points}
+\label{apptech:artifacts}
+
+\subsection{Main Scripts}
+
+The maintained scripts are organized by layer.
+\begin{itemize}[leftmargin=2em,itemsep=0.2em]
+\item `scripts/hlt\_sep\_surrogate\_dataset\_generate.jl':
+      generates direct SEP/ROM1 training payloads.
+\item `scripts/hlt\_sep\_surrogate\_train.jl':
+      trains the ROM1-residual surrogate.
+\item `scripts/hlt\_bridge\_support\_report.jl':
+      converts dataset metadata into finite-support reports.
+\item `scripts/hlt\_bridge\_posterior\_grid\_compare.jl':
+      compares direct SEP, ROM1, and surrogate posterior-grid surfaces.
+\item `scripts/hlt\_bridge\_robustness\_sweep.jl':
+      orchestrates the HLT bridge dataset, support report, training, and
+      posterior-grid comparison.
+\item `scripts/run\_surrogate\_hmc\_advancedhmc.jl':
+      runs empirical HLT surrogate NUTS-HMC with inversion filtering and gate
+      support.
+\item `scripts/gali\_validation\_package.jl':
+      audits the maintained Gal\'i hard-ELB validation artifacts.
+\item `scripts/gali\_obc\_actual\_floor\_twoparam\_inversion\_grid\_validation.jl':
+      runs the two-parameter actual-floor inversion/HMC diagnostic.
+\end{itemize}
+
+\subsection{Canonical Artifact Layout}
+
+For an HLT bridge run with identifier \(r\), the expected layout is
+\begin{verbatim}
+.local_artifacts/hlt_reduced_bridge_validation/r/
+  hlt_sep_surrogate_dataset.jls
+  SUPPORT_REPORT.md
+  hlt_sep_surrogate_trained_r.jls
+
+.local_artifacts/hlt_reduced_bridge_validation/posterior_grid_compare_r/
+  hlt_bridge_posterior_grid_comparison.jls
+  SUMMARY.md
+  comparison_table.tex
+  ROBUSTNESS_SWEEP.md
+\end{verbatim}
+
+For the Gal\'i package, the consolidated audit is written under
+\begin{verbatim}
+.local_artifacts/gali_validation_package/
+\end{verbatim}
+and individual layer artifacts remain under their producing run directories.
+
+\subsection{Replication Commands}
+
+The dense HLT bridge is expensive but has a single orchestration entry point:
+\begin{verbatim}
+julia --project=. scripts/hlt_bridge_robustness_sweep.jl \
+  --stage=full \
+  --run-id=<run_id> \
+  --param-set=investment_4p_supported \
+  --grid=10 \
+  --epochs=400 \
+  --hidden=256 \
+  --hidden2=128 \
+  --obs-sigma-scale=1.0 \
+  --dgp-noise-scale=0.25
+\end{verbatim}
+
+The Gal\'i validation package audit is:
+\begin{verbatim}
+julia --project=. scripts/gali_validation_package.jl \
+  --run-id=<run_id> \
+  --strict=true
+\end{verbatim}
+
+The empirical HLT surrogate chain is run through:
+\begin{verbatim}
+julia --project=. scripts/run_surrogate_hmc_advancedhmc.jl \
+  --surrogate=<surrogate_bundle.jls> \
+  --data=<data_payload.jls> \
+  --gate-calibration=<gate_payload.jls> \
+  --gate-mode=soft \
+  --out=<chain_payload.jls>
+\end{verbatim}
+The linear+gate ablation uses the same command with
+`--disable-nn-correction=true'.
+
+\section{Interpretation Rules}
+\label{apptech:interpretation}
+
+The pipeline deliberately separates approximation accuracy from economic
+interpretation.
+\begin{enumerate}[leftmargin=2em,itemsep=0.25em]
+\item A low residual RMSE means the network tracks direct SEP on the audited
+      support. It does not by itself prove posterior correctness away from that
+      support.
+\item A passing Gal\'i two-parameter HMC diagnostic validates the
+      ROM1-residual, inversion, and matched-HMC layers in a hard-ELB small
+      model. It does not establish that the 18-parameter HLT posterior has been
+      globally explored.
+\item The HLT 10,000-cell bridge validates the residual target in the
+      medium-scale investment block. It does not supply a full multi-period
+      direct-SEP HMC benchmark.
+\item The empirical profiled objective is comparable across linear, linear+gate,
+      and surrogate runs that use the same inversion architecture. It should not
+      be described as a Bayes factor.
+\item Warm-started HMC diagnostics certify sampling within the reported basin.
+      They do not rule out other posterior basins unless a separate mode search
+      establishes their mass.
+\end{enumerate}
+
+\section{Reproducibility Checklist}
+\label{apptech:checklist}
+
+Before a result is promoted to the paper, the replication package should contain
+the following.
+\begin{enumerate}[leftmargin=2em,itemsep=0.25em]
+\item The exact command or orchestration script.
+\item The git commit recorded in the payload.
+\item A raw `.jls' payload containing draws, grids, objectives, or predictions.
+\item A human-readable `SUMMARY.md' or support report.
+\item A LaTeX table fragment if the result appears in a table.
+\item A statement of support: full grid support, trimmed support, or mapped
+      failure region.
+\item A statement of scope: direct likelihood, profiled inversion objective,
+      one-period known-feature comparison, or full HMC comparison.
+\end{enumerate}
+
+\section{Conclusion}
+\label{apptech:conclusion}
+
+The maintained pipeline is designed to be auditable rather than opaque. The
+surrogate is trained on an observable residual against direct nonlinear
+solutions; validation compares ROM1, direct SEP, and the residual surrogate on
+common inputs; inference uses a profiled inversion objective whose limitations
+are explicit; and numerical results promoted to the paper require raw artifacts.
+This structure is the basis for the paper's methodological claim. The remaining
+gap for a stronger submission is not hidden implementation detail but scale:
+the full multi-period direct-SEP HMC benchmark for the 18-parameter HLT
+posterior is still beyond the currently reported validation package.
+
+\bibliographystyle{plainnat}
+\bibliography{SurrogateNN_paper}
+
+\end{document}
