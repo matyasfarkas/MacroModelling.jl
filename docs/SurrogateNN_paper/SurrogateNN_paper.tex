@@ -301,7 +301,7 @@ The 18-parameter analysis uses SW07-HLT: habit formation, capital accumulation, 
 
 The estimator combines three tools at different accuracy levels: first-order perturbation (ROM1, microseconds), a neural network surrogate (milliseconds), and the full nonlinear SEP solver (0.8 seconds). The neural network does not learn the full nonlinear transition. Instead, it learns the \textit{residual} between the nonlinear and linear solutions, $\Delta g = g_\theta^{\text{SEP}} - g_\theta^{\text{ROM1}}$. At inference, the surrogate prediction adds this correction to the linear baseline: $\hat{g}(s,\varepsilon,\theta) = g_\theta^{\text{ROM1}}(s,\varepsilon) + \hat{\Delta}(s,\varepsilon,\theta; w)$. Because the linear solution already captures 99 percent of the dynamics near steady state, the residual is two orders of magnitude smaller than the full transition, concentrating the network's capacity on the nonlinear correction \citep{peherstorfer2018survey}. When the correction is zero, the estimator reduces to the standard linear model.
 
-The surrogate must be valid across the prior regions with posterior mass---not just near one mode---because the sampler can visit parameter configurations far from the training center during adaptation and mode exploration. I train on parameter draws from a Sobol sequence covering the bounded parameter space (Section~\ref{subsec:surrogate}), and FiLM conditioning (Appendix~\ref{app:resnet_film}) allows the network to adapt to each parameter configuration. The residual formulation also gives explicit control over approximation error: the error is directly measurable as the validation RRMSE and formally bounded in terms of posterior coverage distortion under the assumptions in Appendix~\ref{sec:formal_consistency}. At the realized non-binding validation RRMSE of 0.0012, the theoretical upper bound on coverage distortion is below one percentage point; the separate binding-region RRMSE is much larger and is treated as a lower-bound stress diagnostic rather than covered by this bound.
+The surrogate must be valid across the prior regions with posterior mass---not just near one mode---because the sampler can visit parameter configurations far from the training center during adaptation and mode exploration. I train on parameter draws from a Sobol sequence covering the bounded parameter space (Section~\ref{subsec:surrogate}), and FiLM conditioning (Appendix~\ref{app:resnet_film}) allows the network to adapt to each parameter configuration. The residual formulation also gives explicit control over approximation error: the error is directly measurable as the validation RRMSE and formally bounded in terms of posterior coverage distortion under the assumptions in Appendix~\ref{sec:formal_consistency}. At the realized non-binding validation RRMSE of 0.0012, the implied coverage-distortion diagnostic is below one percentage point; the separate binding-region RRMSE is much larger and is treated as a lower-bound stress diagnostic rather than covered by this bound.
 
 The procedure has two stages. \emph{Offline}: draw a parameter grid from prior support, solve the nonlinear system at each grid point, compute linear transitions at the same inputs, train the neural network on the residuals, and calibrate the regime-switching gate. \emph{Online}: for each MCMC proposal $\theta'$, recover shocks via an inversion filter, classify each period as calm or stressed based on the state's distance from steady state, evaluate the exact Kalman likelihood in calm periods and a penalized inversion objective in stressed periods, and accept or reject via HMC. Because the inversion step profiles over shocks without a reported Jacobian/Laplace determinant, I interpret the regime-switching values as comparable inversion log objectives rather than marginal likelihoods or Bayes factors. The full algorithm is in Appendix~\ref{app:hmc}.
 
@@ -748,9 +748,9 @@ The stability of the relative shares supports the view that investment dominance
 
 Two independent linear chains find different posterior modes (34-nat gap), indicating ridged geometry in the wage/price markup block \citep{herbst2016sequential}. The decomposition results are deterministic and unaffected; the posterior comparisons in Section~\ref{sec:inference_consequences} are conditional on a single mode and on the profiled inversion objective used for the surrogate cells.
 
-The baseline surrogate is trained at shock scale 0.1, where the ZLB rarely binds; the supplementary dataset at scale 0.4 extends coverage to binding episodes. The same surrogate can be evaluated on different sample periods without retraining because the neural network maps from parameter-state-shock space rather than time-series indices, but this does not eliminate out-of-distribution risk. The theoretical coverage-distortion bound from Corollary~\ref{cor:coverage} evaluates to below one percentage point at the non-binding validation RRMSE of 0.0012 (Appendix~\ref{sec:formal_consistency}); it should not be applied to the binding-region RRMSE of 0.12. A direct SEP comparison at twenty posterior draws shows that the ROM1--SEP prediction gap (average RMSE 1.04 per variable, exceeding $3\sigma_y$ for labor and the interest rate) is large relative to the non-binding surrogate training error.
+The baseline surrogate is trained at shock scale 0.1, where the ZLB rarely binds; the supplementary dataset at scale 0.4 extends coverage to binding episodes. The same surrogate can be evaluated on different sample periods without retraining because the neural network maps from parameter-state-shock space rather than time-series indices, but this does not eliminate out-of-distribution risk. The coverage-distortion diagnostic from Corollary~\ref{cor:coverage} evaluates to below one percentage point at the non-binding validation RRMSE of 0.0012 (Appendix~\ref{sec:formal_consistency}); it should not be applied to the binding-region RRMSE of 0.12. A direct SEP comparison at twenty posterior draws shows that the ROM1--SEP prediction gap (average RMSE 1.04 per variable, exceeding $3\sigma_y$ for labor and the interest rate) is large relative to the non-binding surrogate training error.
 
-To bridge the gap to the 18-parameter estimation, I provide two lines of current evidence: (i) the formal consistency theory shows coverage distortion scales as $\sqrt{T} \cdot \text{RRMSE}^2$ with spectral prefactor $\sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$, bounding the theoretical distortion below one percentage point at the non-binding validation RRMSE; (ii) the twenty-draw SEP comparison provides an empirical full-scale solution check. A Monte Carlo coverage study at the full 18-parameter scale (Appendix~\ref{app:mc_coverage}) validates only the linear Kalman + NUTS pipeline: it achieves average coverage of 79.8\% across 14 replications, with the Clopper--Pearson 95\% confidence interval containing the nominal 90\% rate for 16 of 18 parameters. It is not evidence on surrogate posterior coverage. The direct Gal\'i SEP-HMC comparison is listed separately in Appendix~\ref{sec:validation_design}.
+To bridge the gap to the 18-parameter estimation, I provide two lines of current evidence: (i) the formal consistency theory shows coverage distortion scales as $\sqrt{T} \cdot \text{RRMSE}^2$ with spectral prefactor $\sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$ under the score-control assumption, giving a below-one-percentage-point diagnostic at the non-binding validation RRMSE; (ii) the twenty-draw SEP comparison provides an empirical full-scale solution check. A Monte Carlo coverage study at the full 18-parameter scale (Appendix~\ref{app:mc_coverage}) validates only the linear Kalman + NUTS pipeline: it achieves average coverage of 79.8\% across 14 replications, with the Clopper--Pearson 95\% confidence interval containing the nominal 90\% rate for 16 of 18 parameters. It is not evidence on surrogate posterior coverage. The direct Gal\'i SEP-HMC comparison is listed separately in Appendix~\ref{sec:validation_design}.
 
 \subsection{Policy Implications}
 
@@ -1722,7 +1722,7 @@ The 18-nat gap reflects multiple sources: surrogate approximation error, the pro
 \section{Formal Consistency of the Surrogate Posterior}
 \label{sec:formal_consistency}
 
-The surrogate replaces the intractable FOM transition $g_\theta$ with a neural-network approximation $\hat{g}_\theta$, inducing a surrogate log-likelihood $\hat{\ell}(\theta)$ that differs from the true nonlinear log-likelihood $\ell(\theta)$. This section establishes conditions under which the surrogate posterior nevertheless concentrates on the true parameter at the parametric rate, derives a closed-form bound on the log-likelihood bias in terms of the surrogate's relative root mean squared error, and quantifies the resulting distortion to credible-interval coverage. The arguments draw on the misspecified-likelihood framework of \citet{kleijn2012bernstein}, the quasi-posterior consistency theory of \citet{mueller2013risk}, and the convergence analysis of \citet{fernandezvillaverde2006convergence} for likelihoods computed from nonlinear DSGE solutions, adapted to the sieve structure that neural-network approximation imposes.
+The surrogate replaces the intractable FOM transition $g_\theta$ with a neural-network approximation $\hat{g}_\theta$, inducing a surrogate log-likelihood $\hat{\ell}(\theta)$ that differs from the true nonlinear log-likelihood $\ell(\theta)$. This section states sufficient conditions under which the surrogate posterior nevertheless concentrates on the true parameter at the parametric rate, derives a closed-form bound on the expected log-likelihood bias in terms of the surrogate's relative root mean squared error, and quantifies the resulting distortion to credible-interval coverage. The arguments draw on the misspecified-likelihood framework of \citet{kleijn2012bernstein}, the quasi-posterior consistency theory of \citet{mueller2013risk}, and the convergence analysis of \citet{fernandezvillaverde2006convergence} for likelihoods computed from nonlinear DSGE solutions, adapted to the sieve structure that neural-network approximation imposes. The result is a sufficient-condition argument, not an automatic finite-sample certificate for the empirical HMC implementation.
 
 \subsection{Setup and Assumptions}
 
@@ -1769,9 +1769,25 @@ where $\mathcal{S}_T(\theta) \subset \R^{n_s} \times \R^{n_\eps}$ is the set of 
 
 Assumption~\ref{ass:surrogate_convergence} is the key requirement specific to the surrogate architecture. It holds for feedforward networks with SiLU activation under standard universal approximation results \citep{hornik1989multilayer,cybenko1989approximation}: for any $\delta > 0$, there exists a network width such that the supremum approximation error on any compact domain is below $\delta$. The practical content is that training-set coverage must span $\mathcal{S}_T(\theta)$ uniformly over $\Theta$---the Sobol design combined with data-augmented trajectories (Section~\ref{subsec:surrogate}) is designed to achieve this.
 
-\begin{assumption}[Mean-square and score control]
+\begin{assumption}[Approximation-error control]
 \label{ass:surrogate_smoothness}
-Let $e_t(\theta) = H(s_t^{\text{FOM}}(\theta)-\hat{s}_t(\theta))$ and $y_t = Hs_t^{\text{FOM}}(\theta_0)+\eta_t$. Uniformly over $\Theta$, $\E\|e_t(\theta)\|^2 = O(\delta_T^2)$ and the approximation error is orthogonal to the measurement innovation, $\E[\eta_t'\Sigmay^{-1}e_t(\theta)] = 0$. The score contribution of the surrogate error is smooth enough that $\sup_{\theta\in\Theta}\|\nabla_\theta[\hat{\ell}(\theta)-\ell(\theta)]\| = O_p(T\delta_T^2)$.
+Let $e_t(\theta) = H(s_t^{\text{FOM}}(\theta)-\hat{s}_t(\theta))$ and $y_t = Hs_t^{\text{FOM}}(\theta_0)+\eta_t$. Uniformly over $\Theta$, $\E\|e_t(\theta)\|^2 = O(\delta_T^2)$ and the approximation error is orthogonal to the measurement innovation,
+\[
+\E[\eta_t'\Sigmay^{-1}e_t(\theta)] = 0.
+\]
+The realized cross term obeys the stochastic equicontinuity bound
+\[
+\sup_{\theta\in\Theta}
+\left|\sum_{t=1}^T
+\left\{\eta_t'\Sigmay^{-1}e_t(\theta)
+- \E[\eta_t'\Sigmay^{-1}e_t(\theta)]\right\}\right|
+= O_p(\sqrt{T}\delta_T).
+\]
+The score contribution of the surrogate error is smooth enough that
+\[
+\sup_{\theta\in\Theta}\|\nabla_\theta[\hat{\ell}(\theta)-\ell(\theta)]\|
+= O_p(T\delta_T^2).
+\]
 \end{assumption}
 
 \subsection{Posterior Consistency}
@@ -1806,14 +1822,14 @@ where $\hat{\theta}_T$ is the surrogate posterior mode and $\|\cdot\|_{\text{TV}
 The argument proceeds in three steps.
 
 \textit{Step 1: Uniform log-likelihood approximation.}
-Proposition~\ref{prop:ll_bias_bound} below separates the deterministic and mean-square statements. Pathwise, the exact identity gives a first-order bound in the sup-norm approximation error. For the posterior consistency claim I use the expected, orthogonality-based bound in Assumption~\ref{ass:surrogate_smoothness}: the per-period surrogate-induced bias is $O(\delta_T^2)$ uniformly in $\theta$. Therefore, for a constant $C$ independent of $t$ and $\theta$,
+Proposition~\ref{prop:ll_bias_bound} below separates the deterministic and mean-square statements, while Assumption~\ref{ass:surrogate_smoothness} controls the realized empirical fluctuation. Pathwise, the exact identity gives a first-order bound in the sup-norm approximation error. Under Assumption~\ref{ass:surrogate_smoothness}, the empirical cross term contributes $O_p(\sqrt{T}\delta_T)$ and the orthogonality-based quadratic term contributes $O_p(T\delta_T^2)$ uniformly in $\theta$. Therefore,
 \begin{equation}
 \sup_{\theta \in \Theta}
   |\ell(\theta) - \hat{\ell}(\theta)|
-  \;=\; O_p(T\delta_T^2).
+  \;=\; O_p(\sqrt{T}\delta_T + T\delta_T^2).
 \label{eq:uniform_ll_approx}
 \end{equation}
-Under the rate condition $\delta_T = o(T^{-1/2})$, the right-hand side is $o_p(1)$, so the surrogate log-likelihood converges uniformly to the FOM log-likelihood in probability. A purely deterministic sup-norm theorem would instead require the stronger pathwise rate $\delta_T=o(T^{-1})$.
+Under the rate condition $\delta_T = o(T^{-1/2})$, both terms on the right-hand side are $o_p(1)$, so the surrogate log-likelihood converges uniformly to the FOM log-likelihood in probability. A purely deterministic sup-norm theorem would instead require the stronger pathwise rate $\delta_T=o(T^{-1})$.
 
 \textit{Step 2: Consistency and contraction rate.}
 Write the surrogate log-likelihood ratio as
@@ -1903,22 +1919,22 @@ which is \eqref{eq:ll_bias_total}. A deterministic pathwise bound follows from \
 
 \begin{remark}[Numerical evaluation]
 \label{rem:numerical_bound}
-In the 18-parameter estimation: $T = 265$, $n_y = 7$, $\|H\|_{\text{op}} = 1$ (selection matrix), $\lambda_{\min}(\Sigmay) = (0.10)^2 = 0.01$ (calibrated measurement error standard deviation), and RRMSE $= 0.0012$. The bound \eqref{eq:ll_bias_total} evaluates to $B_T \leq 265 \cdot 1 \cdot (0.0012)^2 \cdot \Var(s) / (2 \cdot 0.01) = 0.019 \cdot \Var(s)$ nats. With $\Var(s) \approx 1$ in state-standard-deviation units, $B_T \lesssim 0.02$ nats, negligible relative to the realized log-likelihood of $-1{,}781$. The realized gap $|\ell(\theta^*) - \hat{\ell}(\theta^*)|$ at twenty posterior draws averages 18 nats (Appendix~\ref{sec:identification}); this exceeds the theoretical bound because the realized gap reflects the combined effect of approximation bias \emph{and} genuine nonlinear likelihood structure that the surrogate captures correctly, which is the economic content of the estimation. The theoretical bound measures only the contribution of surrogate approximation error and correctly characterizes the magnitude of the latter.
+In the 18-parameter estimation: $T = 265$, $n_y = 7$, $\|H\|_{\text{op}} = 1$ (selection matrix), $\lambda_{\min}(\Sigmay) = (0.10)^2 = 0.01$ (calibrated measurement error standard deviation), and RRMSE $= 0.0012$. The bound \eqref{eq:ll_bias_total} evaluates to $B_T \leq 265 \cdot 1 \cdot (0.0012)^2 \cdot \Var(s) / (2 \cdot 0.01) = 0.019 \cdot \Var(s)$ nats. With $\Var(s) \approx 1$ in state-standard-deviation units, $B_T \lesssim 0.02$ nats, negligible relative to the realized log-likelihood of $-1{,}781$. The realized gap $|\ell(\theta^*) - \hat{\ell}(\theta^*)|$ at twenty posterior draws averages 18 nats (Appendix~\ref{sec:identification}); this exceeds the expected-bias bound because the realized gap reflects the combined effect of approximation bias \emph{and} genuine nonlinear likelihood structure that the surrogate captures correctly, which is the economic content of the estimation. The expected-bias bound measures only the contribution of surrogate approximation error and correctly characterizes the magnitude of the latter.
 \end{remark}
 
 \subsection{Credible Interval Coverage}
 
 \begin{corollary}[Credible Interval Validity]
 \label{cor:coverage}
-Let $C_\alpha^T \subset \Theta$ be a $(1-\alpha)$-credible set under the surrogate posterior: $\hat{\pi}_T(C_\alpha^T \given y_{1:T}) = 1-\alpha$. Let $B_T = T \cdot C \cdot \delta_T^2$ denote the mean-square log-likelihood perturbation from \eqref{eq:uniform_ll_approx}, and write $\kappa = \lambda_{\max}(\mathcal{I}(\theta_0)) / \lambda_{\min}(\mathcal{I}(\theta_0))$ for the spectral condition number of the Fisher information. Under the conditions of Theorem~\ref{thm:posterior_consistency}, the frequentist coverage of $C_\alpha^T$ satisfies
+Let $C_\alpha^T \subset \Theta$ be a $(1-\alpha)$-credible set under the surrogate posterior: $\hat{\pi}_T(C_\alpha^T \given y_{1:T}) = 1-\alpha$. Let $G_T = T \cdot C_\nabla \cdot \delta_T^2$ denote the uniform score-perturbation scale in Assumption~\ref{ass:surrogate_smoothness}, and write $\kappa = \lambda_{\max}(\mathcal{I}(\theta_0)) / \lambda_{\min}(\mathcal{I}(\theta_0))$ for the spectral condition number of the Fisher information. Under the conditions of Theorem~\ref{thm:posterior_consistency}, the frequentist coverage of $C_\alpha^T$ satisfies
 \begin{equation}
 \bigl|\,P_{\theta_0}\!\left(\theta_0 \in C_\alpha^T\right) - (1 - \alpha)\,\bigr|
-  \;\leq\; \frac{B_T}{\sqrt{T}} \cdot
+  \;\leq\; \frac{G_T}{\sqrt{T}} \cdot
     \frac{\sqrt{\lambda_{\max}(\mathcal{I}(\theta_0))}}{\lambda_{\min}(\mathcal{I}(\theta_0))}
   \;+\; o(T^{-1/2}).
 \label{eq:coverage_bound}
 \end{equation}
-Expressed in terms of the surrogate RRMSE through $B_T = O(T \cdot \text{RRMSE}^2)$, the distortion scales as $\sqrt{T} \cdot \text{RRMSE}^2 \cdot \sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$. The bound requires $\kappa$ to be bounded; in the application, the Fisher information is well-conditioned at the posterior mode (condition number $< 50$ from the inverse Hessian), so this assumption is satisfied.
+Expressed in terms of the surrogate RRMSE through the score-control rate $G_T = O(T \cdot \text{RRMSE}^2)$, the distortion scales as $\sqrt{T} \cdot \text{RRMSE}^2 \cdot \sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$. The bound requires $\kappa$ to be bounded; in the application, the Fisher information is well-conditioned at the posterior mode (condition number $< 50$ from the inverse Hessian), so this assumption is satisfied.
 \end{corollary}
 
 \begin{proof}
@@ -1926,12 +1942,12 @@ Let $\tilde{\theta}_T$ denote the FOM posterior mode and $\hat{\theta}_T$ the su
 \[
 \nabla \ell(\hat{\theta}_T) = -\nabla[\hat{\ell} - \ell](\hat{\theta}_T).
 \]
-The right-hand side is bounded in norm by $\|\nabla[\hat{\ell} - \ell]\|_\infty$, which is $O_p(T\delta_T^2)=O_p(B_T)$ by Assumption~\ref{ass:surrogate_smoothness}. A second-order Taylor expansion of $\ell$ around $\tilde{\theta}_T$ and the identity $-\nabla^2\ell(\tilde{\theta}_T)/T \to \mathcal{I}(\theta_0)$ yield
+The right-hand side is bounded in norm by $\|\nabla[\hat{\ell} - \ell]\|_\infty$, which is $O_p(T\delta_T^2)=O_p(G_T)$ by Assumption~\ref{ass:surrogate_smoothness}. A second-order Taylor expansion of $\ell$ around $\tilde{\theta}_T$ and the identity $-\nabla^2\ell(\tilde{\theta}_T)/T \to \mathcal{I}(\theta_0)$ yield
 \begin{equation}
 \|\hat{\theta}_T - \tilde{\theta}_T\|
   \;\leq\; \frac{\|\nabla[\hat{\ell} - \ell](\hat{\theta}_T)\|}
     {\lambda_{\min}(-\nabla^2\ell(\tilde{\theta}_T))}
-  \;=\; O\!\left(\frac{B_T}{T\,\lambda_{\min}(\mathcal{I}(\theta_0))}\right).
+  \;=\; O\!\left(\frac{G_T}{T\,\lambda_{\min}(\mathcal{I}(\theta_0))}\right).
 \label{eq:mode_shift}
 \end{equation}
 By Theorem~\ref{thm:posterior_consistency}(iii), both posteriors admit Bernstein--von Mises approximations with covariance $(T\mathcal{I}(\theta_0))^{-1}$ in total variation. The TV distance between them is therefore controlled by the TV distance between two Gaussians differing only in mean. The standard inequality
@@ -1948,21 +1964,21 @@ applied with $\Sigma = (T\mathcal{I}(\theta_0))^{-1}$, gives
 Substituting \eqref{eq:mode_shift}:
 \[
 \text{TV}(\hat{\pi}_T, \pi_T)
-  \;\leq\; \tfrac{1}{\sqrt{2\pi}}\,\sqrt{T\lambda_{\max}}\,\cdot\,\frac{B_T}{T\lambda_{\min}}
-  \;=\; \tfrac{1}{\sqrt{2\pi}}\,\frac{B_T}{\sqrt{T}}\cdot\frac{\sqrt{\lambda_{\max}}}{\lambda_{\min}}.
+  \;\leq\; \tfrac{1}{\sqrt{2\pi}}\,\sqrt{T\lambda_{\max}}\,\cdot\,\frac{G_T}{T\lambda_{\min}}
+  \;=\; \tfrac{1}{\sqrt{2\pi}}\,\frac{G_T}{\sqrt{T}}\cdot\frac{\sqrt{\lambda_{\max}}}{\lambda_{\min}}.
 \]
 Since $|P(A)_{\hat\pi} - P(A)_\pi| \leq \text{TV}(\hat{\pi}, \pi)$ for any measurable set $A$, and the FOM coverage of $C_\alpha^T$ under $\pi_T$ is $1-\alpha$ up to $o(T^{-1/2})$ by the BvM approximation, \eqref{eq:coverage_bound} follows. The $o(T^{-1/2})$ term absorbs the BvM approximation error.
 \end{proof}
 
 \begin{remark}[Numerical coverage distortion]
 \label{rem:rrmse_scaling}
-The coverage distortion in \eqref{eq:coverage_bound} scales as $\sqrt{T} \cdot \text{RRMSE}^2$ with a spectral prefactor $\sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$. In the extended-sample application, $T = 265$, $\text{RRMSE} = 0.0012$, and the constant $C$ in $B_T = T \cdot C \cdot \text{RRMSE}^2$ satisfies $C \lesssim \|H\|_{\text{op}}^2 / (2\lambda_{\min}(\Sigmay)) = 50$ from Proposition~\ref{prop:ll_bias_bound}. This gives $B_T \leq 265 \cdot 50 \cdot (0.0012)^2 = 0.019$ nats. With spectral condition number $\kappa \lesssim 50$ and $\lambda_{\min}(\mathcal{I}(\theta_0)) \approx 1$ at the posterior mode, the bound evaluates to
+The coverage distortion in \eqref{eq:coverage_bound} scales as $\sqrt{T} \cdot \text{RRMSE}^2$ with a spectral prefactor $\sqrt{\kappa}/\sqrt{\lambda_{\min}(\mathcal{I}(\theta_0))}$ and an unobserved score-control constant $C_\nabla$. In the extended-sample application, $T = 265$ and $\text{RRMSE} = 0.0012$. As a calibration diagnostic, I use the log-likelihood-bias constant from Proposition~\ref{prop:ll_bias_bound}, $C \lesssim \|H\|_{\text{op}}^2 / (2\lambda_{\min}(\Sigmay)) = 50$, as the scale for $G_T = T \cdot C_\nabla \cdot \text{RRMSE}^2$. This gives $G_T \leq 265 \cdot 50 \cdot (0.0012)^2 = 0.019$. With spectral condition number $\kappa \lesssim 50$ and $\lambda_{\min}(\mathcal{I}(\theta_0)) \approx 1$ at the posterior mode, the diagnostic evaluates to
 \[
 \text{Coverage distortion}
   \;\leq\; \frac{0.019}{\sqrt{265}} \cdot \frac{\sqrt{50}}{1}
   \;\approx\; 0.0082 \;=\; 0.82 \text{ percentage points}.
 \]
-The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this conservative theoretical bound reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The bound applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The Gal\'i hard-ELB package supplies a passing two-parameter posterior diagnostic for the ROM1-residual/inversion/HMC pipeline, while the full three-parameter direct-SEP HMC comparison remains an unreported scaling target.
+The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this calibrated diagnostic reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The calculation applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not estimate the score-control constant directly, does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The Gal\'i hard-ELB package supplies a passing two-parameter posterior diagnostic for the ROM1-residual/inversion/HMC pipeline, while the full three-parameter direct-SEP HMC comparison remains an unreported scaling target.
 \end{remark}
 
 \subsection{Discussion}
@@ -1974,7 +1990,7 @@ The neural network $\hat{g}_\theta$ belongs to a function class indexed by its w
 A bootstrap particle filter also introduces bias into the log-likelihood through Monte Carlo error: with $N_p$ particles, the per-period variance of the log-likelihood estimate is $O(1/N_p)$, and the bias in the log-marginal-likelihood is $O(T/N_p)$ \citep{pitt2012some,doucet2015efficient}. In the 18-parameter model, particle-filter weight degeneracy (ESS collapses to 1.0 at all particle counts up to $N_p = 5{,}000$, producing LL $= -21.2 \times 10^6$ versus the Kalman value of $-1{,}818$; Section~\ref{subsec:results_hlt_runtime}) means that the effective $N_p$ is unity, producing $O(T)$ bias per period---orders of magnitude worse than the surrogate's $O(\text{RRMSE}^2)$ bias. The surrogate trades stochastic estimation error for deterministic approximation error, and the latter is under the researcher's control through the training budget.
 
 \paragraph{Practical diagnostics.}
-Theorem~\ref{thm:posterior_consistency} requires $\delta_T = o(T^{-1/2})$, a condition that cannot be checked directly since the FOM solution at the posterior mode is unavailable during online estimation. Four diagnostics provide partial evidence. First, the held-out RRMSE (Table~\ref{tab:surrogate_regional_accuracy}) measures error at parameter values not used in training, while also revealing a far-tail cell above 0.002 and a much larger ZLB-binding stress error. Second, the realized log-likelihood bias bound from Proposition~\ref{prop:ll_bias_bound} evaluates to $B_T \leq 0.02$ nats at the non-binding validation RRMSE, and the coverage-distortion bound from Corollary~\ref{cor:coverage} is below one percentage point at that same value. Third, direct SEP evaluations at twenty subsampled posterior draws show that the ROM1--SEP prediction gap averages 1.04 RMSE per variable, with all twenty SEP simulations converging and the largest gaps concentrated in labor (3.07) and the interest rate (0.86), consistent with the equation-block decomposition identifying investment dynamics as the dominant nonlinear channel. Fourth, a reduced HLT bridge over $(\rho_b,\rho_{qs},\sigma_b,\sigma_{qs})$ evaluates direct SEP, ROM1, and the residual surrogate on identical finite-support inputs. In the 10{,}000-cell held-out posterior-grid comparison, the surrogate reduces prediction RMSE against direct SEP from 0.1436 to 0.00075 and reduces log-posterior-surface RMSE from 88.07 to 0.053, with 90 percent intervals overlapping direct SEP for all four bridge parameters.
+Theorem~\ref{thm:posterior_consistency} requires $\delta_T = o(T^{-1/2})$, a condition that cannot be checked directly since the FOM solution at the posterior mode is unavailable during online estimation. Four diagnostics provide partial evidence. First, the held-out RRMSE (Table~\ref{tab:surrogate_regional_accuracy}) measures error at parameter values not used in training, while also revealing a far-tail cell above 0.002 and a much larger ZLB-binding stress error. Second, the expected log-likelihood bias bound from Proposition~\ref{prop:ll_bias_bound} evaluates to $B_T \leq 0.02$ nats at the non-binding validation RRMSE, and the calibrated coverage-distortion diagnostic from Corollary~\ref{cor:coverage} is below one percentage point at that same value. Third, direct SEP evaluations at twenty subsampled posterior draws show that the ROM1--SEP prediction gap averages 1.04 RMSE per variable, with all twenty SEP simulations converging and the largest gaps concentrated in labor (3.07) and the interest rate (0.86), consistent with the equation-block decomposition identifying investment dynamics as the dominant nonlinear channel. Fourth, a reduced HLT bridge over $(\rho_b,\rho_{qs},\sigma_b,\sigma_{qs})$ evaluates direct SEP, ROM1, and the residual surrogate on identical finite-support inputs. In the 10{,}000-cell held-out posterior-grid comparison, the surrogate reduces prediction RMSE against direct SEP from 0.1436 to 0.00075 and reduces log-posterior-surface RMSE from 88.07 to 0.053, with 90 percent intervals overlapping direct SEP for all four bridge parameters.
 
 
 \section{Validation Design}
