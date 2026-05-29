@@ -717,7 +717,7 @@ The decomposition identifies investment as the dominant nonlinearity source (69 
 
 Initial-state treatment is not used as a headline validation result here. Any posterior-recovery claim for $s_0$ should be reported only after the Gal\'i direct SEP-HMC versus surrogate-HMC comparison is generated.
 
-Surrogate accuracy is strong in the non-binding validation design but weaker in the lower-bound stress region. Across most parameter regions the held-out RRMSE is below 0.002, while the far-tail 95th percentile is 0.00231 (Appendix~\ref{app:robustness_extended}, Table~\ref{tab:surrogate_regional_accuracy}). The combined surrogate (63,939 samples including 20,240 ZLB-binding episodes at shock scale 0.4) achieves RRMSE of 0.12 on binding-period test data---an 89 percent improvement over the version trained without ZLB episodes, but much larger than the non-binding validation error. Earlier Gal\'i seed and prior sensitivity tables are omitted until the direct Gal\'i validation comparison exists.
+Surrogate accuracy is strong in the non-binding validation design but weaker in the lower-bound stress region. Across most parameter regions the held-out RRMSE is below 0.002, while the far-tail 95th percentile is 0.00231 (Appendix~\ref{app:robustness_extended}, Table~\ref{tab:surrogate_regional_accuracy}). The combined surrogate (63,939 samples including 20,240 ZLB-binding episodes at shock scale 0.4) achieves RRMSE of 0.12 on binding-period test data---an 89 percent improvement over the version trained without ZLB episodes, but much larger than the non-binding validation error. Gal\'i seed and prior sensitivity tables are excluded because the present validation evidence comes from the hard-ELB package summarized in Appendix~\ref{sec:validation_design}.
 
 During ZLB-binding episodes, ROM1 predicts deeply negative rates; the surrogate adds back the approximate lower-bound correction and tracks the SEP benchmark qualitatively across the reported observables (Appendix~\ref{app:robustness_extended}, Figures~\ref{fig:zlb_correction_robs}--\ref{fig:zlb_correction_4panel}).
 
@@ -785,7 +785,7 @@ Three extensions follow naturally. First, extending the invisibility analysis to
 \section{Full Model Specification}
 \label{app:model}
 
-This appendix presents the complete equilibrium system for the Gal\'i (2015) New Keynesian model with occasionally binding zero lower bound. It serves as a negative-control specification and as the source model for the hard-ELB validation package in Appendix~\ref{sec:validation_design}; the full three-parameter direct-SEP HMC comparison remains unreported. The 18-parameter analysis in Section~\ref{subsec:nonlinearity_sources} uses the richer \citet{smets2007shocks} specification, detailed in Appendix~\ref{app:sw07_model} below.
+This appendix presents the complete equilibrium system for the Gal\'i (2015) New Keynesian model with occasionally binding zero lower bound. It serves as a negative-control specification and as the source model for the hard-ELB validation package in Appendix~\ref{sec:validation_design}; the full three-parameter direct-SEP HMC comparison is a separate scaling target. The 18-parameter analysis in Section~\ref{subsec:nonlinearity_sources} uses the richer \citet{smets2007shocks} specification, detailed in Appendix~\ref{app:sw07_model} below.
 
 
 \subsection{Household Problem}
@@ -1107,7 +1107,7 @@ When solving over a parameter grid $\{\theta^{(i)}\}_{i=1}^N$, I initialize $Y^{
 Y^{(0)}(\theta^{(i+1)}) = Y^*(\theta^{(i)}).
 \end{equation}
 
-Warm starts reduce Newton iterations from about 20 with a cold start to about 3--5 in the grid runs. This reduction implies a 4--6$\times$ speedup across the grid. Critically, I accept a warm start only when the previous solve converged (convergence flag equals zero); if the previous solve failed or exceeded the acceptance tolerance, I fall back to a cold start from the first-order perturbation steady state. This check prevents the solver from inheriting a divergent trajectory that would contaminate subsequent solves along the parameter grid---a subtle bug that I discovered caused systematic convergence failures in early dataset-generation runs before the flag check was added.
+Warm starts reduce Newton iterations from about 20 with a cold start to about 3--5 in the grid runs. This reduction implies a 4--6$\times$ speedup across the grid. I accept a warm start only when the previous solve converged (convergence flag equals zero); if the previous solve failed or exceeded the acceptance tolerance, I fall back to a cold start from the first-order perturbation steady state. This check prevents failed trajectories from propagating across the parameter grid.
 
 
 \section{Surrogate Training Details}
@@ -1562,7 +1562,7 @@ Algorithm~\ref{alg:pipeline} summarizes the complete estimation procedure.
 \section{Computational Details}
 \label{app:computational}
 
-Table~\ref{tab:computational_cost} reports the runtime profile of the existing HLT three-parameter validation workflow. This is a pipeline-cost benchmark, not the Gal\'i direct-HMC validation described in Appendix~\ref{sec:validation_design}.
+Table~\ref{tab:computational_cost} reports the runtime profile of the HLT three-parameter diagnostic. This is a pipeline-cost benchmark, not the Gal\'i direct-HMC validation described in Appendix~\ref{sec:validation_design}.
 
 \subsection{Hardware and Software}
 
@@ -1978,7 +1978,7 @@ The coverage distortion in \eqref{eq:coverage_bound} scales as $\sqrt{T} \cdot \
   \;\leq\; \frac{0.019}{\sqrt{265}} \cdot \frac{\sqrt{50}}{1}
   \;\approx\; 0.0082 \;=\; 0.82 \text{ percentage points}.
 \]
-The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this calibrated diagnostic reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The calculation applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not estimate the score-control constant directly, does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The Gal\'i hard-ELB package supplies a passing two-parameter posterior diagnostic for the ROM1-residual/inversion/HMC pipeline, while the full three-parameter direct-SEP HMC comparison remains an unreported scaling target.
+The surrogate would need non-binding RRMSE exceeding about $0.0013$ before this calibrated diagnostic reached one percentage point at this sample size, so the realized value of $0.0012$ is close to the threshold rather than an order of magnitude below it. The calculation applies worst-case RRMSE uniformly across all periods and all state dimensions. It does not estimate the score-control constant directly, does not cover the separate binding-region RRMSE of 0.12, and the 18-parameter Monte Carlo coverage study in Appendix~\ref{app:mc_coverage} validates only the linear Kalman + NUTS pipeline. The Gal\'i hard-ELB package supplies a passing two-parameter posterior diagnostic for the ROM1-residual/inversion/HMC pipeline, while the full three-parameter direct-SEP HMC comparison remains a separate scaling target.
 \end{remark}
 
 \subsection{Discussion}
@@ -2002,13 +2002,11 @@ The reduced HLT bridge varies four parameters, $(\rho_b,\rho_{qs},\sigma_b,\sigm
 
 The HLT bridge passes the pre-specified finite-support comparison. Prediction RMSE relative to direct SEP falls from 0.1436 under ROM1 to 0.00075 under the surrogate, and log-posterior-surface RMSE falls from 88.07 to 0.053. Surrogate 90 percent intervals overlap direct SEP intervals for all four bridge parameters. The bridge is therefore the main direct evidence that the residual surrogate is learning the intended nonlinear correction in the medium-scale application. It remains a one-period, known-feature grid comparison, not a full multi-period inversion-filter or HMC certificate.
 
-The more ambitious validation target is a direct SEP-HMC versus surrogate-HMC comparison on the Gal\'i synthetic model in Section~\ref{subsec:gali_model}. The DGP should use the same SEP solution and priors for both samplers, with identical data, seeds, and chain lengths. The comparison is acceptable if posterior means are within Monte Carlo error, 90 percent intervals materially overlap, and no systematic coverage distortion appears. The current package verifies this logic in a smaller hard-ELB OBC exercise; it does not yet complete the full three-shock SEP-HMC target.
+The more ambitious validation target is a direct SEP-HMC versus surrogate-HMC comparison on the Gal\'i synthetic model in Section~\ref{subsec:gali_model}. The DGP should use the same SEP solution and priors for both samplers, with identical data, seeds, and chain lengths. The comparison is acceptable if posterior means are within Monte Carlo error, 90 percent intervals materially overlap, and no systematic coverage distortion appears. I treat the full three-shock version as a scaling target rather than as evidence in this draft.
 
-I do not report the full requested Gal\'i three-parameter direct-SEP HMC comparison here. Existing Gal\'i diagnostics show that the SEP engine solves the model at a cached true parameter value, but the full three-parameter direct-SEP HMC run remains too computationally expensive for this draft. I therefore treat that exercise as a design target rather than as posterior-validating evidence. The replication package now includes narrower actual-floor diagnostics using the maintained Gal\'i OBC model. First, an adverse $\eps_z$ shock block generates a six-period floor episode with falling output and inflation, and a local known-shock grid over $\sigma_z$ confirms that a residual surrogate can reproduce the direct OBC posterior on that path. Second, a one-parameter inversion-grid check recovers shocks with the linear ROM1 inversion filter and evaluates the common recovered shocks under direct OBC and ROM1 plus the residual surrogate. That run has zero solver warnings, finite support at all 18 grid points, direct and surrogate posterior means of $0.050053$, and true-value coverage in both 90 percent intervals. Third, a matched one-parameter HMC smoke on the same inversion objective runs direct and surrogate NUTS with identical seeds, 30 post-warmup draws, zero numerical errors, overlapping intervals, true-value coverage, and a posterior-mean difference of 0.21 combined MCSE units. Fourth, a two-parameter matched-HMC check estimates $(\sigma_z,\sigma_a)$ on a 24-period actual-floor path with post-ELB identification blocks. In the extended four-chain run, the grid/training stage has zero solver warnings, actual-floor binding in 9 of 24 periods, finite support at all 36 grid points, and holdout residual RMSE approximately zero. The matched-HMC posterior comparison uses 4,000 post-warmup draws per objective; direct and surrogate 90 percent intervals overlap for both parameters, both true values are covered, and posterior-mean differences are $-0.45$ and $-0.46$ combined MCSE units for $\sigma_z$ and $\sigma_a$. The direct sampler records six numerical-error proposals out of 4,000 post-warmup draws, while the surrogate sampler records zero; the negligible-issue diagnostic and the overall validation flag both pass. Fifth, $\sigma_\nu$ probes are retained as expected identification-failure diagnostics: direct and surrogate objectives agree, but both push the parameter toward the local grid boundary, so the failure is not evidence of surrogate approximation bias. These are transition-map, inversion-layer, and sampler checks, not substitutes for the requested three-parameter direct-SEP HMC exercise.
+The available hard-ELB diagnostics use the maintained Gal\'i OBC model and validate narrower layers of the pipeline. An adverse $\eps_z$ shock block generates a six-period floor episode with falling output and inflation, and a local known-shock grid over $\sigma_z$ confirms that a residual surrogate reproduces the direct OBC posterior on that path. A one-parameter inversion-grid check recovers shocks with the linear ROM1 inversion filter and evaluates common recovered shocks under direct OBC and ROM1 plus the residual surrogate; all 18 grid points are finite, direct and surrogate posterior means are both $0.050053$, and both 90 percent intervals cover the true value. A matched one-parameter HMC smoke on the same inversion objective runs direct and surrogate NUTS with identical seeds, 30 post-warmup draws, zero numerical errors, overlapping intervals, true-value coverage, and a posterior-mean difference of 0.21 combined MCSE units. A two-parameter matched-HMC check estimates $(\sigma_z,\sigma_a)$ on a 24-period actual-floor path with post-ELB identification blocks. In the extended four-chain run, actual-floor binding occurs in 9 of 24 periods, all 36 grid points are finite, direct and surrogate 90 percent intervals overlap for both parameters, both true values are covered, and posterior-mean differences are $-0.45$ and $-0.46$ combined MCSE units for $\sigma_z$ and $\sigma_a$. The direct sampler records six numerical-error proposals out of 4,000 post-warmup draws, while the surrogate sampler records zero. Probes that add $\sigma_\nu$ behave as identification diagnostics: direct and surrogate objectives agree, but both push the parameter toward the local grid boundary.
 
-I also maintain a bounded HLT direct-SEP/MH versus surrogate/MH harness targeting the SW07-HLT legacy three-parameter price block $(\xi_p,\iota_p,\varepsilon_p)$ rather than the Gal\'i shock-volatility vector $(\sigma_A,\sigma_\mu,\sigma_R)$. This is a diagnostic harness, not a posterior validation pass: the direct SEP side returns a finite objective, while the historical surrogate bundle is not a current-runtime posterior comparison.
-
-I therefore do not report the missing full three-parameter direct posterior comparison here. Reproducibility details for the available diagnostics belong in the replication package rather than in the manuscript.
+A bounded HLT direct-SEP/MH harness targeting the legacy three-parameter price block $(\xi_p,\iota_p,\varepsilon_p)$ is retained as a diagnostic only. The direct SEP side returns a finite objective, but the historical surrogate bundle is not a current-runtime posterior comparison.
 
 \section{Validation Status}
 \label{app:validation_results}
@@ -2032,9 +2030,9 @@ Two-parameter inversion-HMC diagnostic & $(\sigma_z,\sigma_a)$ direct/surrogate 
 $\sigma_\nu$ probes & Expected identification failures: direct and surrogate objectives agree, but both push $\sigma_\nu$ toward the local grid boundary \\
 HLT support map & 10{,}000 of 10{,}000 supported investment-block direct-SEP cells solve; SEP residual max $9.996\times 10^{-6}$ \\
 HLT posterior-grid bridge & Passes one-period held-out comparison: surrogate prediction RMSE falls from 0.1436 to 0.00075 and log-posterior-surface RMSE from 88.07 to 0.053 relative to direct SEP; all four surrogate intervals overlap direct SEP \\
-Full Gal\'i three-parameter direct SEP-HMC & Not reported; remains a scaling target rather than a result in this draft \\
-Full Gal\'i three-parameter surrogate-HMC comparison & Not reported on the same direct-SEP DGP, priors, seeds, and chain lengths \\
-Full HLT inversion-filter/HMC bridge & Not reported; the current HLT bridge is a finite-support known-feature grid comparison \\
+Full Gal\'i three-parameter direct SEP-HMC & Scaling target rather than a result in this draft \\
+Full Gal\'i three-parameter surrogate-HMC comparison & Scaling target on the same direct-SEP DGP, priors, seeds, and chain lengths \\
+Full HLT inversion-filter/HMC bridge & Scaling target; the current HLT bridge is a finite-support known-feature grid comparison \\
 HLT direct-SEP/MH fallback harness & Implemented; direct SEP objective is finite in a diagnostic check \\
 Historical HLT direct-FOM diagnostic & Available as a diagnostic check, not a posterior comparison \\
 \bottomrule
@@ -2054,7 +2052,7 @@ Table~\ref{tab:rhat_linear} reports diagnostics from 4 independent linear chains
 An initial four-chain diagnostic with cold-start chains (seeds 42, 2, 3, 4) produced $\hat{R} > 1.1$ for all 18 parameters. Chains 2--4, initialized from calibrated baseline values, failed to find the nonlinear posterior mode (objective $\approx -14{,}535$ vs.\ $-1{,}787$ for the best chain)---reflecting the surrogate posterior's narrower basin of attraction and the difficulty of starting from a cold initialization. The nonlinear objective surface is more concentrated than the linear one in the warm-started comparison, creating an initialization challenge that the standard NUTS warmup phase cannot always overcome in 500 adaptation steps.
 
 A practical workaround is to warm-start new chains from the best chain's posterior mean. Three additional chains (seeds 5, 6, 7) were initialized from the seed-42 posterior mean and run for 2{,}000 post-warmup draws each ($\approx 65$ hours per chain on Apple M4). Table~\ref{tab:rhat_surrogate} reports the diagnostics pooled across the four warm-started chains (seeds 42, 5, 6, 7). Convergence now holds broadly: maximum $\hat{R} = 1.049$ (below the 1.1 threshold for all 18 parameters), 13 of 18 parameters satisfy the stricter $\hat{R} < 1.01$ criterion, and the remaining five---$\rho_{qs}$, $\rho_{ms}$, $\sigma_{qs}$, $\iota_p$, $\varepsilon_p$---show only mild warnings with $\hat{R} \in [1.02, 1.05]$. Minimum pooled ESS is 90 (for Kimball curvature $\varepsilon_p$), consistent with the weak identification of the pricing nonlinearity; ESS exceeds 4{,}000 for the risk-premium and TFP shock blocks. The per-chain posterior-mean objective agrees to within 7 nats across the four chains ($-1{,}787$ to $-1{,}780.8$), and no chain records a divergent transition. These are sampling diagnostics within the warm-started basin, not evidence that posterior mass across basins has been measured.
-Table~\ref{tab:mode_sensitivity_chains} lists the cold-start and warm-start chain artifacts used for this mode-sensitivity accounting.
+Table~\ref{tab:mode_sensitivity_chains} lists the cold-start and warm-start chain records used for this mode-sensitivity accounting.
 
 \begin{table}[htbp]
 \centering
@@ -2291,7 +2289,7 @@ $\xi_w$ & Calvo wages & 0.943 & [0.917, 0.960] \\
 
 \begin{table}[htbp]
 \centering
-\caption{Runtime profile of the HLT three-parameter validation workflow (seconds)}
+\caption{Runtime profile of the HLT three-parameter diagnostic (seconds)}
 \label{tab:computational_cost}
 \begin{tabular}{lccc}
 \toprule
@@ -2459,13 +2457,13 @@ Tail (75-100th) & 1,250 & 0.00135 & 0.00231 & Real rate \\
 \tablenotes{\textit{Notes}: Distance measured as Mahalanobis norm from prior mean. The median RRMSE is below 0.002 in every region; the tail-region 95th percentile exceeds 0.002, so far-tail accuracy remains a caveat.}
 \end{table}
 
-\subsection{Omitted Validation Tables}
+\subsection{Excluded Validation Tables}
 
-Earlier seed-sensitivity, prior-sensitivity, simplified 18-parameter validation, and sample-length recovery tables are omitted from this paper because the current replication package does not contain reproducible runs supporting those numerical claims. They should be restored only after the underlying runs are regenerated and documented. Appendix~\ref{sec:validation_design} tracks the passing hard-ELB Gal\'i package audit, the reduced HLT direct-SEP bridge, and the remaining full multi-period direct-SEP HMC scaling targets.
+Seed-sensitivity, prior-sensitivity, simplified 18-parameter validation, and sample-length recovery tables are excluded because the replication package does not contain documented runs supporting those numerical claims. Appendix~\ref{sec:validation_design} tracks the passing hard-ELB Gal\'i package audit, the reduced HLT direct-SEP bridge, and the remaining full multi-period direct-SEP HMC scaling targets.
 
 \subsection{Surrogate Architecture Comparison}
 
-The architecture-comparison table previously reported posterior-mode errors from the omitted three-parameter recovery workflow. I omit it from this paper until the underlying run is regenerated. The current paper uses the architecture documented in the training materials and reports only the held-out accuracy and posterior consequences that have matching replication support.
+The architecture-comparison table is also excluded because its posterior-mode errors came from the same unsupported three-parameter recovery exercise. The paper uses the architecture documented in the training materials and reports only held-out accuracy and posterior consequences with matching replication support.
 
 \subsection{ZLB-Binding Surrogate Performance}
 
