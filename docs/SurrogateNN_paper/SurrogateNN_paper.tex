@@ -143,11 +143,43 @@
 \begin{abstract}
 \noindent
 \footnotesize
-First-order perturbation misses the dominant deterministic nonlinearity in the Smets--Wouters model studied here. The investment adjustment cost vanishes with zero marginal cost at trend growth, so the level resource-cost term is first-order invisible while the state-dependent products involving marginal adjustment costs are compressed to local linear coefficients. A stochastic-extended-path decomposition of the nonlinear-minus-linear solution gap assigns 69 percent of the gap to the investment and capital block and 0.2 percent to the price Phillips curve. In simulations with binding lower-bound episodes, investment remains the largest source of the nonlinear correction, although its binding-episode share falls at the most extreme shock scale.
+This paper asks where first-order Smets--Wouters loses quantitatively important
+nonlinear dynamics. In the model studied here, the answer is the investment
+block. The investment adjustment cost has zero level and zero marginal cost at
+trend growth, so the level resource cost is first-order invisible and the
+state-dependent products involving marginal adjustment costs are compressed to
+local linear coefficients. A stochastic-extended-path decomposition assigns 69
+percent of the nonlinear-minus-linear solution gap to investment and capital,
+and 0.2 percent to the price Phillips curve. Investment remains the largest
+source of the correction in simulations with lower-bound episodes, although its
+binding-episode share falls at the most extreme shock scale.
 
-To estimate the nonlinear model on U.S. data, I develop a neural network surrogate that learns the residual between nonlinear and linear transitions, coupled with a regime-switching filter that activates the nonlinear correction only in periods of large displacement from steady state. The residual formulation makes approximation error observable on validation data, and a formal consistency result gives conditions under which this error has limited posterior impact. A reduced four-parameter HLT bridge benchmarks the same residual surrogate against direct SEP on finite support: all 10{,}000 supported grid cells solve, the surrogate lowers prediction RMSE from 0.1436 to 0.00075 relative to direct SEP, and log-posterior-surface RMSE falls from 88.07 to 0.053. Surrogate-based Bayesian estimation via NUTS-HMC completes in 2.4 hours with zero divergent transitions in the baseline run.
+I estimate the nonlinear model on U.S. data with a neural network surrogate.
+The network does not learn the full transition. It learns the residual between
+the nonlinear stochastic-extended-path transition and the first-order transition.
+A gate applies this correction only when the economy is far from steady state.
+This design makes the approximation error measurable. In a reduced
+four-parameter HLT bridge, all 10{,}000 supported direct-SEP grid cells solve;
+the surrogate lowers prediction RMSE from 0.1436 to 0.00075 relative to direct
+SEP, and log-posterior-surface RMSE falls from 88.07 to 0.053. Baseline
+surrogate NUTS-HMC estimation completes in 2.4 hours with zero divergent
+transitions.
 
-The empirical results are model-specific rather than a generic proof of bias from linearization. On the 1959--2004 sample, nonlinear estimation is associated with higher risk-premium volatility and lower wage-markup persistence, consistent with the missing investment channel changing how shocks are allocated. On the 1959--2025 sample, a high-likelihood warm-started surrogate mode improves the posterior-mean profiled log objective by 35.92 nats relative to the linear Kalman posterior mean, and the linear smoother requires risk-premium shocks of $56\sigma$ during COVID. The same comparison is conditional on one country, one model specification, a single posterior basin, the surrogate approximation, the inversion objective, the gate design, and COVID out-of-distribution risk. A restored ARMA(1,1) markup specification improves the linear log likelihood by 34 nats on the baseline sample, comparable to the nonlinear gap, so the posterior shifts should be read as evidence relative to this HLT benchmark rather than as a specification-invariant rejection of linear DSGE estimation. A quiet-sample forecast pilot fails under the original gate, while a no-HMC gate recalibration diagnostic reduces the aggregate RMSE ratio from 2.40 to 1.04. Re-estimating the surrogate posterior under the q95 padded gate gives a 1.09 full-window ratio, with gains early in the quiet sample and losses later, so the calm-period gate-design risk is reduced but unresolved.
+The empirical evidence is model-specific. On 1959--2004 data, nonlinear
+estimation is associated with higher risk-premium volatility and lower
+wage-markup persistence. On 1959--2025 data, a high-likelihood warm-started
+surrogate mode improves the posterior-mean profiled log objective by 35.92 nats
+relative to the linear Kalman posterior mean, and the linear smoother requires
+risk-premium shocks of $56\sigma$ during COVID. This comparison is conditional
+on one country, one model specification, one posterior basin, the surrogate
+approximation, the inversion objective, the gate design, and COVID
+out-of-distribution risk. Restoring the ARMA(1,1) markup terms improves the
+linear log likelihood by 34 nats on the baseline sample, almost the same scale
+as the nonlinear gap. The posterior shifts should therefore be read as evidence
+relative to this HLT benchmark, not as a specification-invariant rejection of
+linear DSGE estimation. Calm-period forecasting remains a gate-design risk:
+the original quiet-sample gate fails, while a q95 padded re-estimation lowers
+the full-window aggregate RMSE ratio to 1.09.
 \end{abstract}
 
 \medskip
@@ -168,29 +200,143 @@ The empirical results are model-specific rather than a generic proof of bias fro
 \section{Introduction}
 \label{sec:introduction}
 
-The standard motivation for nonlinear DSGE estimation is the zero lower bound on nominal interest rates. The effective lower bound (ELB) creates a kink that first-order perturbation cannot represent, and the episodes where it binds---2009--2015 in the United States, 2020--2022---are among the most policy-relevant in recent macroeconomic history. A large literature has developed nonlinear methods specifically to handle this constraint \citep{gust2012effects,boehl2022monetary,guerrieri2015occbin}. In the Smets--Wouters specification studied here, however, the dominant measured nonlinearity is elsewhere.
+Nonlinear DSGE estimation is often motivated by the effective lower bound
+(ELB). The ELB creates a kink that first-order perturbation cannot represent,
+and the U.S. ELB episodes in 2009--2015 and 2020--2022 are central episodes for
+monetary policy. A large literature has therefore built nonlinear tools around
+this constraint \citep{gust2012effects,boehl2022monetary,guerrieri2015occbin}.
+In the Smets--Wouters specification studied here, the main measured
+nonlinearity is instead in the investment block.
 
-In an 18-parameter Smets--Wouters model with occasionally binding constraints, I solve the full nonlinear system at 22,080 state--shock--parameter combinations and compare each solution against the corresponding first-order perturbation output. The investment and capital block accounts for 69 percent of the total gap between nonlinear and linear dynamics; the price Phillips curve---where the Kimball aggregator enters and which has received substantial attention in the nonlinear DSGE literature \citep{gust2012effects,boehl2022monetary,fernandezvillaverde2021estimating}---accounts for 0.2 percent. In a separate shock-scale exercise, the unconditional investment share remains 88--92 percent even when lower-bound episodes occur, though the share during binding periods alone falls at the largest shock scale (Figure~\ref{fig:decomposition_vs_scale}).
+I do three things. First, I measure which equations create the
+gap between the nonlinear solution and the first-order solution. Second, I
+build a surrogate estimator that can take this nonlinear model to U.S. data.
+Third, I report what changes in the posterior, while keeping the limits of
+that comparison explicit.
 
-The reason is analytical, but it is not that every marginal adjustment-cost term disappears. Let $x_t=I_t/I_{t-1}$ and write the level cost as $S(x_t)=\tfrac{\chi}{2}(x_t-1)^2$, where $\chi=S_{xx}(1)$ is the curvature at trend growth. The level term satisfies $S(1)=S_x(1)=0$ and is therefore first-order invisible in resource constraints. The marginal term $S_x(x_t)=\chi(x_t-1)$ is locally visible in first-order conditions, but first-order perturbation retains only this local slope and discards the products between $S_x$, Tobin's $q$, the shadow price of capital, and the stochastic discount factor. I formalize the level-cost result as a general \textit{perturbation invisibility} property (Proposition~\ref{prop:invisibility}): any function satisfying $f(\bar{x}) = f'(\bar{x}) = 0$ at steady state contributes zero in levels to first-order methods.
+The first result is deterministic. I solve the 18-parameter Smets--Wouters
+model with occasionally binding constraints at 22,080 state--shock--parameter
+combinations. I then compare each nonlinear stochastic-extended-path (SEP)
+solution with the corresponding first-order perturbation. The investment and
+capital block accounts for 69 percent of the total gap. The price Phillips
+curve, where the Kimball aggregator enters and where much of the nonlinear DSGE
+literature has focused \citep{gust2012effects,boehl2022monetary,fernandezvillaverde2021estimating},
+accounts for 0.2 percent. In a separate shock-scale exercise, investment still
+accounts for 88--92 percent of the unconditional gap when lower-bound episodes
+occur, although its share during binding periods falls at the largest shock
+scale (Figure~\ref{fig:decomposition_vs_scale}).
 
-Three diagnostics point in the same direction. First, the equation-block decomposition shows investment at 69 percent and pricing at 0.2 percent (Table~\ref{tab:equation_block}). Second, a Gal\'i (2015) model with the same ELB and Kimball aggregation but no investment shows near-zero nonlinearity at empirically relevant shock scales (Figure~\ref{fig:gali_obc_vs_no_obc})---same ELB, same Kimball structure, different investment block. Third, in a counterfactual specification, removing $S(\cdot)$ substantially increases the measured gap because the adjustment cost both creates nonlinear marginal products and damps investment volatility, while linearizing the utilization cost $a(z)$ changes the gap by less than 1.5 percent.
+The reason is simple. Let \(x_t=I_t/I_{t-1}\) and write the level investment
+adjustment cost as \(S(x_t)=\tfrac{\chi}{2}(x_t-1)^2\). At trend growth,
+\(S(1)=S_x(1)=0\). The level resource cost is therefore invisible to a
+first-order approximation. The marginal cost \(S_x(x_t)=\chi(x_t-1)\) is
+locally visible, but first-order perturbation keeps only the local slope. It
+does not keep the products between \(S_x\), Tobin's \(q\), the shadow price of
+capital, and the stochastic discount factor. Proposition~\ref{prop:invisibility}
+formalizes the level-cost statement: any function with
+\(f(\bar{x})=f'(\bar{x})=0\) contributes zero in levels to a first-order method.
 
-If linearization discards an important investment-channel amplification, the linear posterior may compensate through the shock processes and persistence parameters that load on investment dynamics. On U.S. data (1959Q1--2004Q4), switching from linear to nonlinear estimation is associated with a doubling of risk-premium volatility $\sigma_b$, a compression of wage markup persistence $\rho_w$ from 0.37 to 0.08, and a 2.7-fold rise in Kimball curvature $\varepsilon_p$ (Table~\ref{tab:18param_switching_posterior}). These shifts are consistent with the invisibility mechanism, but they are conditional on the HLT model, the chosen priors, and the surrogate objective.
+Three diagnostics support the ranking. The equation-block decomposition puts
+investment at 69 percent and pricing at 0.2 percent (Table~\ref{tab:equation_block}).
+A Gal\'i (2015) model with the same ELB and Kimball aggregation but no
+investment block has near-zero nonlinearity at empirically relevant shock scales
+(Figure~\ref{fig:gali_obc_vs_no_obc}). In counterfactual HLT specifications,
+removing \(S(\cdot)\) increases the measured gap because the adjustment cost
+both creates nonlinear marginal products and dampens investment volatility,
+while linearizing the utilization cost \(a(z)\) changes the gap by less than
+1.5 percent.
 
-Extending the sample through 2025Q1---to include the two modern ELB episodes where the standard argument for nonlinear estimation is strongest---is more revealing but also more fragile. The linear model attributes the COVID-19 collapse to risk-premium shocks exceeding $56\sigma$, price markup shocks of $32\sigma$, and monetary shocks of $23\sigma$ under its own smoother. The high-likelihood warm-started surrogate mode improves the posterior-mean profiled log objective by 35.92 nats ($-1{,}781.68$ versus $-1{,}817.59$) and shifts the posterior toward lower shock volatilities and higher investment-related persistence. This comparison is conditional on a single posterior basin, the surrogate approximation, the inversion objective, the gate design, and COVID out-of-distribution risk; it is not a marginal-likelihood or Bayes-factor comparison.
+If the linear solution misses this investment-channel amplification, the
+posterior may compensate through shocks and persistence parameters that load on
+investment dynamics. On U.S. data from 1959Q1 to 2004Q4, nonlinear estimation
+is associated with a doubling of risk-premium volatility \(\sigma_b\), a
+compression of wage-markup persistence \(\rho_w\) from 0.37 to 0.08, and a
+2.7-fold rise in Kimball curvature \(\varepsilon_p\)
+(Table~\ref{tab:18param_switching_posterior}). These shifts match the
+invisibility mechanism, but they are conditional on the HLT model, the priors,
+and the surrogate objective.
 
-A specification caveat is equally important. The HLT baseline suppresses the ARMA(1,1) price- and wage-markup shock terms used in the original \citet{smets2007shocks} specification. This is the same block where \citet{farkas2020bayesian} document a flat posterior target in the full Smets--Wouters model. Restoring those MA terms on the baseline sample improves the linear log likelihood by 34 nats (Appendix~\ref{app:hlt_vs_ft}), almost the same scale as the 35.92-nat nonlinear objective gap in the extended-sample comparison. The nonlinear posterior shifts therefore should not be read as a specification-invariant measurement of linearization bias. They show that, relative to the HLT benchmark used to train the surrogate, the profiled nonlinear objective favors a different posterior allocation of COVID and investment dynamics.
+The extended 1959Q1--2025Q1 sample is more informative and more fragile. The
+linear smoother explains COVID with risk-premium shocks above \(56\sigma\),
+price-markup shocks of \(32\sigma\), and monetary-policy shocks of
+\(23\sigma\). A high-likelihood warm-started surrogate mode improves the
+posterior-mean profiled log objective by 35.92 nats
+(\(-1{,}781.68\) versus \(-1{,}817.59\)) and shifts the posterior toward lower
+shock volatilities and higher investment-related persistence. This is not a
+marginal-likelihood or Bayes-factor comparison. It is conditional on one
+posterior basin, the surrogate approximation, the inversion objective, the gate
+design, and COVID out-of-distribution risk.
 
-The policy implication is correspondingly narrow. In the HLT model studied here, linear estimates may attribute too much variation to exogenous shocks when the missing investment channel is quantitatively important. For researchers choosing which nonlinearities to include in estimated models of this class, the deterministic decomposition favors prioritizing the investment block over the ELB and Kimball pricing. The posterior comparison strengthens that case within the current model but does not by itself establish global posterior dominance across alternative specifications.
+There is also a specification caveat. The HLT baseline suppresses the
+ARMA(1,1) price- and wage-markup shock terms used by
+\citet{smets2007shocks}. This is the same block where
+\citet{farkas2020bayesian} document a flat posterior target in the full
+Smets--Wouters model. Restoring those MA terms on the baseline sample improves
+the linear log likelihood by 34 nats (Appendix~\ref{app:hlt_vs_ft}), almost the
+same scale as the 35.92-nat nonlinear objective gap in the extended sample. I
+therefore read the nonlinear posterior shifts as evidence relative to the HLT
+benchmark used to train the surrogate, not as a specification-invariant
+measurement of linearization bias.
 
-To estimate the nonlinear model, I develop a neural network surrogate coupled with a regime-switching filter. The neural network learns the residual between the full nonlinear solution and the linear baseline---a target two orders of magnitude smaller than the full transition. A regime-switching gate classifies each sample period as calm or stressed based on the economy's distance from steady state, applying the nonlinear correction in periods classified as stressed and using the exact Kalman filter elsewhere. I sample the posterior via Hamiltonian Monte Carlo with the No-U-Turn Sampler. A bootstrap particle filter---the standard nonlinear alternative---collapses to a single effective particle in every period at all particle counts tested; at $N_p=5{,}000$, its log-likelihood magnitude is roughly four orders worse than the Kalman value (Table~\ref{tab:pf_benchmark}). The filter-free formulation sidesteps this degeneracy by treating shocks as explicit unknowns.
+The estimator is designed around one idea: learn only what first order misses.
+The neural network learns the residual
+\(g^{\text{SEP}}-g^{\text{ROM1}}\), not the full nonlinear transition. A
+regime-switching gate applies the correction only when the economy is far from
+steady state and uses the exact Kalman filter in calm periods. I sample with
+NUTS-HMC. A bootstrap particle filter, the standard nonlinear likelihood
+alternative, collapses to a single effective particle in every period at all
+particle counts tested; at \(N_p=5{,}000\), its log-likelihood magnitude is
+roughly four orders worse than the Kalman value (Table~\ref{tab:pf_benchmark}).
+The filter-free formulation avoids this problem by treating shocks as explicit
+unknowns.
 
-Two properties distinguish this approach from other recent surrogate methods \citep{kase2025estimating,naubert2025differentiable}. First, approximation error is directly measured: because the network learns the residual $g^{\text{SEP}} - g^{\text{ROM1}}$, validation RRMSE is an error on the nonlinear correction rather than on the full transition, and Appendix~\ref{sec:formal_consistency} states the assumptions under which this maps into posterior distortion. Second, the surrogate is trained once on parameter draws spanning the full prior support and reused across estimation samples without retraining. As a bridge to the medium-scale application, Appendix~\ref{sec:validation_design} reports a reduced four-parameter HLT grid in which all 10{,}000 maintained-support direct-SEP cells solve and a held-out posterior-grid comparison matches direct SEP posterior intervals for all four investment-block parameters. These properties make the decomposition exercise auditable, but they do not eliminate out-of-distribution risk in the COVID window. Online estimation with 1,000 NUTS draws completes in 2.4 hours on an Apple M4 with zero divergent transitions, after a 12-hour offline training stage.
+Two features make the surrogate auditable. First, the residual target makes the
+approximation error directly measurable on validation data, and
+Appendix~\ref{sec:formal_consistency} states conditions under which this error
+has limited posterior impact. Second, the network is trained once on parameter
+draws spanning prior support and then reused across samples. A reduced
+four-parameter HLT bridge benchmarks the same residual surrogate against direct
+SEP: all 10{,}000 supported cells solve, the surrogate lowers prediction RMSE
+from 0.1436 to 0.00075, and a held-out posterior-grid comparison matches direct
+SEP intervals for all four investment-block parameters
+(Appendix~\ref{sec:validation_design}). The online technical appendix gives the
+full computation record: scripts, output files, validation criteria, and the
+limits of each diagnostic.
 
-The decomposition results in Sections~\ref{sec:invisibility}--\ref{sec:decomposition} are deterministic, computed from the nonlinear solver without MCMC. The posterior comparison in Section~\ref{sec:inference_consequences} is conditional on a single model, a single U.S. sample, one high-likelihood warm-started surrogate mode, the profiled inversion objective, the surrogate approximation, and the gate design. The out-of-sample evidence is mixed: the switching surrogate improves COVID-window conditional predictions but fails a quiet-sample 1995Q1--2007Q4 pilot under the original gate, where aggregate RMSE is 2.40 times ROM1. A stricter q95 gate diagnostic using the same posterior draws reduces the ratio to 1.04 and hard-gate activation to 1.9 percent. Re-estimating the surrogate chain under this q95 gate gives a 1.09 ratio: much better than the original gate and better than ROM1 in the early quiet window, but still worse over the full calm holdout. The failure appears substantially gate-related, but calm-period performance remains an implementation risk rather than a resolved strength.
+The main implication is narrow but useful. In the HLT model studied here, a
+first-order estimate can attribute too much variation to exogenous shocks when
+the missing investment channel is large. For researchers deciding which
+nonlinearities to keep in estimated Smets--Wouters models, the deterministic
+evidence favors prioritizing the investment block over the ELB and Kimball
+pricing. The posterior comparison strengthens that conclusion within the
+current model, but it does not establish global posterior dominance across
+alternative specifications.
 
-The paper draws on three literatures. For the nonlinear solver, I use the stochastic extended path method \citep{fair1983solution,adjemian2025stochastic}, which handles occasionally binding constraints natively and scales to medium-scale models, unlike projection \citep{judd1992projection} or sparse grids \citep{krueger2004computing,winschel2010solving}; \citet{richter2017nonlinear} provides a survey of nonlinear solution methods with OBC. For the surrogate, I build on multi-fidelity methods from engineering \citep{peherstorfer2018survey} and the model-discrepancy framework of \citet{kennedy2001bayesian}. The residual formulation is related to \citet{koop2022bayesian} and \citet{naubert2025differentiable} but approximates the transition-map correction rather than the likelihood; compared to \citet{kase2025estimating}, it learns a two-orders-of-magnitude smaller target and supplies smooth gradients for HMC. \citet{janssens2025efficient} achieve large speed gains via time-varying local linearization, but their first-order Taylor expansion cannot capture the $S' \times p^k \times \xi_{t+1}/\xi_t$ cross-terms that drive the investment-channel nonlinearity. For sampling, I extend the filter-free HMC framework of \citet{childers2022filter} and \citet{farkas2020bayesian} to the nonlinear setting. This sidesteps the particle-filter weight degeneracy documented in \citet{herbst2019tempered} and \citet{cubaborda2019likelihood}. Recent nonlinear estimation work---\citet{gust2012effects}, \citet{boehl2022monetary}, \citet{fernandezvillaverde2021estimating}, \citet{basu2017uncertainty}---faces either this degeneracy or the restriction to piecewise-linear approximations. The theoretical underpinnings of likelihood-based inference with computed nonlinear solutions are developed in \citet{fernandezvillaverde2006convergence}, whose convergence results motivate the formal consistency theory in Appendix~\ref{sec:formal_consistency}.
+The out-of-sample evidence reinforces this caution. The switching surrogate
+improves COVID-window conditional predictions but fails a quiet-sample
+1995Q1--2007Q4 pilot under the original gate, where aggregate RMSE is 2.40 times
+ROM1. A q95 gate diagnostic using the same posterior draws reduces the ratio to
+1.04 and the hard-gate activation rate to 1.9 percent. Re-estimating the
+surrogate chain under this q95 gate gives a 1.09 ratio: much better than the
+original gate and better than ROM1 early in the quiet window, but still worse
+over the full calm holdout. Calm-period gate design remains a risk, not a
+resolved strength.
+
+The paper draws on three literatures. For the nonlinear solver, I use the
+stochastic extended path method \citep{fair1983solution,adjemian2025stochastic},
+which handles occasionally binding constraints and scales to medium-size
+models; \citet{richter2017nonlinear} surveys nonlinear solution methods with
+occasionally binding constraints. For the surrogate, I build on multi-fidelity
+methods \citep{peherstorfer2018survey} and model-discrepancy methods
+\citep{kennedy2001bayesian}. The closest recent DSGE surrogate papers are
+\citet{kase2025estimating} and \citet{naubert2025differentiable}; the difference
+here is that the network approximates a transition residual rather than the
+likelihood itself. For sampling, I extend the filter-free HMC approach of
+\citet{childers2022filter} and \citet{farkas2020bayesian} to the nonlinear
+setting, motivated by particle-filter degeneracy in medium-scale DSGE models
+\citep{herbst2019tempered,cubaborda2019likelihood}. The formal consistency
+arguments build on likelihood inference with computed nonlinear solutions in
+\citet{fernandezvillaverde2006convergence}.
 
 % ============================================================================
 % SECTION 3: THE INVISIBILITY PROPERTY
