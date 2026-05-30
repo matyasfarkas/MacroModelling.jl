@@ -3,6 +3,8 @@
 
 echo "==================================================================="
 echo "LaTeX Compilation Script for Job Market Paper"
+echo "Default build omits the legacy in-file appendices."
+echo "Use compile_full_with_appendix.sh for the archive build."
 echo "==================================================================="
 
 # Change to paper directory
