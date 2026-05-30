@@ -37,6 +37,11 @@
 \newcommand{\obs}{\mathrm{obs}}
 \newcommand{\llik}{\ell}
 
+\makeatletter
+\g@addto@macro\UrlBreaks{\do\_\do\-\do\.}
+\makeatother
+\Urlmuskip=0mu plus 1mu\relax
+
 \newtheorem{protocol}{Protocol}
 \newtheorem{diagnostic}{Diagnostic}
 
@@ -54,7 +59,7 @@
 }
 
 \title{Online Technical Appendix\\
-\large Computational Pipeline for ROM1-Residual Surrogate Estimation}
+\large Computational Pipeline, Validation Record, and Replication Map}
 \author{Matyas Farkas}
 \date{May 2026}
 
@@ -69,7 +74,9 @@ checks do not prove. The pipeline has three separate objects: the direct
 nonlinear transition computed by stochastic extended path (SEP), the
 ROM1-residual surrogate that approximates that transition, and the profiled
 inversion objective used for posterior comparisons in the empirical
-application.
+application. The appendix is intentionally more comprehensive than the paper:
+it records successful diagnostics, failed diagnostics, non-promoted pilots,
+artifact locations, and replication commands.
 \end{abstract}
 
 \tableofcontents
@@ -96,6 +103,16 @@ objective. They are therefore not marginal-likelihood comparisons unless an
 additional change-of-variables or Laplace determinant is supplied. The
 validation exercises below are designed around that distinction.
 
+\paragraph{How to read this appendix.}
+The main paper should be read as the economic argument. This appendix should be
+read as the computation record. It is written to make it possible to answer
+three practical questions without reading the code first.
+\begin{enumerate}[leftmargin=2em,itemsep=0.2em]
+\item If a number appears in the paper, which artifact produced it?
+\item If a validation passed, what exactly did it validate?
+\item If a diagnostic failed or was not promoted, why was it excluded?
+\end{enumerate}
+
 \paragraph{Maintained components.}
 The maintained replication package contains three layers.
 \begin{enumerate}[leftmargin=2em,itemsep=0.2em]
@@ -114,6 +131,62 @@ one-period known-feature comparison over the investment block. It is strong
 evidence that the residual target is learned on the relevant nonlinear channel;
 it is not a complete certificate for the full multi-period inversion-filter
 posterior.
+
+\section{Claim Map}
+\label{apptech:claim_map}
+
+This section links the paper's claims to the evidence required to support them.
+The table is deliberately conservative. It separates statements that are direct
+measurements from statements that depend on the surrogate, the gate, or the
+posterior sampler.
+
+\begin{table}[htbp]
+\centering
+\caption{Claim Map}
+\label{tab:tech_claim_map}
+\begin{tabular}{p{0.25\textwidth}p{0.33\textwidth}p{0.30\textwidth}}
+\toprule
+Claim & Evidence & Scope \\
+\midrule
+Investment dominates the nonlinear solution gap & Direct SEP versus ROM1
+equation-block decomposition; shock-scale decompositions; Gal\'i model without
+investment as negative control & Deterministic solution comparison, independent
+of HMC and surrogate sampling \\
+The residual surrogate learns the HLT investment-channel correction & 10,000
+supported HLT bridge cells; prediction RMSE falls from 0.143574 to 0.000749395;
+surface RMSE falls from 88.0719 to 0.0534526 & One-period, known-feature,
+finite-support HLT bridge \\
+The hard-ELB pipeline works in a small model & Gal\'i actual-floor validation
+package; two-parameter matched direct/surrogate HMC over
+\((\sigma_z,\sigma_a)\) passes & Small-model hard-ELB validation, not full HLT
+posterior validation \\
+The extended-sample surrogate posterior finds a better profiled objective than
+the linear posterior & 2-by-2 objective decomposition:
+\(-1817.59\), \(-1852.63\), \(-1830.44\), \(-1781.68\) & Profiled objective
+under common inversion architecture, not a Bayes factor \\
+The warm-started surrogate mode is high likelihood & Four warm-started
+surrogate chains have posterior-mean objectives from \(-1787.38\) to
+\(-1780.80\); cold starts remain in a low-objective basin & Conditional on
+mode-search evidence currently available \\
+The gate needs caution in calm periods & Quiet-sample OOS failures under the
+original gate; q95 padded diagnostic improves fixed-posterior ratio to 1.04 and
+re-estimated full-gate ratio to 1.09 & Gate-design diagnostic; not a fully
+optimized forecasting rule \\
+SEP solver settings do not overturn the 265-period sensitivity probe & Full
+265-period SEP sensitivity run over five posterior draws and six
+\((\texttt{accept\_tol},K)\) cells & Solver-stability diagnostic, not a
+complete global numerical-analysis study \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Claims deliberately not made.}
+The paper does not claim that the surrogate objective is an exact marginal
+likelihood. It does not claim a Bayes factor against the linear model. It does
+not claim that the reported warm-started mode is globally dominant. It does not
+claim that the Gal\'i two-parameter validation proves the full 18-parameter
+HLT posterior. It does not use the pruned-ROM2 pilot as evidence, because that
+pilot failed its sanity check.
 
 \section{Notation and Objects}
 \label{apptech:notation}
@@ -414,6 +487,62 @@ and combines period contributions by the maintained mixing routine. The q95
 gate diagnostic in the paper recalibrates this object to avoid classifying all
 quiet-sample periods as stressed.
 
+\subsection{Exact Calculation Reported as a Profiled Objective}
+\label{apptech:objective_calculation}
+
+For a fixed parameter vector \(\theta\), the empirical objective is computed by
+the following deterministic sequence.
+\begin{algorithm}[Empirical objective evaluation]
+\item Load the transformed data, steady state, measurement map, shock standard
+      deviations, and gate-calibration payload.
+\item Initialize the state using the same convention as the corresponding
+      chain payload.
+\item For period \(t\), recover \(\widehat\eps_t(\theta)\) from the ROM1
+      inversion problem in \eqref{eq:tech_rom_inversion}.
+\item If the gate is calm, add the Kalman/ROM1 period contribution
+      \(\ell_t^K(\theta)\).
+\item If the gate is stressed, form the ROM1 prediction plus either a zero
+      correction (linear+gate ablation) or the neural residual correction, and
+      add the Gaussian observation contribution in
+      \eqref{eq:tech_sur_objective}.
+\item Propagate the state with the same transition used for the period
+      prediction.
+\item Sum period contributions and add the parameter prior and transform
+      Jacobian when evaluating the HMC target.
+\end{algorithm}
+
+The word ``profiled'' has a precise meaning here. The shocks
+\(\widehat\eps_t(\theta)\) are chosen to fit the observation at each period
+rather than integrated out. The objective therefore compares models under a
+common shock-recovery rule. It is useful for studying whether the nonlinear
+transition improves fit under that rule. It is not a likelihood in the sense
+required for a Bayes factor unless the omitted determinant or Laplace term is
+derived and included.
+
+\subsection{Linear+Gate Ablation}
+\label{apptech:linear_gate}
+
+The maintained empirical script supports a no-NN ablation flag. This keeps the
+inversion filter, gate, state propagation convention, priors, and sampler
+structure, but sets
+\(\widehat{\Delta}_w=0\). The fixed-parameter ablation artifact evaluates three
+objects at the linear and surrogate posterior means:
+\[
+\begin{array}{lcc}
+ & \theta_{\mathrm{linear}} & \theta_{\mathrm{surrogate}} \\
+\text{Linear Kalman} & -1817.59 & -1852.63 \\
+\text{Linear+gate, no NN} & -1845.10 & -1861.57 \\
+\text{Full gate+NN} & -1830.44 & -1781.68 .
+\end{array}
+\]
+The fixed-parameter result is informative but not final. At
+\(\theta_{\mathrm{surrogate}}\), the NN residual improves the objective by
+79.89 nats relative to the no-NN gate. At
+\(\theta_{\mathrm{linear}}\), the gate architecture alone worsens the objective
+by 27.51 nats and the NN residual recovers 14.66 nats. Because these are
+fixed-parameter evaluations, a dedicated no-NN HMC run is still required before
+presenting the ablation as a posterior comparison.
+
 \section{Prior, Parameter Transform, and HMC}
 \label{apptech:hmc}
 
@@ -487,6 +616,43 @@ Probes involving \(\sigma_\nu\) are retained as identification diagnostics:
 direct and surrogate objectives agree, but the parameter is pushed to the local
 grid boundary.
 
+\begin{table}[htbp]
+\centering
+\caption{Gal\'i Hard-ELB Validation Package}
+\label{tab:tech_gali_package}
+\begin{tabular}{p{0.30\textwidth}p{0.18\textwidth}p{0.40\textwidth}}
+\toprule
+Check & Status & Interpretation \\
+\midrule
+Stress path & Pass & The actual-floor path binds for six of 24 periods; output
+and inflation fall in the forced window. \\
+Known-shock residual grid over \(\sigma_z\) & Pass & Direct OBC and surrogate
+predictions are finite, and the holdout posterior comparison passes. \\
+ROM1-inversion grid over \(\sigma_z\) & Pass & The common inversion layer is
+finite for direct and surrogate objectives. \\
+One-parameter matched HMC & Pass & Direct and surrogate HMC intervals overlap;
+mean difference is 0.2067 combined MCSE units. \\
+Two-parameter grid over \((\sigma_z,\sigma_a)\) & Pass & Direct and surrogate
+surfaces are finite and cover the two targeted parameters. \\
+Two-parameter matched HMC & Pass & Four chains per objective; 4,000
+post-warmup draws per objective; interval overlap and true-value coverage for
+both parameters. \\
+\(\sigma_\nu\) probes & Expected failure & Direct and surrogate agree, but the
+short design does not identify the parameter away from the boundary. \\
+Three-parameter direct-SEP smoke & Pass as smoke & Finite likelihood and
+finite-gradient check; not used as a posterior recovery result. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The important point is not that every attempted Gal\'i exercise succeeded.
+They did not. The \(\sigma_\nu\) exercises showed a local identification
+problem. The full three-parameter direct-SEP HMC version was too expensive to
+promote. The current evidence is therefore stated as a hard-ELB pipeline audit:
+it validates the residual target, ROM1 inversion layer, and matched-HMC
+comparison in a small model over the two shock scales that the design
+identifies.
+
 \subsection{Reduced HLT Bridge}
 
 The reduced HLT bridge targets the investment and risk-premium block
@@ -524,6 +690,214 @@ Surrogate 90 percent intervals overlap direct SEP intervals for all four bridge
 parameters. This validates the residual-learning target on finite HLT support.
 It does not validate full multi-period inversion-filter HMC for the
 18-parameter empirical posterior.
+
+\begin{table}[htbp]
+\centering
+\caption{Reduced HLT Bridge: Posterior Marginals on the 10,000-Cell Grid}
+\label{tab:tech_hlt_bridge_marginals}
+\begin{tabular}{lcccc}
+\toprule
+Parameter & Truth & Direct mean & Surrogate mean & Common 90\% interval \\
+\midrule
+\texttt{crhob} & 0.583333 & 0.578232 & 0.578138 & [0.483333, 0.683333] \\
+\texttt{crhoqs} & 0.711111 & 0.717703 & 0.717704 & [0.627778, 0.822222] \\
+\texttt{z\_eb} & 1.850000 & 1.687480 & 1.687460 & [1.416670, 1.850000] \\
+\texttt{z\_eqs} & 0.594444 & 0.595980 & 0.595913 & [0.411111, 0.777778] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Reduced HLT Bridge: Prediction RMSE by Observable}
+\label{tab:tech_hlt_bridge_rmse_obs}
+\begin{tabular}{lccc}
+\toprule
+Observable & ROM1 RMSE & Surrogate RMSE & Improvement \\
+\midrule
+\texttt{dy} & 0.193920 & 0.000923 & 99.52\% \\
+\texttt{dc} & 0.200742 & 0.001032 & 99.49\% \\
+\texttt{dinve} & 0.208037 & 0.001220 & 99.41\% \\
+\texttt{labobs} & 0.132777 & 0.000663 & 99.50\% \\
+\texttt{pinfobs} & 0.039289 & 0.000131 & 99.67\% \\
+\texttt{dwobs} & 0.031020 & 0.000109 & 99.65\% \\
+\texttt{robs} & 0.054567 & 0.000236 & 99.57\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{How to Read the HLT Bridge}
+\label{apptech:read_hlt_bridge}
+
+The HLT bridge is strong evidence for the residual target because the
+comparison holds the state, shock, and parameter inputs fixed. ROM1 is already
+a good local approximation near steady state, but it misses the nonlinear
+investment correction on the supported grid. The surrogate is trained on that
+missed correction. The result that matters most is therefore the fall in
+prediction RMSE from 0.143574 to 0.000749395 on direct-SEP targets.
+
+The bridge is not a full empirical posterior validation. It is one period, the
+features are known, the observation scale is fixed by the validation design,
+and the posterior is a discrete grid surface. The direct inference problem in
+the paper is harder: it is multi-period, uses recovered shocks, contains a gate,
+and samples an 18-dimensional parameter vector. The correct interpretation is:
+the bridge validates the hardest medium-scale numerical object that is
+currently affordable and directly relevant to the investment channel, while
+leaving the full inversion-filter HMC bridge as a scaling target.
+
+\section{Empirical Pipeline Record}
+\label{apptech:empirical_record}
+
+This section records the empirical runs used to interpret the 1959--2025
+posterior comparison. The purpose is not to add more headline results. The
+purpose is to make the chain of evidence transparent.
+
+\subsection{Extended-Sample Objective Decomposition}
+\label{apptech:ll_decomposition}
+
+The extended-sample comparison uses \(T=265\) quarters and seven observables.
+The maintained 2-by-2 objective table is
+\[
+\begin{array}{lcc}
+ & \theta_{\mathrm{linear}} & \theta_{\mathrm{surrogate}} \\
+\text{Linear Kalman} & -1817.59 & -1852.63 \\
+\text{Regime-switching surrogate} & -1830.44 & -1781.68 .
+\end{array}
+\]
+The headline gap is
+\[
+  -1781.68 - (-1817.59) = 35.92
+\]
+nats. A symmetric decomposition assigns 29.05 nats, or 80.9 percent, to model
+change and 6.86 nats, or 19.1 percent, to parameter relocation. This
+calculation addresses one specific concern: the full gap is not only the
+result of moving parameters to a different posterior mean. It does not answer
+the larger question of global posterior mass, because the surrogate result is
+still conditional on the reported warm-started basin.
+
+\subsection{Mode Sensitivity}
+\label{apptech:mode_sensitivity}
+
+The extended-sample chain artifacts show two distinct surrogate regions. Four
+linear chains initialized from the calibrated interior cluster near
+\(-1818\). Three cold-started surrogate chains remain near \(-14535\), with
+small shock volatilities and lower investment persistence. Four warm-started
+surrogate chains initialized from the linear posterior mean reach a much higher
+objective, between \(-1787.38\) and \(-1780.80\) at chain means. The main paper
+therefore describes the nonlinear posterior comparison as conditional on the
+warm-started high-likelihood mode.
+
+The compact chain-level record is:
+\begin{enumerate}[leftmargin=2em,itemsep=0.15em]
+\item Kalman, four interior chains: mean objectives from \(-1817.97\) to
+      \(-1817.48\), zero divergences, \(\sigma_b=0.166\)--0.179,
+      \(\rho_b=0.731\)--0.764, and \(\rho_w=0.157\)--0.179.
+\item Surrogate cold starts, three interior chains: mean objective
+      \(-14534.52\), zero divergences, \(\sigma_b=0.094\)--0.098,
+      \(\rho_b=0.606\)--0.610, and \(\rho_w=0.606\)--0.622.
+\item Surrogate warm starts, four linear-mean chains: mean objectives from
+      \(-1787.38\) to \(-1780.80\), zero divergences,
+      \(\sigma_b=0.091\)--0.092, \(\rho_b=0.897\)--0.901, and
+      \(\rho_w=0.226\)--0.236.
+\end{enumerate}
+
+The cold-start result is a warning, not a secondary headline. It means the
+surrogate objective has difficult geometry. It also means that claims about
+global posterior dominance would require a broader mode-search exercise. The
+paper does not make that claim.
+
+\subsection{ARMA Markup Confound}
+\label{apptech:arma_confound}
+
+The HLT baseline suppresses the ARMA(1,1) price- and wage-markup shock terms
+used in the original Smets--Wouters specification. This matters because the
+markup block is known to create flat posterior targets in the full model
+\citep{farkas2020bayesian}. The local artifact comparing HLT with the restored
+markup MA terms shows an improvement of about 34 nats in the linear likelihood
+on the baseline sample. That number is close to the 35.92-nat extended-sample
+surrogate objective gap. The implication is simple: the posterior shifts in the
+paper are evidence relative to the HLT benchmark, not a universal statement
+about every Smets--Wouters specification.
+
+\subsection{Quiet-Sample Forecasting and Gate Recalibration}
+\label{apptech:oos_gate}
+
+The quiet-sample out-of-sample exercise estimates through 1994Q4 and evaluates
+1995Q1--2007Q4. It is a gate-design diagnostic. Under the original gate, the
+switching surrogate classifies too many calm periods as stressed and performs
+poorly. Holding posterior draws fixed and recalibrating the gate to a q95
+padded rule reduces the full-window RMSE ratio to 1.04, with a hard-gate share
+of 1.9 percent. Re-estimating the surrogate chain under the q95 padded gate and
+evaluating with the full gate gives:
+\[
+  \text{early quiet ratio}=0.70,\qquad
+  \text{full OOS ratio}=1.09,\qquad
+  \text{remaining ratio}=1.19.
+\]
+Thus the failure is localized but not eliminated. The gate can be made much
+less damaging in calm periods, and it improves the early quiet window, but it
+does not beat ROM1 over the full calm holdout.
+
+The diagnostic rows are:
+\begin{enumerate}[leftmargin=2em,itemsep=0.15em]
+\item Base no padding: full ratio 1.180, early ratio 1.476, remaining ratio
+      1.062, hard-gate share 1.9 percent.
+\item q95 padded, fixed posterior: full ratio 1.038, early ratio 1.072,
+      remaining ratio 1.027, hard-gate share 1.9 percent.
+\item q95 padded, re-estimated, full gate: full ratio 1.090, early ratio
+      0.700, remaining ratio 1.190, hard-gate share 1.9 percent.
+\end{enumerate}
+
+\subsection{SEP Sensitivity}
+\label{apptech:sep_sensitivity_record}
+
+The SEP sensitivity rerun now covers the full 265-period extended payload for
+five posterior draws selected by Mahalanobis distance from the pooled
+surrogate chains. It evaluates
+\[
+  \texttt{accept\_tol}\in\{0.01,0.1,0.35\},\qquad
+  K\in\{3,5\}.
+\]
+All six cells converge for all selected periods. The \(K=5\) cells are
+identical to the reference at the reported precision. Moving from \(K=5\) to
+\(K=3\) changes the observation path, with aggregate RMSE \(1.08\times 10^{-2}\)
+against the reference and the largest per-variable RMSE in labor. The result is
+not that SEP is completely insensitive to every setting. The result is that the
+reference quadrature choice is stable across tolerance values in this rerun,
+and the documented \(K=3\) versus \(K=5\) difference is now explicit.
+
+\subsection{Euler-Residual Diagnostic}
+\label{apptech:euler_record}
+
+The Euler-residual artifact evaluates residuals along realized trajectories at
+the extended-sample posterior mean. It is a useful numerical diagnostic but is
+not the main accuracy criterion for the likelihood comparison. In that
+artifact, the SEP trajectory has lower maximum residual than ROM1, while the
+ROM1+NN trajectory can have larger equation residuals, especially when the NN
+correction is forced everywhere. This does not overturn the paper's prediction
+RMSE or posterior-grid evidence because the NN is trained to correct
+observation-space transition errors on audited support, not to solve the full
+nonlinear equilibrium system when applied outside its gate.
+
+\subsection{Runs Not Promoted}
+\label{apptech:not_promoted}
+
+Several artifacts are retained precisely because they prevent overstatement.
+\begin{enumerate}[leftmargin=2em,itemsep=0.25em]
+\item The HLT legacy three-parameter direct-SEP/MH runs are smoke checks. The
+      reported production threshold is false, sample sizes are one draw in the
+      maintained summaries, and interval comparisons are not meaningful.
+\item The full Gal\'i three-parameter direct-SEP HMC run is a scaling target.
+      The \(\sigma_\nu\) probes indicate local identification failure in the
+      short hard-ELB design, not a surrogate failure.
+\item The pruned-ROM2 pilot is not cited as a success. In the single reported
+      cell, pruned ROM2 is farther from SEP than ROM1, so the pilot requires a
+      dedicated initialization and stability pass before any production claim.
+\item The q95 re-estimated quiet-sample diagnostic must be read with the
+      correct gate-evaluation file. The full-gate evaluation gives the 1.09
+      ratio; a mismatched all-gate evaluation gives a much worse 3.05 ratio and
+      is not the promoted diagnostic.
+\end{enumerate}
 
 \section{Acceptance Criteria}
 \label{apptech:criteria}
@@ -614,6 +988,87 @@ For the Gal\'i package, the consolidated audit is written under
 .local_artifacts/gali_validation_package/
 \end{verbatim}
 and individual layer outputs remain under their producing run directories.
+
+\subsection{Artifact Ledger}
+\label{apptech:artifact_ledger}
+
+The following ledger records the artifacts that currently support the
+paper-facing numerical claims. Paths are relative to the repository root.
+
+\begin{description}[leftmargin=2em,style=nextline,itemsep=0.45em]
+\item[HLT bridge support.]
+\begin{verbatim}
+.local_artifacts/hlt_reduced_bridge_validation/
+  investment4p_supported_grid10_full_sweep_20260527/
+  SUPPORT_REPORT.md
+\end{verbatim}
+records the 10,000-cell support map, zero failures, and SEP residual
+min/median/max. This supports the bridge support statement.
+
+\item[HLT bridge posterior grid.]
+\begin{verbatim}
+.local_artifacts/hlt_reduced_bridge_validation/
+  posterior_grid_compare_<run_id>/
+  SUMMARY.md
+\end{verbatim}
+with run id \texttt{investment4p\_supported\_grid10\_full\_sweep\_20260527}.
+It records the direct, ROM1, and surrogate grid comparison. This supports the
+prediction-RMSE improvement from 0.143574 to 0.000749395 and the surface-RMSE
+improvement from 88.0719 to 0.0534526.
+
+\item[Gal\'i validation package.]
+\begin{verbatim}
+.local_artifacts/gali_validation_package/
+  gali_validation_package_20260521/
+  VALIDATION_PACKAGE_REPORT.md
+\end{verbatim}
+records the passing hard-ELB small-model pipeline audit.
+
+\item[Objective decomposition.]
+\path{.local_artifacts/ll_decomposition/LL_DECOMPOSITION_SUMMARY.md}
+records the 35.92-nat gap and the 80.9/19.1 symmetric decomposition.
+
+\item[Linear+gate ablation.]
+\path{.local_artifacts/ll_decomposition/LINEAR_GATE_ABLATION_SUMMARY.md}
+records the fixed-parameter no-NN ablation. It is internal evidence on the gate
+and residual correction, not a posterior table.
+
+\item[Mode sensitivity.]
+\path{.local_artifacts/mode_sensitivity/MODE_SENSITIVITY_SUMMARY.md}
+records the chain-level mode table and the warm-start caveat.
+
+\item[Gate recalibration.]
+\path{.local_artifacts/oos_gate_recalibration/OOS_GATE_RECALIBRATION_SUMMARY.md}
+records the fixed-posterior quiet-sample gate-policy diagnostic.
+
+\item[Quiet OOS re-estimation.]
+\begin{verbatim}
+.local_artifacts/oos_forecast/
+  OOS_SUMMARY_quiet_1994_q95_reestimated_fullgate.md
+\end{verbatim}
+records the q95 padded re-estimation diagnostic: 0.70 early-window ratio, 1.09
+full-window ratio, and 1.19 remaining-window ratio.
+
+\item[SEP sensitivity.]
+\begin{verbatim}
+.local_artifacts/sep_sensitivity/full_265_20260521/
+  SEP_SENSITIVITY_SUMMARY.md
+\end{verbatim}
+records the full 265-period SEP sensitivity rerun.
+
+\item[Euler residuals.]
+\path{.local_artifacts/euler_errors/EULER_ERRORS_SUMMARY.md}
+records the extended-sample Euler-residual diagnostic. It is not a
+likelihood-accuracy headline.
+
+\item[Pruned ROM2 pilot.]
+\path{.local_artifacts/pruned_rom2_benchmark/PRUNED_ROM2_BENCHMARK_SUMMARY.md}
+records a failed pilot and is explicitly not promoted.
+\end{description}
+
+The ledger should be updated whenever a number moves from an artifact into the
+paper. If a future result has no raw payload, no human-readable summary, or no
+clear scope statement, it should stay out of the submission draft.
 
 \subsection{Replication Commands}
 
