@@ -3,6 +3,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{setspace}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath,amssymb,amsthm,mathtools,bm}
 \usepackage{booktabs}
 \usepackage{array}
@@ -27,7 +28,7 @@
 \newcommand{\N}{\mathcal{N}}
 \newcommand{\eps}{\varepsilon}
 \newcommand{\thetafull}{\theta}
-\newcommand{\given}{\,\middle|\,}
+\newcommand{\given}{\,|\,}
 \newcommand{\Sigmay}{\Sigma_y}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 \newcommand{\rom}{\mathrm{ROM1}}
@@ -62,16 +63,13 @@
 
 \begin{abstract}
 \noindent
-This appendix documents the computational pipeline used to estimate nonlinear
-DSGE models with a ROM1-residual neural-network surrogate. The goal is
-replication and auditability. The appendix defines the likelihood objects,
-offline training design, stochastic extended path (SEP) data-generation step,
-ROM1-residual surrogate, inversion-filter objective, regime-switching gate,
-NUTS-HMC implementation, direct nonlinear validation checks, and artifact
-schema. It distinguishes three objects that are intentionally separate in the
-paper: a direct nonlinear transition benchmark, a surrogate approximation to
-that benchmark, and the profiled inversion objective used for empirical
-posterior comparisons.
+This appendix documents the computation behind the paper. It answers four
+questions: what is computed, how it is computed, what is checked, and what the
+checks do not prove. The pipeline has three separate objects: the direct
+nonlinear transition computed by stochastic extended path (SEP), the
+ROM1-residual surrogate that approximates that transition, and the profiled
+inversion objective used for posterior comparisons in the empirical
+application.
 \end{abstract}
 
 \tableofcontents
@@ -81,9 +79,9 @@ posterior comparisons.
 \label{apptech:scope}
 
 This appendix is a technical companion to the paper. It is not a second
-empirical paper. Its role is to make the estimation pipeline inspectable enough
-that a reader can see which numerical objects are being compared and which
-claims each validation exercise supports.
+empirical paper. The purpose is to make the computation easy to audit. Each
+section states the object being computed, the procedure used to compute it, and
+the evidence produced by the corresponding diagnostic.
 
 The core computational claim is narrow:
 \[
@@ -179,8 +177,8 @@ RMSE.
       \(Y^{\rom}\), solver residual diagnostics, observable indices, parameter
       names, and git provenance.
 \item Train a neural network on \(Y-Y^{\rom}\). In the HLT bridge the reported
-      target is observation-only; in the broader estimation workflow the bundle
-      can also carry state corrections needed for propagation.
+      target is observation-only; in the full empirical estimator the bundle can
+      also carry state corrections needed for propagation.
 \item Validate the surrogate out of sample by comparing
       \(Y^{\rom}+\widehat{\Delta}\) to \(Y\), and by comparing posterior
       surfaces against direct SEP on finite support.
@@ -190,12 +188,12 @@ RMSE.
       with NUTS-HMC.
 \end{algorithm}
 
-The artifact convention is deliberately simple. Raw payloads are serialized as
-Julia `.jls' files under `.local_artifacts/'. Human-readable summaries are
-stored as `SUMMARY.md' or `SUPPORT_REPORT.md'. Tables promoted to the paper are
-stored as `.tex' fragments under either the paper directory or the relevant
-artifact directory. The paper should not report a numerical result unless a
-matching raw payload and human-readable summary exist.
+The output-file convention is deliberately simple. Raw payloads are serialized
+as Julia \path{.jls} files under \path{.local_artifacts/}. Human-readable
+summaries are stored as \path{SUMMARY.md} or \path{SUPPORT_REPORT.md}. Tables
+promoted to the paper are stored as \path{.tex} fragments under either the paper
+directory or the relevant output directory. The paper should not report a
+numerical result unless a matching raw payload and human-readable summary exist.
 
 \section{Direct SEP Data Generation}
 \label{apptech:sep_generation}
@@ -288,14 +286,14 @@ nonlinear correction.
 Let \(D_{\mathrm{train}}\) be the training set. Inputs and targets are
 standardized dimension by dimension:
 \[
-  \widetilde{X}_{j,k}={X_{j,k}-\bar X_k\over s_{X,k}},\qquad
+  \widetilde{X}_{j,k}=\frac{X_{j,k}-\bar X_k}{s_{X,k}},\qquad
   \widetilde{\Delta}_{j,\ell}=
-  {\Delta_{j,\ell}-\bar\Delta_\ell\over s_{\Delta,\ell}}.
+  \frac{\Delta_{j,\ell}-\bar\Delta_\ell}{s_{\Delta,\ell}}.
 \]
 The default objective is mean squared error,
 \begin{equation}
   \min_w
-  {1\over |D_{\mathrm{train}}|}
+  \frac{1}{|D_{\mathrm{train}}|}
   \sum_{j\in D_{\mathrm{train}}}
   \norm{
     \widehat{\Delta}_w(\widetilde X_j)
@@ -316,7 +314,7 @@ For each output coordinate \(k\), the validation RMSE is
   \mathrm{RMSE}_k^{\sur}
   =
   \left[
-    {1\over |D_{\mathrm{val}}|}
+    \frac{1}{|D_{\mathrm{val}}|}
     \sum_{j\in D_{\mathrm{val}}}
     \left(
       Y_{j,k}
@@ -329,7 +327,7 @@ For each output coordinate \(k\), the validation RMSE is
 \]
 The improvement over ROM1 is
 \[
-  1-{\mathrm{RMSE}^{\sur}_k\over \mathrm{RMSE}^{\rom}_k}.
+  1-\frac{\mathrm{RMSE}^{\sur}_k}{\mathrm{RMSE}^{\rom}_k}.
 \]
 The paper reports the aggregate RMSE and surface-RMSE diagnostics only after
 the validation point is held out from training.
@@ -352,11 +350,11 @@ step solves
   =
   \arg\min_{\eps}
   \left\|
-    {y_t^{\obs}-H g^{\rom}_\theta(s_{t-1},\eps)\over \sigma_y}
+    \frac{y_t^{\obs}-H g^{\rom}_\theta(s_{t-1},\eps)}{\sigma_y}
   \right\|^2
   +
   \left\|
-    {\eps\over \sigma_\eps(\theta)}
+    \frac{\eps}{\sigma_\eps(\theta)}
   \right\|^2 .
 \label{eq:tech_rom_inversion}
 \end{equation}
@@ -381,7 +379,7 @@ The period contribution is the Gaussian observation objective
 \begin{equation}
   \ell_t^{\sur}(\theta)
   =
-  -{1\over 2}
+  -\frac{1}{2}
   \left[
     (y_t^{\obs}-\widehat y_t^{\sur})'
       \Sigmay^{-1}
@@ -426,7 +424,7 @@ unconstrained vector \(z\in\R^p\), with
   =
   a_i + (b_i-a_i)\Lambda(z_i),
   \qquad
-  \Lambda(z)={1\over 1+\exp(-z)}.
+  \Lambda(z)=\frac{1}{1+\exp(-z)}.
 \]
 The log posterior in unconstrained coordinates is
 \begin{equation}
@@ -556,34 +554,46 @@ provenance note. \\
 \end{tabular}
 \end{table}
 
-\section{Artifact Schema and Replication Entry Points}
-\label{apptech:artifacts}
+\section{Output Files and Replication Entry Points}
+\label{apptech:outputs}
 
 \subsection{Main Scripts}
 
-The maintained scripts are organized by layer.
-\begin{itemize}[leftmargin=2em,itemsep=0.2em]
-\item `scripts/hlt\_sep\_surrogate\_dataset\_generate.jl':
-      generates direct SEP/ROM1 training payloads.
-\item `scripts/hlt\_sep\_surrogate\_train.jl':
-      trains the ROM1-residual surrogate.
-\item `scripts/hlt\_bridge\_support\_report.jl':
-      converts dataset metadata into finite-support reports.
-\item `scripts/hlt\_bridge\_posterior\_grid\_compare.jl':
-      compares direct SEP, ROM1, and surrogate posterior-grid surfaces.
-\item `scripts/hlt\_bridge\_robustness\_sweep.jl':
-      orchestrates the HLT bridge dataset, support report, training, and
-      posterior-grid comparison.
-\item `scripts/run\_surrogate\_hmc\_advancedhmc.jl':
-      runs empirical HLT surrogate NUTS-HMC with inversion filtering and gate
-      support.
-\item `scripts/gali\_validation\_package.jl':
-      audits the maintained Gal\'i hard-ELB validation artifacts.
-\item `scripts/gali\_obc\_actual\_floor\_twoparam\_inversion\_grid\_validation.jl':
-      runs the two-parameter actual-floor inversion/HMC diagnostic.
-\end{itemize}
+The maintained scripts are organized by what they do. The exact file names are:
+\begin{verbatim}
+scripts/hlt_sep_surrogate_dataset_generate.jl
+scripts/hlt_sep_surrogate_train.jl
+scripts/hlt_bridge_support_report.jl
+scripts/hlt_bridge_posterior_grid_compare.jl
+scripts/hlt_bridge_robustness_sweep.jl
+scripts/run_surrogate_hmc_advancedhmc.jl
+scripts/gali_validation_package.jl
+scripts/gali_obc_actual_floor_twoparam_inversion_grid_validation.jl
+\end{verbatim}
 
-\subsection{Canonical Artifact Layout}
+Their roles are:
+\begin{description}[leftmargin=3.2cm,style=nextline,itemsep=0.2em]
+\item[Dataset generation]
+      Generate direct SEP and ROM1 training payloads.
+\item[Surrogate training]
+      Train the ROM1-residual surrogate.
+\item[Support report]
+      Convert dataset metadata into finite-support reports.
+\item[Grid comparison]
+      Compare direct SEP, ROM1, and surrogate posterior-grid surfaces.
+\item[Bridge sweep]
+      Run the HLT bridge dataset, support report, training, and posterior-grid
+      comparison in one command.
+\item[Empirical HMC]
+      Run empirical HLT surrogate NUTS-HMC with inversion filtering and gate
+      support.
+\item[Gal\'i package audit]
+      Check the maintained Gal\'i hard-ELB validation output files.
+\item[Gal\'i HMC diagnostic]
+      Run the two-parameter actual-floor inversion/HMC diagnostic.
+\end{description}
+
+\subsection{Output File Layout}
 
 For an HLT bridge run with identifier \(r\), the expected layout is
 \begin{verbatim}
@@ -603,7 +613,7 @@ For the Gal\'i package, the consolidated audit is written under
 \begin{verbatim}
 .local_artifacts/gali_validation_package/
 \end{verbatim}
-and individual layer artifacts remain under their producing run directories.
+and individual layer outputs remain under their producing run directories.
 
 \subsection{Replication Commands}
 
@@ -638,7 +648,7 @@ julia --project=. scripts/run_surrogate_hmc_advancedhmc.jl \
   --out=<chain_payload.jls>
 \end{verbatim}
 The linear+gate ablation uses the same command with
-`--disable-nn-correction=true'.
+\texttt{--disable-nn-correction=true}.
 
 \section{Interpretation Rules}
 \label{apptech:interpretation}
@@ -672,8 +682,9 @@ the following.
 \begin{enumerate}[leftmargin=2em,itemsep=0.25em]
 \item The exact command or orchestration script.
 \item The git commit recorded in the payload.
-\item A raw `.jls' payload containing draws, grids, objectives, or predictions.
-\item A human-readable `SUMMARY.md' or support report.
+\item A raw \path{.jls} payload containing draws, grids, objectives, or
+      predictions.
+\item A human-readable \path{SUMMARY.md} or support report.
 \item A LaTeX table fragment if the result appears in a table.
 \item A statement of support: full grid support, trimmed support, or mapped
       failure region.
@@ -684,11 +695,12 @@ the following.
 \section{Conclusion}
 \label{apptech:conclusion}
 
-The maintained pipeline is designed to be auditable rather than opaque. The
-surrogate is trained on an observable residual against direct nonlinear
-solutions; validation compares ROM1, direct SEP, and the residual surrogate on
-common inputs; inference uses a profiled inversion objective whose limitations
-are explicit; and numerical results promoted to the paper require raw artifacts.
+The maintained pipeline is designed to be easy to audit. The surrogate is
+trained on a measured residual against direct nonlinear solutions. Validation
+compares ROM1, direct SEP, and the residual surrogate on common inputs.
+Inference uses a profiled inversion objective, and the limits of that objective
+are stated explicitly. Numerical results promoted to the paper require raw
+output files.
 This structure is the basis for the paper's methodological claim. The remaining
 gap for a stronger submission is not hidden implementation detail but scale:
 the full multi-period direct-SEP HMC benchmark for the 18-parameter HLT
