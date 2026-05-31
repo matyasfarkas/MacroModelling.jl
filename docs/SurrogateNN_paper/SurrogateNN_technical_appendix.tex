@@ -42,6 +42,13 @@
 \makeatother
 \Urlmuskip=0mu plus 1mu\relax
 
+\newcommand{\techappendixnotes}[1]{%
+  \par\smallskip
+  \noindent\begin{minipage}{0.92\textwidth}%
+  \footnotesize #1%
+  \end{minipage}\par%
+}
+
 \newtheorem{protocol}{Protocol}
 \newtheorem{diagnostic}{Diagnostic}
 
@@ -73,7 +80,7 @@ questions: what is computed, how it is computed, what is checked, and what the
 checks do not prove. The pipeline has three separate objects: the direct
 nonlinear transition computed by stochastic extended path (SEP), the
 ROM1-residual surrogate that approximates that transition, and the profiled
-inversion objective used for posterior comparisons in the empirical
+inversion objective used for empirical criterion comparisons in the
 application. The appendix is intentionally more comprehensive than the paper:
 it records successful diagnostics, failed diagnostics, non-promoted pilots,
 artifact locations, and replication commands.
@@ -97,11 +104,20 @@ The core computational claim is narrow:
   \text{SEP}
 \]
 on explicitly documented state--shock--parameter support, where
-\(\widehat{\Delta}\) is a learned residual correction. The empirical posterior
+\(\widehat{\Delta}\) is a learned residual correction. The empirical
 comparisons in the paper use this approximation inside a profiled inversion
-objective. They are therefore not marginal-likelihood comparisons unless an
-additional change-of-variables or Laplace determinant is supplied. The
-validation exercises below are designed around that distinction.
+objective. They are therefore not marginal-likelihood comparisons. Determinant
+terms alone would not close the gap: a Laplace approximation would also require
+the shock prior evaluated at the profiled shock path and the Hessian of the
+shock-level criterion, while an exact change-of-variables likelihood would
+require a separately derived Jacobian. The validation exercises below are
+designed around that distinction.
+
+\paragraph{Lower-bound terminology.}
+This appendix uses \emph{ELB} for the economic effective lower bound. It uses
+\emph{OBC} only for the occasionally-binding-constraint solver
+implementation, and \emph{actual-floor path} only for the Gal\'i validation
+design in which the simulated policy rate binds at the maintained floor.
 
 \paragraph{How to read this appendix.}
 The main paper should be read as the economic argument. This appendix should be
@@ -138,7 +154,8 @@ posterior.
 This section links the paper's claims to the evidence required to support them.
 The table is deliberately conservative. It separates statements that are direct
 measurements from statements that depend on the surrogate, the gate, or the
-posterior sampler.
+posterior sampler. Table~\ref{tab:tech_claim_map} reports the resulting claim
+map.
 
 \begin{table}[htbp]
 \centering
@@ -156,15 +173,17 @@ The residual surrogate learns the HLT investment-channel correction & 10,000
 supported HLT bridge cells; prediction RMSE falls from 0.143574 to 0.000749395;
 surface RMSE falls from 88.0719 to 0.0534526 & One-period, known-feature,
 finite-support HLT bridge \\
-The hard-ELB pipeline works in a small model & Gal\'i actual-floor validation
+The ELB/OBC pipeline passes the reported small-model diagnostics & Gal\'i
+actual-floor ELB validation
 package; two-parameter matched direct/surrogate HMC over
-\((\sigma_z,\sigma_a)\) passes & Small-model hard-ELB validation, not full HLT
+\((\sigma_z,\sigma_a)\) passes & Small-model ELB validation, not full HLT
 posterior validation \\
-The extended-sample surrogate posterior finds a better profiled objective than
-the linear posterior & 2-by-2 objective decomposition:
-\(-1817.59\), \(-1852.63\), \(-1830.44\), \(-1781.68\) & Profiled objective
-under common inversion architecture, not a Bayes factor \\
-The warm-started surrogate mode is high likelihood & Four warm-started
+The warm-started extended-sample surrogate criterion exceeds the linear
+criterion & 2-by-2 criterion accounting:
+\(-1817.59\), \(-1852.63\), \(-1830.44\), \(-1781.68\) & Mixed exact Kalman
+and profiled-inversion criterion values; accounting exercise only, not a Bayes
+factor \\
+The warm-started surrogate mode has a high profiled objective & Four warm-started
 surrogate chains have posterior-mean objectives from \(-1787.38\) to
 \(-1780.80\); cold starts remain in a low-objective basin & Conditional on
 mode-search evidence currently available \\
@@ -178,6 +197,12 @@ SEP solver settings do not overturn the 265-period sensitivity probe & Full
 complete global numerical-analysis study \\
 \bottomrule
 \end{tabular}
+\techappendixnotes{\textit{Notes}: The table separates direct SEP
+measurements, finite-support surrogate validations, and empirical
+profiled-criterion results. Exact Kalman likelihood values and profiled
+surrogate objective values are recorded as criterion values under the maintained
+normalization; the table does not report marginal likelihoods or Bayes
+factors. Artifact paths are listed in Section~\ref{apptech:artifact_ledger}.}
 \end{table}
 
 \paragraph{Claims deliberately not made.}
@@ -185,8 +210,9 @@ The paper does not claim that the surrogate objective is an exact marginal
 likelihood. It does not claim a Bayes factor against the linear model. It does
 not claim that the reported warm-started mode is globally dominant. It does not
 claim that the Gal\'i two-parameter validation proves the full 18-parameter
-HLT posterior. It does not use the pruned-ROM2 pilot as evidence, because that
-pilot failed its sanity check.
+HLT posterior. It does not claim that the SEP sensitivity check is a global
+solver-invariance proof. It does not use the pruned-ROM2 pilot as evidence,
+because that pilot failed its sanity check.
 
 \section{Notation and Objects}
 \label{apptech:notation}
@@ -231,7 +257,7 @@ The observation equation used for the inversion objective is
   y_t^{\obs}=H x_t + u_t,\qquad u_t\sim\N(0,\Sigmay).
 \label{eq:tech_obs_eq}
 \end{equation}
-In the HLT bridge and hard-ELB Gal\'i checks, \(\Sigmay\) is fixed by the
+In the HLT bridge and Gal\'i ELB/OBC checks, \(\Sigmay\) is fixed by the
 validation design. In the empirical HLT estimation, \(\Sigmay\) is a calibrated
 measurement-error scale, with robustness checks tied to surrogate validation
 RMSE.
@@ -257,8 +283,9 @@ RMSE.
       surfaces against direct SEP on finite support.
 \item In empirical estimation, recover shocks period by period using the ROM1
       inversion filter, evaluate the surrogate correction on gate periods, use
-      Kalman likelihood contributions on calm periods, and sample \(\theta\)
-      with NUTS-HMC.
+      exact ROM1/Kalman predictive log-likelihood contributions on calm
+      periods, use profiled observation-fit contributions on gate periods, and
+      sample \(\theta\) with NUTS-HMC.
 \end{algorithm}
 
 The output-file convention is deliberately simple. Raw payloads are serialized
@@ -434,9 +461,12 @@ step solves
 The same recovered shock can then be evaluated under ROM1, direct SEP in
 validation exercises, or ROM1 plus the surrogate residual. This common-shock
 design is essential: it isolates the transition approximation from shock
-recovery.
+recovery. The shock penalty in \eqref{eq:tech_rom_inversion} regularizes the
+recovery problem and fixes the common shock path; the profiled observation
+objective below does not subsequently add the shock-density term as a joint
+likelihood contribution.
 
-\subsection{Profiled Observation Objective}
+\subsection{Profiled Observation-Fit Objective}
 
 On a surrogate-evaluated period, the prediction is
 \[
@@ -462,10 +492,14 @@ The period contribution is the Gaussian observation objective
   \right].
 \label{eq:tech_sur_objective}
 \end{equation}
-Because \(\widehat{\eps}_t(\theta)\) is profiled out, this is not the exact
-marginal likelihood unless the determinant terms associated with the profiling
-step are added. The paper therefore refers to the reported values as profiled
-log objectives.
+Because \(\widehat{\eps}_t(\theta)\) is profiled out, this is not an exact
+joint likelihood or marginal likelihood. The missing pieces are not only a
+determinant: a Laplace-style profiled likelihood would also require the shock
+log density evaluated at \(\widehat{\eps}_t(\theta)\) and the Hessian
+determinant of the shock-level criterion, while an exact change-of-variables
+calculation would require a separately derived Jacobian for the observation to
+shock mapping. The paper therefore refers to the reported values as profiled
+observation-fit objectives.
 
 \subsection{Gate}
 
@@ -485,7 +519,11 @@ where \(\ell_t^K\) is the Kalman contribution under ROM1. With a soft gate, the
 implementation uses precomputed probabilities \(p_t\in[10^{-4},1-10^{-4}]\)
 and combines period contributions by the maintained mixing routine. The q95
 gate diagnostic in the paper recalibrates this object to avoid classifying all
-quiet-sample periods as stressed.
+quiet-sample periods as stressed. Because this object combines exact Kalman
+predictive contributions on calm periods with profiled observation-fit
+contributions on stress periods, it is a hybrid criterion unless the full joint
+density and state-update recursion are normalized under one likelihood
+architecture.
 
 \subsection{Exact Calculation Reported as a Profiled Objective}
 \label{apptech:objective_calculation}
@@ -508,7 +546,9 @@ the following deterministic sequence.
 \item Propagate the state with the same transition used for the period
       prediction.
 \item Sum period contributions and add the parameter prior and transform
-      Jacobian when evaluating the HMC target.
+      Jacobian when evaluating the HMC target. This target omits a shock-prior
+      contribution and the determinant/Laplace terms that would be needed for a
+      full likelihood.
 \end{algorithm}
 
 The word ``profiled'' has a precise meaning here. The shocks
@@ -516,8 +556,9 @@ The word ``profiled'' has a precise meaning here. The shocks
 rather than integrated out. The objective therefore compares models under a
 common shock-recovery rule. It is useful for studying whether the nonlinear
 transition improves fit under that rule. It is not a likelihood in the sense
-required for a Bayes factor unless the omitted determinant or Laplace term is
-derived and included.
+required for a Bayes factor unless the omitted shock-prior contribution,
+Jacobian or Hessian determinant, and a unified treatment of calm and stress
+periods are derived and included.
 
 \subsection{Linear+Gate Ablation}
 \label{apptech:linear_gate}
@@ -585,21 +626,21 @@ a sampler-design difference.
 \section{Validation Package}
 \label{apptech:validation_package}
 
-The validation package has two complementary roles. The Gal\'i hard-ELB
+The validation package has two complementary roles. The Gal\'i ELB/OBC
 exercise validates pipeline layers in a small model where direct nonlinear
 evaluation is feasible. The reduced HLT bridge validates the residual target in
 the medium-scale model used for the main application.
 
-\subsection{Gal\'i Hard-ELB Package}
+\subsection{Gal\'i ELB/OBC Package}
 
-The Gal\'i package uses the maintained current-repo Gal\'i OBC model and three
-observables: output, inflation, and the policy rate. It imposes an adverse
-\(\eps_z\) shock block that makes the lower bound bind for multiple periods,
+The Gal\'i package uses the current repository's Gal\'i OBC implementation and
+three observables: output, inflation, and the policy rate. It imposes an
+adverse \(\eps_z\) shock block that makes the ELB bind for multiple periods,
 with output and inflation falling during the binding window. The package
 contains five checks.
 
 \begin{enumerate}[leftmargin=2em,itemsep=0.2em]
-\item A stress-path check verifying that the hard-ELB path is economically
+\item A stress-path check verifying that the actual-floor ELB path is economically
       meaningful.
 \item A known-shock residual-grid check over \(\sigma_z\).
 \item A one-parameter inversion-grid check using common ROM1-recovered shocks.
@@ -614,19 +655,20 @@ intervals overlap for both parameters, both true values are covered, and
 posterior mean differences are below one combined-MCSE unit in absolute value.
 Probes involving \(\sigma_\nu\) are retained as identification diagnostics:
 direct and surrogate objectives agree, but the parameter is pushed to the local
-grid boundary.
+grid boundary. Table~\ref{tab:tech_gali_package} summarizes the reported
+checks and their interpretation.
 
 \begin{table}[htbp]
 \centering
-\caption{Gal\'i Hard-ELB Validation Package}
+\caption{Gal\'i ELB/OBC Validation Package}
 \label{tab:tech_gali_package}
 \begin{tabular}{p{0.30\textwidth}p{0.18\textwidth}p{0.40\textwidth}}
 \toprule
 Check & Status & Interpretation \\
 \midrule
-Stress path & Pass & The actual-floor path binds for six of 24 periods; output
+Stress path & Pass & The actual-floor ELB path binds for six of 24 periods; output
 and inflation fall in the forced window. \\
-Known-shock residual grid over \(\sigma_z\) & Pass & Direct OBC and surrogate
+Known-shock residual grid over \(\sigma_z\) & Pass & Direct ELB/OBC and surrogate
 predictions are finite, and the holdout posterior comparison passes. \\
 ROM1-inversion grid over \(\sigma_z\) & Pass & The common inversion layer is
 finite for direct and surrogate objectives. \\
@@ -639,16 +681,23 @@ post-warmup draws per objective; interval overlap and true-value coverage for
 both parameters. \\
 \(\sigma_\nu\) probes & Expected failure & Direct and surrogate agree, but the
 short design does not identify the parameter away from the boundary. \\
-Three-parameter direct-SEP smoke & Pass as smoke & Finite likelihood and
+Three-parameter direct-SEP smoke & Pass as smoke & Finite objective and
 finite-gradient check; not used as a posterior recovery result. \\
 \bottomrule
 \end{tabular}
+\techappendixnotes{\textit{Notes}: ``Pass'' means the check satisfies the
+package-specific finite-objective, interval-overlap, or diagnostic criterion
+described in the surrounding text; it is not a claim about the full HLT
+posterior. ``Actual-floor'' denotes the simulated ELB-binding validation path.
+``OBC'' denotes the occasionally-binding-constraint implementation. Matched HMC
+uses common data, priors, seeds, and chain design across direct and surrogate
+objectives. MCSE is Monte Carlo standard error.}
 \end{table}
 
 The important point is not that every attempted Gal\'i exercise succeeded.
 They did not. The \(\sigma_\nu\) exercises showed a local identification
 problem. The full three-parameter direct-SEP HMC version was too expensive to
-promote. The current evidence is therefore stated as a hard-ELB pipeline audit:
+promote. The current evidence is therefore stated as an ELB/OBC pipeline audit:
 it validates the residual target, ROM1 inversion layer, and matched-HMC
 comparison in a small model over the two shock scales that the design
 identifies.
@@ -689,7 +738,9 @@ and
 Surrogate 90 percent intervals overlap direct SEP intervals for all four bridge
 parameters. This validates the residual-learning target on finite HLT support.
 It does not validate full multi-period inversion-filter HMC for the
-18-parameter empirical posterior.
+18-parameter empirical HMC target. Tables~\ref{tab:tech_hlt_bridge_marginals}
+and~\ref{tab:tech_hlt_bridge_rmse_obs} report the posterior-grid marginal
+comparison and the observation-level prediction errors.
 
 \begin{table}[htbp]
 \centering
@@ -705,6 +756,13 @@ Parameter & Truth & Direct mean & Surrogate mean & Common 90\% interval \\
 \texttt{z\_eqs} & 0.594444 & 0.595980 & 0.595913 & [0.411111, 0.777778] \\
 \bottomrule
 \end{tabular}
+\techappendixnotes{\textit{Notes}: The grid contains
+\(10^4\) supported cells over
+\((\texttt{crhob},\texttt{crhoqs},\texttt{z\_eb},\texttt{z\_eqs})\). The truth
+point is held out from training. Direct and surrogate posterior summaries use
+the same discrete grid weights under the validation observation scale; the
+reported interval is the common 5th--95th percentile support implied by those
+weights.}
 \end{table}
 
 \begin{table}[htbp]
@@ -724,6 +782,13 @@ Observable & ROM1 RMSE & Surrogate RMSE & Improvement \\
 \texttt{robs} & 0.054567 & 0.000236 & 99.57\% \\
 \bottomrule
 \end{tabular}
+\techappendixnotes{\textit{Notes}: RMSE is computed against direct SEP
+observation targets on the held-out HLT bridge grid, using the validation
+observable scale. Observables are output growth (\texttt{dy}), consumption
+growth (\texttt{dc}), investment growth (\texttt{dinve}), labor
+(\texttt{labobs}), inflation (\texttt{pinfobs}), wage growth (\texttt{dwobs}),
+and the policy rate (\texttt{robs}). Improvement is
+\(1-\mathrm{RMSE}^{\sur}/\mathrm{RMSE}^{\rom}\).}
 \end{table}
 
 \subsection{How to Read the HLT Bridge}
@@ -749,14 +814,18 @@ leaving the full inversion-filter HMC bridge as a scaling target.
 \label{apptech:empirical_record}
 
 This section records the empirical runs used to interpret the 1959--2025
-posterior comparison. The purpose is not to add more headline results. The
+criterion comparison. The purpose is not to add more headline results. The
 purpose is to make the chain of evidence transparent.
 
 \subsection{Extended-Sample Objective Decomposition}
 \label{apptech:ll_decomposition}
 
 The extended-sample comparison uses \(T=265\) quarters and seven observables.
-The maintained 2-by-2 objective table is
+Let \(Q_{\mathrm{lin}}\) denote the exact ROM1/Kalman log likelihood evaluated
+at a fixed parameter vector, and let \(Q_{\mathrm{surr}}\) denote the
+regime-switching profiled observation-fit objective evaluated under the
+surrogate inversion architecture. These are criterion values, not two entries
+from a single marginal likelihood. The maintained 2-by-2 criterion table is
 \[
 \begin{array}{lcc}
  & \theta_{\mathrm{linear}} & \theta_{\mathrm{surrogate}} \\
@@ -764,16 +833,19 @@ The maintained 2-by-2 objective table is
 \text{Regime-switching surrogate} & -1830.44 & -1781.68 .
 \end{array}
 \]
-The headline gap is
+The headline criterion gap is
 \[
   -1781.68 - (-1817.59) = 35.92
 \]
 nats. A symmetric decomposition assigns 29.05 nats, or 80.9 percent, to model
-change and 6.86 nats, or 19.1 percent, to parameter relocation. This
-calculation addresses one specific concern: the full gap is not only the
-result of moving parameters to a different posterior mean. It does not answer
-the larger question of global posterior mass, because the surrogate result is
-still conditional on the reported warm-started basin.
+change and 6.86 nats, or 19.1 percent, to parameter relocation. This is an
+accounting decomposition of the reported criteria only. It addresses one
+specific concern: the full criterion gap is not only the result of moving
+parameters to a different posterior mean. It does not answer the larger
+question of global posterior mass or Bayes factors, because the surrogate
+criterion omits the shock-prior, determinant/Jacobian, and Laplace terms
+discussed in Section~\ref{apptech:objective_calculation}, and because the
+surrogate result is still conditional on the reported warm-started basin.
 
 \subsection{Mode Sensitivity}
 \label{apptech:mode_sensitivity}
@@ -784,8 +856,8 @@ linear chains initialized from the calibrated interior cluster near
 small shock volatilities and lower investment persistence. Four warm-started
 surrogate chains initialized from the linear posterior mean reach a much higher
 objective, between \(-1787.38\) and \(-1780.80\) at chain means. The main paper
-therefore describes the nonlinear posterior comparison as conditional on the
-warm-started high-likelihood mode.
+therefore describes the nonlinear criterion comparison as conditional on the
+warm-started high-objective mode.
 
 The compact chain-level record is:
 \begin{enumerate}[leftmargin=2em,itemsep=0.15em]
@@ -803,8 +875,8 @@ The compact chain-level record is:
 
 The cold-start result is a warning, not a secondary headline. It means the
 surrogate objective has difficult geometry. It also means that claims about
-global posterior dominance would require a broader mode-search exercise. The
-paper does not make that claim.
+global posterior dominance or posterior mass would require a broader
+mode-search exercise. The paper does not make that claim.
 
 \subsection{ARMA Markup Confound}
 \label{apptech:arma_confound}
@@ -815,9 +887,9 @@ markup block is known to create flat posterior targets in the full model
 \citep{farkas2020bayesian}. The local artifact comparing HLT with the restored
 markup MA terms shows an improvement of about 34 nats in the linear likelihood
 on the baseline sample. That number is close to the 35.92-nat extended-sample
-surrogate objective gap. The implication is simple: the posterior shifts in the
-paper are evidence relative to the HLT benchmark, not a universal statement
-about every Smets--Wouters specification.
+surrogate objective gap. The implication is simple: the reported parameter
+shifts are criterion-based evidence relative to the HLT benchmark, not a
+universal statement about every Smets--Wouters specification.
 
 \subsection{Quiet-Sample Forecasting and Gate Recalibration}
 \label{apptech:oos_gate}
@@ -851,13 +923,21 @@ The diagnostic rows are:
 \subsection{SEP Sensitivity}
 \label{apptech:sep_sensitivity_record}
 
-The SEP sensitivity rerun now covers the full 265-period extended payload for
-five posterior draws selected by Mahalanobis distance from the pooled
-surrogate chains. It evaluates
+The maintained SEP sensitivity table comes from
+\path{.local_artifacts/sep_sensitivity/full_265_20260521/}. It supersedes the
+earlier three-draw, 40-period pilot. The rerun covers the full 265-period
+extended payload for five posterior draws selected by Mahalanobis distance
+from the pooled surrogate chains. It evaluates
 \[
   \texttt{accept\_tol}\in\{0.01,0.1,0.35\},\qquad
   K\in\{3,5\}.
 \]
+Table~\ref{tab:sep_sensitivity} reports the reconciled provenance, convergence
+rate, Euler residual, and prediction-error distance from the
+\((\texttt{accept\_tol},K)=(0.01,5)\) reference cell.
+
+\input{generated/sep_sensitivity_table.tex}
+
 All six cells converge for all selected periods. The \(K=5\) cells are
 identical to the reference at the reported precision. Moving from \(K=5\) to
 \(K=3\) changes the observation path, with aggregate RMSE \(1.08\times 10^{-2}\)
@@ -871,7 +951,7 @@ and the documented \(K=3\) versus \(K=5\) difference is now explicit.
 
 The Euler-residual artifact evaluates residuals along realized trajectories at
 the extended-sample posterior mean. It is a useful numerical diagnostic but is
-not the main accuracy criterion for the likelihood comparison. In that
+not the main accuracy criterion for the empirical criterion comparison. In that
 artifact, the SEP trajectory has lower maximum residual than ROM1, while the
 ROM1+NN trajectory can have larger equation residuals, especially when the NN
 correction is forced everywhere. This does not overturn the paper's prediction
@@ -889,7 +969,7 @@ Several artifacts are retained precisely because they prevent overstatement.
       maintained summaries, and interval comparisons are not meaningful.
 \item The full Gal\'i three-parameter direct-SEP HMC run is a scaling target.
       The \(\sigma_\nu\) probes indicate local identification failure in the
-      short hard-ELB design, not a surrogate failure.
+      short ELB/OBC design, not a surrogate failure.
 \item The pruned-ROM2 pilot is not cited as a success. In the single reported
       cell, pruned ROM2 is farther from SEP than ROM1, so the pilot requires a
       dedicated initialization and stability pass before any production claim.
@@ -901,6 +981,9 @@ Several artifacts are retained precisely because they prevent overstatement.
 
 \section{Acceptance Criteria}
 \label{apptech:criteria}
+
+Table~\ref{tab:tech_validation_criteria} states the criteria used to promote
+diagnostics from local artifacts into the paper record.
 
 \begin{table}[htbp]
 \centering
@@ -926,6 +1009,11 @@ Empirical use & Any paper table has a raw payload, human-readable summary, and
 provenance note. \\
 \bottomrule
 \end{tabular}
+\techappendixnotes{\textit{Notes}: These are promotion criteria and audit
+rules, not empirical estimates. The Gal\'i ELB/OBC package and the reduced HLT
+bridge meet the criteria stated for their respective layers; the full
+18-parameter multi-period direct-SEP HMC bridge remains a scaling target rather
+than a passed criterion.}
 \end{table}
 
 \section{Output Files and Replication Entry Points}
@@ -962,7 +1050,7 @@ Their roles are:
       Run empirical HLT surrogate NUTS-HMC with inversion filtering and gate
       support.
 \item[Gal\'i package audit]
-      Check the maintained Gal\'i hard-ELB validation output files.
+      Check the maintained Gal\'i ELB/OBC validation output files.
 \item[Gal\'i HMC diagnostic]
       Run the two-parameter actual-floor inversion/HMC diagnostic.
 \end{description}
@@ -1022,7 +1110,7 @@ improvement from 88.0719 to 0.0534526.
   gali_validation_package_20260521/
   VALIDATION_PACKAGE_REPORT.md
 \end{verbatim}
-records the passing hard-ELB small-model pipeline audit.
+records the passing small-model ELB/OBC pipeline audit.
 
 \item[Objective decomposition.]
 \path{.local_artifacts/ll_decomposition/LL_DECOMPOSITION_SUMMARY.md}
@@ -1112,18 +1200,18 @@ The pipeline deliberately separates approximation accuracy from economic
 interpretation.
 \begin{enumerate}[leftmargin=2em,itemsep=0.25em]
 \item A low residual RMSE means the network tracks direct SEP on the audited
-      support. It does not by itself prove posterior correctness away from that
+      support. It does not by itself prove correctness of the empirical target away from that
       support.
 \item A passing Gal\'i two-parameter HMC diagnostic validates the
-      ROM1-residual, inversion, and matched-HMC layers in a hard-ELB small
+      ROM1-residual, inversion, and matched-HMC layers in an ELB/OBC small
       model. It does not establish that the 18-parameter HLT posterior has been
       globally explored.
 \item The HLT 10,000-cell bridge validates the residual target in the
       medium-scale investment block. It does not supply a full multi-period
       direct-SEP HMC benchmark.
-\item The empirical profiled objective is comparable across linear, linear+gate,
-      and surrogate runs that use the same inversion architecture. It should not
-      be described as a Bayes factor.
+\item Exact Kalman likelihood entries and profiled inversion-objective entries
+      are reported as criterion values under the maintained normalization. They
+      should not be described as one marginal likelihood or as a Bayes factor.
 \item Warm-started HMC diagnostics certify sampling within the reported basin.
       They do not rule out other posterior basins unless a separate mode search
       establishes their mass.
@@ -1143,7 +1231,7 @@ the following.
 \item A LaTeX table fragment if the result appears in a table.
 \item A statement of support: full grid support, trimmed support, or mapped
       failure region.
-\item A statement of scope: direct likelihood, profiled inversion objective,
+\item A statement of scope: exact Kalman likelihood, profiled inversion objective,
       one-period known-feature comparison, or full HMC comparison.
 \end{enumerate}
 
