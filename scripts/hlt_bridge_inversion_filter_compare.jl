@@ -25,6 +25,7 @@ Base.@kwdef struct InversionBridgeOptions
     periods::Int = 8
     truth_mode::String = "validation-nearest-center"
     truth_index::Int = 0
+    panel_mode::String = "heldout-one-step"
     split_seed::Int = 20260527
     obs_sigma_scale::Float64 = 1.0
     obs_sigma_floor::Float64 = 1.0e-3
@@ -66,6 +67,7 @@ function parse_args(args::Vector{String})
         periods = parse(Int, parse_arg(args, "--periods", string(opts.periods))),
         truth_mode = parse_arg(args, "--truth-mode", opts.truth_mode),
         truth_index = parse(Int, parse_arg(args, "--truth-index", string(opts.truth_index))),
+        panel_mode = parse_arg(args, "--panel-mode", opts.panel_mode),
         split_seed = parse(Int, parse_arg(args, "--split-seed", string(opts.split_seed))),
         obs_sigma_scale = parse(Float64, parse_arg(args, "--obs-sigma-scale", string(opts.obs_sigma_scale))),
         obs_sigma_floor = parse(Float64, parse_arg(args, "--obs-sigma-floor", string(opts.obs_sigma_floor))),
@@ -277,6 +279,31 @@ function bridge_manifest(opts::InversionBridgeOptions)
         panel_idx = vcat(panel_idx, train_idx[1:(opts.periods - length(panel_idx))])
     end
 
+    execution_plan = opts.panel_mode == "surrogate-rollout" ? [
+        "construct a deterministic dynamic HLT observation panel by rolling the trained ROM1-residual bridge at one truth theta",
+        "recover shocks with the ROM1 inversion filter under each candidate theta",
+        "evaluate the direct SEP inversion objective on the same observation panel and parameter grid",
+        "evaluate the ROM1-residual surrogate objective with the same recovered-shock architecture",
+        "compare direct SEP, ROM1, and surrogate posterior surfaces by means, intervals, MAP ranking, and surface RMSE",
+    ] : [
+        "construct a short synthetic HLT observation panel from a held-out validation sequence",
+        "recover shocks with the ROM1 inversion filter under each candidate theta",
+        "evaluate the direct SEP inversion objective on the same observation panel and parameter grid",
+        "evaluate the ROM1-residual surrogate objective with the same recovered-shock architecture",
+        "compare direct SEP, ROM1, and surrogate posterior surfaces by means, intervals, MAP ranking, and surface RMSE",
+    ]
+    acceptance_criteria = opts.panel_mode == "surrogate-rollout" ? [
+        "direct SEP inversion objective finite for the truth point and all direct evaluation anchors",
+        "surrogate and ROM1 inversion objectives finite for all candidate anchors",
+        "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
+        "surface RMSE and MAP ranking are reported as diagnostics; this smoke validates dynamic bridge execution before a direct-SEP-generated panel is available",
+    ] : [
+        "direct SEP inversion objective finite for the truth point and all direct evaluation anchors",
+        "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
+        "surrogate centered surface RMSE, after removing the mean objective offset, is materially below ROM1 centered surface RMSE",
+        "local MAP ranking is reported as a diagnostic; this held-out-panel stress test is not a coherent synthetic time-series DGP",
+    ]
+
     return Dict{String,Any}(
         "created_at" => string(Dates.now()),
         "git_commit" => git_commit(),
@@ -293,6 +320,7 @@ function bridge_manifest(opts::InversionBridgeOptions)
         "periods" => opts.periods,
         "truth_mode" => opts.truth_mode,
         "truth_index" => truth_idx,
+        "panel_mode" => opts.panel_mode,
         "truth_in_training_split" => truth_idx in train_idx,
         "truth_in_validation_split" => truth_idx in val_idx,
         "theta_true" => vec(theta_grid[truth_idx, :]),
@@ -304,19 +332,8 @@ function bridge_manifest(opts::InversionBridgeOptions)
         "inversion_maxit" => opts.inversion_maxit,
         "inversion_tol" => opts.inversion_tol,
         "inversion_lambda" => opts.inversion_lambda,
-        "execution_plan" => [
-            "construct a short synthetic HLT observation panel from a held-out validation sequence",
-            "recover shocks with the ROM1 inversion filter under each candidate theta",
-            "evaluate the direct SEP inversion objective on the same observation panel and parameter grid",
-            "evaluate the ROM1-residual surrogate objective with the same recovered-shock architecture",
-            "compare direct SEP, ROM1, and surrogate posterior surfaces by means, intervals, MAP ranking, and surface RMSE",
-        ],
-        "acceptance_criteria" => [
-            "direct SEP inversion objective finite for the truth point and all direct evaluation anchors",
-            "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
-            "surrogate centered surface RMSE, after removing the mean objective offset, is materially below ROM1 centered surface RMSE",
-            "local MAP ranking is reported as a diagnostic; this held-out-panel stress test is not a coherent synthetic time-series DGP",
-        ],
+        "execution_plan" => execution_plan,
+        "acceptance_criteria" => acceptance_criteria,
         "artifact_schema" => [
             "manifest.toml",
             "SUMMARY.md",
@@ -344,6 +361,7 @@ function write_summary(path::String, manifest::Dict{String,Any})
         println(io, "- SEP horizon/maxit: `$(manifest["sep_horizon"]) / $(manifest["sep_maxit"])`")
         println(io, "- Inversion maxit/tol/lambda: `$(manifest["inversion_maxit"]) / $(manifest["inversion_tol"]) / $(manifest["inversion_lambda"])`")
         println(io, "- Truth index: `$(manifest["truth_index"])`")
+        println(io, "- Panel mode: `$(manifest["panel_mode"])`")
         println(io, "- Truth theta: `$(join(["$(manifest["theta_names"][i])=$(fmt(manifest["theta_true"][i]))" for i in eachindex(manifest["theta_names"])], ", "))`")
         println(io, "- Truth in validation split: `$(manifest["truth_in_validation_split"])`")
         println(io, "- Observation sigma: `$(join(fmt.(manifest["obs_sigma"]), ", "))`")
@@ -365,7 +383,11 @@ function write_summary(path::String, manifest::Dict{String,Any})
         if manifest["dry_run"]
             println(io, "Design scaffold only. The script has verified dataset/surrogate compatibility, parameter names, split provenance, and artifact schema. The executable inversion evaluator is the next code step.")
         else
-            println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is assembled from held-out one-step HLT bridge observations, so this is an inversion-objective stress test, not a coherent full-sample DGP.")
+            if manifest["panel_mode"] == "surrogate-rollout"
+                println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is a deterministic dynamic rollout from the trained ROM1-residual bridge at one fixed truth theta, using shocks from the grid artifact.")
+            else
+                println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is assembled from held-out one-step HLT bridge observations, so this is an inversion-objective stress test, not a coherent full-sample DGP.")
+            end
         end
     end
 end
@@ -379,6 +401,7 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     observables = Symbol.(get(meta, "observables", Symbol[]))
     state_names = Symbol.(get(meta, "state_names", Symbol[]))
     isempty(state_names) && error("Dataset metadata missing state_names; cannot build ROM predictor.")
+    X = Matrix{Float64}(data["X"])
     Y = Matrix{Float64}(data["Y"])
     d_obs = length(observables)
     specs = get_parameter_specs(opts.param_set)
@@ -388,13 +411,12 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     truth_idx in candidate_idx || (candidate_idx[end] = truth_idx)
     candidate_idx = unique(candidate_idx)
 
-    # Held-out short panel: nearest validation points around the selected truth.
+    # Held-out artifact indices used either as one-step observations or as
+    # deterministic shock seeds for a coherent dynamic rollout.
     _, val_idx = training_split_indices(size(theta_grid, 1), opts.split_seed)
     panel_idx = nearest_indices(theta_grid[val_idx, :], theta_true, min(opts.periods, length(val_idx)))
     panel_idx = val_idx[panel_idx]
-    obs_data = Matrix{Float64}(Y[1:d_obs, panel_idx])
     obs_sigma = Float64.(manifest["obs_sigma"])
-    obs_ka = KeyedArray(obs_data; Variable = observables, Time = 1:size(obs_data, 2))
 
     model_direct = load_hlt_model(INV_REPO_ROOT, "Smets_Wouters_2007_HLT_obc"; mod = @__MODULE__)
     # The bridge surrogate dataset was generated on the OBC HLT state space.
@@ -468,6 +490,38 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
         d_obs;
         allow_full_residual = false,
     )
+
+    obs_data = if opts.panel_mode == "heldout-one-step"
+        Matrix{Float64}(Y[1:d_obs, panel_idx])
+    elseif opts.panel_mode == "surrogate-rollout"
+        size(X, 1) >= d_state + d_eps + length(theta_names) ||
+            error("Dataset X has $(size(X, 1)) rows, expected at least state($d_state)+shock($d_eps)+theta($(length(theta_names))).")
+        state_t = Float64.(X[1:d_state, panel_idx[1]])
+        shock_panel = Matrix{Float64}(X[d_state + 1:d_state + d_eps, panel_idx])
+        out = Matrix{Float64}(undef, d_obs, length(panel_idx))
+        for t in axes(out, 2)
+            obs_t, state_next = surrogate_predict(state_t, shock_panel[:, t], theta_true)
+            out[:, t] .= Float64.(obs_t)
+            state_t = Float64.(state_next)
+        end
+        serialize(joinpath(opts.out_dir, "synthetic_panel.jls"), Dict{String,Any}(
+            "panel_mode" => opts.panel_mode,
+            "dgp" => "ROM1-residual surrogate dynamic rollout",
+            "truth_index" => truth_idx,
+            "theta_true" => theta_true,
+            "panel_idx" => panel_idx,
+            "initial_state" => Float64.(X[1:d_state, panel_idx[1]]),
+            "shock_panel" => shock_panel,
+            "obs_data" => out,
+            "observables" => observables,
+            "state_names" => state_names,
+            "shock_names" => Symbol.(get(meta, "shock_names", Symbol[])),
+        ))
+        out
+    else
+        error("Unknown --panel-mode=$(opts.panel_mode). Supported modes: heldout-one-step, surrogate-rollout.")
+    end
+    obs_ka = KeyedArray(obs_data; Variable = observables, Time = 1:size(obs_data, 2))
     direct_ll = fill(-Inf, length(candidate_idx))
     surrogate_ll = fill(-Inf, length(candidate_idx))
     rom1_ll = fill(-Inf, length(candidate_idx))
@@ -593,9 +647,10 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     direct_map = argmax(direct_post)
     surrogate_map = argmax(surrogate_post)
     rom1_map = argmax(rom1_post)
+    dynamic_rollout_smoke = opts.panel_mode == "surrogate-rollout"
     pass = all_overlap &&
-        surface_centered_rmse_sur < surface_centered_rmse_rom &&
-        count(==("ok"), statuses) >= min(3, length(statuses))
+        count(==("ok"), statuses) >= min(3, length(statuses)) &&
+        (dynamic_rollout_smoke || surface_centered_rmse_sur < surface_centered_rmse_rom)
 
     result = Dict{String,Any}(
         "manifest" => manifest,
@@ -623,6 +678,8 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
         "rom1_map_local_index" => rom1_map,
         "surrogate_all_interval_overlap" => all_overlap,
         "comparison_pass" => pass,
+        "smoke_pass" => pass,
+        "dynamic_rollout_smoke" => dynamic_rollout_smoke,
     )
     payload_path = joinpath(opts.out_dir, "inversion_bridge_comparison.jls")
     table_path = joinpath(opts.out_dir, "comparison_table.tex")
@@ -643,7 +700,14 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
         println(io, "- Local MAP agreement, surrogate/direct: `$(surrogate_map == direct_map)`")
         println(io, "- Local MAP agreement, ROM1/direct: `$(rom1_map == direct_map)`")
         println(io, "- Surrogate intervals overlap direct: `$(all_overlap)`")
-        println(io, "- Comparison pass: `$(pass)`")
+        println(io, "- Dynamic rollout smoke: `$(dynamic_rollout_smoke)`")
+        if dynamic_rollout_smoke
+            println(io, "- Dynamic rollout smoke pass: `$(pass)`")
+            println(io, "- Accuracy comparison pass: not assessed by smoke criteria")
+        else
+            println(io, "- Comparison pass: `$(pass)`")
+        end
+        dynamic_rollout_smoke && println(io, "- Synthetic panel: `$(joinpath(opts.out_dir, "synthetic_panel.jls"))`")
         println(io, "- Payload: `$(payload_path)`")
         println(io, "- Table: `$(table_path)`")
         println(io)

@@ -160,8 +160,8 @@ Holden--Lind\'e--Trabandt (HLT) specification and audited support studied here,
 the largest measured gap is not mainly the effective lower bound or Kimball
 pricing. It is the investment block. A stochastic-extended-path decomposition
 assigns 69 percent of the nonlinear-minus-linear solution gap to investment and
-capital, and 0.2 percent to the price Phillips curve. The reason is simple:
-the level investment adjustment cost has zero level and zero marginal cost at
+capital, and 0.2 percent to the price Phillips curve. The core mechanism is simple:
+the level investment adjustment cost has zero value and zero marginal cost at
 trend growth, while first order compresses the state-dependent marginal-cost
 products into local coefficients.
 
@@ -609,7 +609,7 @@ The decomposition measures transition-function gaps (69 percent from investment)
 \subsection{The ELB as Alternative Hypothesis}
 \label{subsec:elb_alternative}
 
-If the ELB were the dominant nonlinearity, the investment-block share should decline when the constraint binds frequently. It does not in the plotted diagnostic. The investment block accounts for 89--92 percent of the total gap at every plotted shock scale from 0.8 to 1.5 (Figure~\ref{fig:decomposition_vs_scale}). The composition is flat across that plotted range, including the stress region where the ZLB first binds ($\geq 1.2\sigma$).
+If the ELB were the dominant nonlinearity, the investment-block share should decline when the constraint binds frequently. It does not in the plotted diagnostic. The investment block accounts for 89--92 percent of the total gap at every plotted shock scale from 0.8 to 1.5 (Figure~\ref{fig:decomposition_vs_scale}). The composition is flat across that plotted range, including the stress region where the gross-one floor first binds ($\geq 1.2\sigma$).
 
 \begin{figure}[t]
 \centering
@@ -618,7 +618,7 @@ If the ELB were the dominant nonlinearity, the investment-block share should dec
 \label{fig:decomposition_vs_scale}
 \end{figure}
 
-In rare ZLB-binding episodes the investment share falls---to 90 percent at shock scale 1.2 and 37 percent at scale 1.5. At posterior-estimated parameters, however, binding occurs in only 0.1--0.4 percent of periods, so the unconditional composition remains investment-dominated at 88--92 percent in this shock-scale diagnostic. That figure exceeds the training-set average of 69 percent because Sobol-sampled draws span parameter regions where the investment channel is weaker. Both exercises point the same way: investment dominates, and the ELB remains subordinate in this benchmark.
+In rare lower-bound-binding episodes the investment share falls---to 90 percent at shock scale 1.2 and 37 percent at scale 1.5. At posterior-estimated parameters, however, binding occurs in only 0.1--0.4 percent of periods, so the unconditional composition remains investment-dominated at 88--92 percent in this shock-scale diagnostic. That figure exceeds the training-set average of 69 percent because Sobol-sampled draws span parameter regions where the investment channel is weaker. Both exercises point the same way: investment dominates, and the ELB remains subordinate in this benchmark.
 
 
 \subsection{Gal\'i Negative Control}
@@ -631,16 +631,16 @@ and capital. If the lower bound alone were the dominant source of the measured
 SEP--ROM1 gap, this smaller model should show large gaps when the constraint
 binds. It does not in the maintained shock-scale design.
 
-The ZLB adds meaningful nonlinearity only above $3\sigma$ in this calibration
+The lower bound adds meaningful nonlinearity only above $3\sigma$ in this calibration
 (Figure~\ref{fig:gali_obc_vs_no_obc}). At empirically relevant scales
 ($1$--$3\sigma$) the versions with and without the constraint are nearly
-indistinguishable. At $10\sigma$ the ZLB quadruples the Gal\'i gap, but even
+indistinguishable. At $10\sigma$ the lower bound quadruples the Gal\'i gap, but even
 then the HLT gap remains seven to eight times larger.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/gali_obc_vs_no_obc.pdf}
-\caption{ZLB contribution to nonlinearity in the Gal\'i model. Blue circles: FOM--ROM1 gap without the ZLB constraint. Red diamonds: with the ZLB. Below $3\sigma$ shocks the two are nearly indistinguishable; the ZLB begins to matter at $5\sigma$ and roughly quadruples the gap at $10\sigma$. At empirically relevant shock scales in this calibration, the ZLB contributes negligibly to the FOM--ROM1 gap.}
+\caption{Lower-bound contribution to nonlinearity in the Gal\'i model. Blue circles: FOM--ROM1 gap without the gross-one floor. Red diamonds: with the gross-one floor. The y-axis reports the mean absolute FOM--ROM1 transition gap in model units. Below $3\sigma$ shocks the two are nearly indistinguishable; the floor begins to matter at $5\sigma$ and roughly quadruples the gap at $10\sigma$. At empirically relevant shock scales in this calibration, the lower bound contributes negligibly to the FOM--ROM1 gap.}
 \label{fig:gali_obc_vs_no_obc}
 \end{figure}
 
@@ -722,7 +722,7 @@ $\xi_w$ & Calvo wages & 0.947 & 0.929 & $-$0.018 & [0.889, 0.946] \\
 
 \paragraph{Convergence diagnostics.} Neither chain produces divergent transitions; within-chain ESS exceeds 501 (linear) and 473 (regime-switching). Two independent linear chains find different posterior modes---$\rho_w$ settles at 0.39 versus 0.75, with a 34-nat log-likelihood gap---indicating ridge-like posterior geometry in the wage/price markup block \citep{herbst2016sequential}. A second regime-switching chain initialized from a different point converges 12,700 nats below the primary chain, indicating severe multimodality in the profiled surrogate target. This is not unique to the surrogate: the 34-nat gap between linear chains shows that the SW07 posterior itself has ridge-like geometry. A multi-start protocol with parallel tempering \citep{herbst2019tempered} would systematically explore competing modes; the results here should be read as conditional on the primary mode.
 
-\paragraph{Scope limitations.} The baseline training data use shock scale $\sigma = 0.1$, at which the ZLB rarely binds. A supplementary dataset at $\sigma = 0.4$ adds 20,240 ZLB-binding samples, achieving RRMSE $= 0.12$ on binding episodes. The out-of-distribution (OOD) detection mechanism falls back to ROM1 for states outside the training envelope, but the surrogate's extrapolation behavior at intermediate out-of-distribution states remains a source of unquantified error. Section~\ref{subsec:extended_sample} extends both estimations through 2025Q1.
+\paragraph{Scope limitations.} The baseline training data use shock scale $\sigma = 0.1$, at which the lower bound rarely binds. A supplementary dataset at $\sigma = 0.4$ adds 20,240 lower-bound-binding samples, achieving RRMSE $= 0.12$ on binding episodes. The out-of-distribution (OOD) detection mechanism falls back to ROM1 for states outside the training envelope, but the surrogate's extrapolation behavior at intermediate out-of-distribution states remains a source of unquantified error. Section~\ref{subsec:extended_sample} extends both estimations through 2025Q1.
 
 \subsection{Runtime}
 \label{subsec:results_hlt_runtime}
@@ -863,9 +863,9 @@ The decomposition identifies investment as the dominant nonlinearity source (69 
 
 Initial-state treatment is not used as a headline validation result here. Any posterior-recovery claim for $s_0$ should be reported only after the Gal\'i direct SEP-HMC versus surrogate-HMC comparison is generated.
 
-Surrogate accuracy is strong in the non-binding validation design but weaker in the lower-bound stress region. Across most parameter regions the held-out RRMSE is below 0.002, while the far-tail 95th percentile is 0.00231. The combined surrogate (63,939 samples including 20,240 ZLB-binding episodes at shock scale 0.4) achieves RRMSE of 0.12 on binding-period test data---an 89 percent improvement over the version trained without ZLB episodes, but much larger than the non-binding validation error. Gal\'i seed and prior sensitivity tables are excluded because the present validation evidence comes from the ELB/OBC package summarized in the online technical appendix.
+Surrogate accuracy is strong in the non-binding validation design but weaker in the lower-bound stress region. Across most parameter regions the held-out RRMSE is below 0.002, while the far-tail 95th percentile is 0.00231. The combined surrogate (63,939 samples including 20,240 lower-bound-binding episodes at shock scale 0.4) achieves RRMSE of 0.12 on binding-period test data---an 89 percent improvement over the version trained without lower-bound episodes, but much larger than the non-binding validation error. Gal\'i seed and prior sensitivity tables are excluded because the present validation evidence comes from the ELB/OBC package summarized in the online technical appendix.
 
-During ZLB-binding episodes, ROM1 predicts deeply negative rates; the surrogate adds back the approximate lower-bound correction and tracks the SEP benchmark qualitatively across the reported validation observables.
+During lower-bound-binding episodes, ROM1 predicts deeply negative rates; the surrogate adds back the approximate lower-bound correction and tracks the SEP benchmark qualitatively across the reported validation observables.
 
 \subsection{Robustness to Pricing Specification}
 \label{subsec:pricing_robustness}
@@ -894,7 +894,7 @@ The stability of the relative shares supports the view that investment dominance
 
 Two independent linear chains find different posterior modes (34-nat gap), indicating ridge-like posterior geometry in the wage/price markup block \citep{herbst2016sequential}. The decomposition results are deterministic and unaffected; the parameter comparisons in Section~\ref{sec:inference_consequences} are conditional on a single mode and on the profiled inversion objective used for the surrogate cells.
 
-The baseline surrogate is trained at shock scale 0.1, where the ZLB rarely binds; the supplementary dataset at scale 0.4 extends coverage to binding episodes. The same surrogate can be evaluated on different sample periods without retraining because the neural network maps from parameter-state-shock space rather than time-series indices, but this does not eliminate out-of-distribution risk. The active validation record should be read as bounded support evidence, not a formal coverage certificate for the 18-parameter surrogate target. A direct SEP comparison at twenty posterior draws shows that the ROM1--SEP prediction gap (average RMSE 1.04 per variable, exceeding $3\sigma_y$ for labor and the interest rate) is large relative to the non-binding surrogate training error.
+The baseline surrogate is trained at shock scale 0.1, where the lower bound rarely binds; the supplementary dataset at scale 0.4 extends coverage to binding episodes. The same surrogate can be evaluated on different sample periods without retraining because the neural network maps from parameter-state-shock space rather than time-series indices, but this does not eliminate out-of-distribution risk. The active validation record should be read as bounded support evidence, not a formal coverage certificate for the 18-parameter surrogate target. A direct SEP comparison at twenty posterior draws shows that the ROM1--SEP prediction gap (average RMSE 1.04 per variable, exceeding $3\sigma_y$ for labor and the interest rate) is large relative to the non-binding surrogate training error.
 
 To bridge the gap to the 18-parameter estimation, I provide two lines of current evidence: (i) the HLT bridge compares direct SEP, ROM1, and the residual surrogate on common finite-support inputs; (ii) the twenty-draw SEP comparison provides an empirical full-scale solution check at selected posterior draws. A Monte Carlo coverage study at the full 18-parameter scale validates only the linear Kalman + NUTS pipeline: it achieves average coverage of 79.8\% across 14 replications, with the Clopper--Pearson 95\% confidence interval containing the nominal 90\% rate for 16 of 18 parameters. It is not evidence on surrogate posterior coverage. The Gal\'i ELB/OBC package in the online technical appendix validates narrower ROM1-residual, inversion, and matched-HMC layers.
 
