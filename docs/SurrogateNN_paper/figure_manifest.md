@@ -11,7 +11,7 @@ Scope: active submission paper `docs/SurrogateNN_paper/SurrogateNN_paper.tex` un
 | Removed from active paper | `figures/fig_rom1_forecast_errors.pdf` | No exact producer found. Related script `scripts/hlt_sep_surrogate_forecast_errors.jl` produces `hlt_surrogate_forecast_errors.pdf`, not this filename. | No exact raw artifact found. Related real-data payloads and ROM1 trajectories exist under `.local_artifacts/hlt_18param_realdata/`. | Removed from the active paper because the visible sample-period mismatch could not be resolved from reproducible artifacts. |
 | `fig:decomposition_vs_scale` | `figures/decomposition_vs_shock_scale.pdf` | `scripts/shock_scale_decomposition.jl`. | `.local_artifacts/shock_scale_decomposition/decomposition_by_scale.jls`. | Matched. Current caption already limits support to plotted grid 0.8--1.5 and matches the producer's block-share object. |
 | `fig:gali_obc_vs_no_obc` | `figures/gali_obc_vs_no_obc.pdf` | `scripts/gali_sep_decomposition.jl`. | `.local_artifacts/gali_decomposition/gali_decomposition_results.jls`. | Matched, with a residual caption weakness: the script labels the y-axis as `Mean |FOM - ROM1| gap`; units are not otherwise documented in the figure file. |
-| `fig:covid_shock_comparison` | `figures/covid_shock_comparison.pdf` | No exact producer found. Related COVID decomposition script/artifact produce different filenames (`covid_shock_decomposition.pdf`, `covid_shock_bar_decomposition.pdf`, `covid_ll_decomposition.pdf`). | Partial: `.local_artifacts/covid_decomposition/covid_decomposition_results.jls`, but no exact link to this PDF. | Blocked: no producer chain for the active PDF. Prior reviews also record a corrupted TFP panel label and undefined dotted bands in the visible figure. |
+| Removed from active paper | `figures/covid_shock_comparison.pdf` | Local run log `.local_artifacts/covid_decomposition/covid_decomp_stdout.log` reports saving this PDF and the shock-magnitude table, but no exact producer script was found. | Partial: `.local_artifacts/covid_decomposition/covid_decomposition_results.jls` and `.local_artifacts/covid_decomposition/covid_decomp_stdout.log`. | Removed from the active paper because visual inspection confirmed the corrupted TFP label recorded in prior reviews. The numeric 55.7$\sigma$ risk-premium statement is retained from the logged table. |
 
 ## Inactive Legacy Appendix Figures In This TeX File
 
@@ -36,7 +36,7 @@ These figures are inside the legacy in-file appendix guarded by `\ifpaperappendi
 ## Remaining Provenance Blockers
 
 - `figures/fig_rom1_forecast_errors.pdf`: removed from the active paper because no exact producer/raw artifact was found and prior review recorded a sample-period conflict.
-- `figures/covid_shock_comparison.pdf`: no exact producer/raw artifact link found; visible figure issues from prior review remain: corrupted TFP shock label and undefined dotted reference bands.
+- `figures/covid_shock_comparison.pdf`: removed from the active paper because the visible TFP label is corrupted; the logged COVID decomposition table remains the source for the 55.7$\sigma$ risk-premium statement.
 - `figures/fig_nonlinearity_combined.pdf`: no exact producer script or run manifest found.
 - `figures/fig_sep_all_vars_eqs_4sigma.pdf`: no exact producer script or external raw artifact found.
 - `figures/gali_obc_vs_no_obc.pdf`: producer and raw artifact match, but the caption should document the y-axis units/metric more explicitly before submission.
