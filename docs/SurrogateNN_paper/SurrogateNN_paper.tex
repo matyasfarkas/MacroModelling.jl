@@ -568,44 +568,6 @@ The seven-observable response to a $4\sigma$ investment shock supports the equat
 \end{figure}
 
 
-\subsection{ROM1 Conditional-Prediction Errors in Real Data}
-\label{subsec:rom1_forecast_errors}
-
-Investment growth accounts for 53 percent of ROM1 one-step-ahead conditional-prediction error variance in U.S. data from 1959Q1 to 2004Q4 (Figure~\ref{fig:rom1_forecast_errors}, Table~\ref{tab:crisis_vs_normal}). During crisis quarters (13 of 184), investment RMSE jumps $6.3\times$ while inflation errors \emph{fall} ($0.83\times$)---an asymmetry consistent with the convex utilization cost $a(z)$.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_rom1_forecast_errors.pdf}
-\caption{ROM1 one-step-ahead conditional-prediction errors for the real-data diagnostic sample, 1959Q1--2004Q4. Top: investment growth; middle: output growth; bottom: inflation. Errors are in the observable units used in estimation. Shaded areas: NBER recessions. Dashed red lines: $\pm 2\sigma$ bands computed from the full diagnostic sample.}
-\label{fig:rom1_forecast_errors}
-\end{figure}
-
-\begin{table}[t]
-\centering
-\caption{ROM1 conditional-prediction errors: crisis vs.\ normal quarters}
-\label{tab:crisis_vs_normal}
-\begin{tabular}{lcccc}
-\toprule
-& \multicolumn{2}{c}{Forecast Error RMSE} & & \\
-\cmidrule(lr){2-3}
-Observable & Normal & Crisis & Ratio & Variance Share \\
-\midrule
-Investment growth ($\Delta i$) & 1.65 & 10.35 & 6.3$\times$ & 53.2\% \\
-Output growth ($\Delta y$) & 0.88 & 4.48 & 5.1$\times$ & 12.1\% \\
-Consumption growth ($\Delta c$) & 0.87 & 4.79 & 5.5$\times$ & --- \\
-Hours worked & 0.59 & 1.68 & 2.8$\times$ & --- \\
-Inflation ($\pi$) & 0.92 & 0.76 & 0.8$\times$ & 6.3\% \\
-Wage growth ($\Delta w$) & 1.27 & 1.95 & 1.5$\times$ & --- \\
-Interest rate ($r$) & 0.35 & 0.57 & 1.6$\times$ & --- \\
-\bottomrule
-\end{tabular}
-
-\tablenotes{\textit{Notes}: Crisis quarters defined as periods where the absolute investment growth innovation exceeds $2\sigma$ of its unconditional standard deviation (13 out of 184 quarters, concentrated in the 1974--75, 1980--82, and 2001 recessions). Normal quarters are all remaining periods. Variance share is each observable's contribution to total one-step-ahead conditional-prediction error variance across all 184 quarters. ROM1 inversion filter applied to US quarterly data (1959Q1--2004Q4, 184 quarters) at calibrated \citet{smets2007shocks} parameter values.}
-\end{table}
-
-The decomposition measures transition-function gaps (69 percent from investment). The one-step prediction exercise measures data-fit failures (53 percent from investment). These are different objects---the numerical proximity is coincidental---but both point to the same channel. I therefore keep the benchmark comparison focused on the economically relevant choice in estimation practice: ROM1 versus the fully nonlinear SEP solution.
-
-
 \subsection{The ELB as Alternative Hypothesis}
 \label{subsec:elb_alternative}
 
@@ -1849,7 +1811,7 @@ ROM1 + NN (gate-everywhere)      & $9.4 \times 10^{1}$    & $+1.97$  & $1.87 \ti
 
 The ranking supports three substantive points. First, SEP is the most accurate solution method by a wide margin: the median normalized Euler residual is $4.2 \times 10^{-13}$, essentially machine precision, indicating that the SEP solver satisfies the model's first-order conditions to numerical zero on a typical equation in a typical period. ROM1 sits at $4.7 \times 10^{-4}$---a 0.05\% relative error---which is well within the 1\% threshold conventionally cited as ``acceptable'' for first-order perturbation in the global-solution literature \citep{aruoba2006comparing}. Second, the surrogate's gate-on correction yields a typical normalized residual of $1.7 \times 10^{-3}$, larger than ROM1's by about half a log decade in median. The neural network is trained to reduce the prediction RMSE between the SEP benchmark and ROM1, delivering accurate conditional predictions of observables, but it does not enforce the model's forward-looking consistency conditions; the surrogate functions as a likelihood-approximation tool---a learned correction to the linear filter's prediction step---rather than as a global solution method. Third, the gate-everywhere stress test produces residuals five orders of magnitude above the gated configuration, indicating that the gate's role is to keep the NN inside its training distribution.
 
-The quantitatively meaningful comparison for likelihood-based inference is the prediction RMSE of the surrogate (non-binding validation RRMSE $= 0.0012$) and the realized profiled-objective improvement (35.92 nats over the linear model on the extended sample). The Euler-error ranking does not contradict these results because the two metrics measure different objects: Euler errors quantify how well a trajectory satisfies the model's own equations, while the objective quantifies how well a method's predictions match observed data under the chosen inversion criterion. The 69-percent investment-dominance decomposition (Section~\ref{subsec:nonlinearity_sources}) is computed from SEP solutions---the most accurate method on the Euler-error metric---so the decomposition does not inherit the surrogate's larger Euler error. The bounded SEP-sensitivity pilot in Appendix~\ref{app:sep_sensitivity} supports tolerance stability over a 40-period window, while the full 265-period sensitivity rerun remains a scaling task.
+The quantitatively meaningful comparison for likelihood-based inference is the prediction RMSE of the surrogate (non-binding validation RRMSE $= 0.0012$) and the realized profiled-objective improvement (35.92 nats over the linear model on the extended sample). The Euler-error ranking does not contradict these results because the two metrics measure different objects: Euler errors quantify how well a trajectory satisfies the model's own equations, while the objective quantifies how well a method's predictions match observed data under the chosen inversion criterion. The 69-percent investment-dominance decomposition (Section~\ref{subsec:nonlinearity_sources}) is computed from SEP solutions---the most accurate method on the Euler-error metric---so the decomposition does not inherit the surrogate's larger Euler error. The full 265-period SEP-sensitivity rerun in Appendix~\ref{app:sep_sensitivity} supports tolerance stability within fixed quadrature-node settings; the $K=3$ cells sit just above the original RMSE screen against the $K=5$ reference and are reported as a solver-stability diagnostic rather than as a new benchmark choice.
 
 
 \section{Identification and Approximation Error}
@@ -2482,7 +2444,7 @@ Total & 1069.881 & 1029.600 & 1885.464 \\
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/gali_block_decomposition.pdf}
-\caption{FOM--ROM1 gap decomposition in the Gal\'i (2015) model, which shares the ELB and Kimball structure with the HLT model but lacks investment. Shares are percentages of the total squared transition-function gap at each shock scale. The plotted gap is much smaller than in the HLT model at every shock scale, consistent with the investment channel being the main difference between the models.}
+\caption{FOM--ROM1 gap decomposition in the Gal\'i (2015) model, which has a lower bound but no investment block or Kimball demand curvature. Shares are percentages of the total squared transition-function gap at each shock scale. The plotted gap is much smaller than in the HLT model at every shock scale, consistent with the investment channel being the main difference between the models.}
 \label{fig:gali_block_decomposition}
 \end{figure}
 
