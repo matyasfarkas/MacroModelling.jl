@@ -26,6 +26,7 @@ Base.@kwdef struct InversionBridgeOptions
     truth_mode::String = "validation-nearest-center"
     truth_index::Int = 0
     panel_mode::String = "heldout-one-step"
+    direct_objective::String = "exact-inversion"
     split_seed::Int = 20260527
     obs_sigma_scale::Float64 = 1.0
     obs_sigma_floor::Float64 = 1.0e-3
@@ -68,6 +69,7 @@ function parse_args(args::Vector{String})
         truth_mode = parse_arg(args, "--truth-mode", opts.truth_mode),
         truth_index = parse(Int, parse_arg(args, "--truth-index", string(opts.truth_index))),
         panel_mode = parse_arg(args, "--panel-mode", opts.panel_mode),
+        direct_objective = parse_arg(args, "--direct-objective", opts.direct_objective),
         split_seed = parse(Int, parse_arg(args, "--split-seed", string(opts.split_seed))),
         obs_sigma_scale = parse(Float64, parse_arg(args, "--obs-sigma-scale", string(opts.obs_sigma_scale))),
         obs_sigma_floor = parse(Float64, parse_arg(args, "--obs-sigma-floor", string(opts.obs_sigma_floor))),
@@ -230,6 +232,158 @@ function direct_params(model, theta_names::Vector{Symbol}, theta::AbstractVector
     return params
 end
 
+function write_theta!(model, theta_names::Vector{Symbol}, theta::AbstractVector)
+    params = direct_params(model, theta_names, theta)
+    MacroModelling.write_parameters_input!(model, params, verbose = false)
+    return params
+end
+
+function solve_matrix_rom_context!(model,
+                                   theta_names::Vector{Symbol},
+                                   theta::AbstractVector,
+                                   state_idx::Vector{Int},
+                                   obs_idx::Vector{Int})
+    write_theta!(model, theta_names, theta)
+    Base.invokelatest(
+        MacroModelling.solve!,
+        model;
+        algorithm = :first_order,
+        dynamics = true,
+        obc = false,
+        silent = true,
+    )
+    rom_full_predict, rom_predict_tuple, nsss = build_matrix_rom_predict(
+        model;
+        state_idx = state_idx,
+        obs_idx = obs_idx,
+    )
+    return (
+        rom_full_predict = rom_full_predict,
+        rom_predict_tuple = rom_predict_tuple,
+        nsss = Float64.(nsss),
+        shock_sigmas = shock_sigmas_for(model, 1.0),
+    )
+end
+
+function full_state_from_subset(nsss::Vector{Float64},
+                                state_idx::Vector{Int},
+                                state_subset::AbstractVector)
+    length(state_subset) == length(state_idx) ||
+        error("State subset length $(length(state_subset)) does not match state index length $(length(state_idx)).")
+    state_full = copy(nsss)
+    state_full[state_idx] .= Float64.(state_subset)
+    return state_full
+end
+
+function direct_sep_predict_subset(model,
+                                   theta_names::Vector{Symbol},
+                                   theta::AbstractVector,
+                                   obs_idx::Vector{Int},
+                                   state_idx::Vector{Int},
+                                   nsss::Vector{Float64},
+                                   state_subset::AbstractVector,
+                                   shock_full::AbstractVector,
+                                   opts::InversionBridgeOptions)
+    params = write_theta!(model, theta_names, theta)
+    state_full = full_state_from_subset(nsss, state_idx, state_subset)
+    shocks = reshape(Float64.(shock_full), :, 1)
+    local res
+    try
+        res = MacroModelling.simulate_sep_extended_path(
+            model;
+            periods = 1,
+            initial_state = state_full,
+            shocks = shocks,
+            burn_in = 0,
+            sep_horizon = opts.sep_horizon,
+            sep_order = 1,
+            sep_nnodes = 3,
+            sep_sparse_tree = true,
+            sep_maxit = opts.sep_maxit,
+            sep_tol = 1.0e-7,
+            sep_accept_tol = 1.0e-2,
+            sep_linear_solver = :qr,
+            sep_fallback_solver = :normal_equations,
+            sep_recovery = true,
+            sep_recovery_scales = [0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 0.95, 1.0],
+            shock_scaling = :none,
+            silent = true,
+        )
+    catch err
+        return (
+            ok = false,
+            obs = fill(NaN, length(obs_idx)),
+            state_next = Float64.(state_subset),
+            sep_err = Inf,
+            message = sprint(showerror, err),
+        )
+    end
+    errflag = hasproperty(res, :errorflag) ? Bool(res.errorflag) : false
+    sep_err = if hasproperty(res, :sep_errors) && !isempty(res.sep_errors)
+        last(res.sep_errors)
+    else
+        NaN
+    end
+    if errflag
+        return (
+            ok = false,
+            obs = fill(NaN, length(obs_idx)),
+            state_next = Float64.(state_subset),
+            sep_err = sep_err,
+            message = "simulate_sep_extended_path returned errorflag=true",
+        )
+    end
+    sim = Float64.(Array(res.simulation))
+    if size(sim, 2) < 2
+        return (
+            ok = false,
+            obs = fill(NaN, length(obs_idx)),
+            state_next = Float64.(state_subset),
+            sep_err = Inf,
+            message = "SEP simulation returned fewer than two columns",
+        )
+    end
+    next_full = sim[:, 2]
+    obs = next_full[obs_idx]
+    state_next = next_full[state_idx]
+    ok = all(isfinite, obs) && all(isfinite, state_next)
+    return (
+        ok = ok,
+        obs = ok ? obs : fill(NaN, length(obs_idx)),
+        state_next = ok ? state_next : Float64.(state_subset),
+        sep_err = sep_err,
+        message = ok ? "" : "Direct SEP prediction returned non-finite values",
+    )
+end
+
+function make_direct_sep_eval_predict(model,
+                                      theta_names::Vector{Symbol},
+                                      obs_idx::Vector{Int},
+                                      state_idx::Vector{Int},
+                                      nsss::Vector{Float64},
+                                      rom_predict_fn::Function,
+                                      opts::InversionBridgeOptions)
+    function direct_sep_eval_predict(state::AbstractVector, shock::AbstractVector, theta::AbstractVector)
+        pred = direct_sep_predict_subset(
+            model,
+            theta_names,
+            theta,
+            obs_idx,
+            state_idx,
+            nsss,
+            state,
+            shock,
+            opts,
+        )
+        if !pred.ok
+            return fill(NaN, length(obs_idx)), fill(NaN, length(state_idx))
+        end
+        _, rom_state_next = rom_predict_fn(state, shock, theta)
+        return pred.obs, rom_state_next
+    end
+    return direct_sep_eval_predict
+end
+
 function write_latex_table(path::String, rows::Vector{Dict{String,Any}})
     open(path, "w") do io
         println(io, "\\begin{tabular}{lrrrrrr}")
@@ -267,6 +421,8 @@ function bridge_manifest(opts::InversionBridgeOptions)
     Y = Matrix{Float64}(data["Y"])
     Y_rom1 = Matrix{Float64}(data["Y_rom1"])
     d_obs = length(get(meta, "observables", Symbol[]))
+    rom_mode_raw = get(meta, "rom_mode", :baseline)
+    rom_mode = rom_mode_raw isa Symbol ? rom_mode_raw : Symbol(rom_mode_raw)
     d_obs > 0 || error("Dataset metadata missing observables.")
     n = size(theta_grid, 1)
     n == size(X, 2) == size(Y, 2) == size(Y_rom1, 2) ||
@@ -278,16 +434,23 @@ function bridge_manifest(opts::InversionBridgeOptions)
     if length(panel_idx) < opts.periods
         panel_idx = vcat(panel_idx, train_idx[1:(opts.periods - length(panel_idx))])
     end
+    rom_desc = rom_mode == :baseline ? "baseline ROM1" : "candidate-specific ROM1"
 
     execution_plan = opts.panel_mode == "surrogate-rollout" ? [
         "construct a deterministic dynamic HLT observation panel by rolling the trained ROM1-residual bridge at one truth theta",
-        "recover shocks with the ROM1 inversion filter under each candidate theta",
+        "recover shocks with the $(rom_desc) inversion filter under each candidate theta",
         "evaluate the direct SEP inversion objective on the same observation panel and parameter grid",
         "evaluate the ROM1-residual surrogate objective with the same recovered-shock architecture",
         "compare direct SEP, ROM1, and surrogate posterior surfaces by means, intervals, MAP ranking, and surface RMSE",
+    ] : opts.panel_mode == "direct-sep-rollout" ? [
+        "construct a deterministic dynamic HLT observation panel by rolling direct SEP at one truth theta",
+        "recover shocks with the $(rom_desc) inversion filter under each candidate theta",
+        "evaluate a direct-SEP measurement-error objective using the same recovered-shock architecture as the surrogate",
+        "evaluate ROM1 and ROM1-residual surrogate objectives with $(rom_desc) matrices and shock scales",
+        "compare centered objective surfaces, posterior intervals, and local MAP ranking",
     ] : [
         "construct a short synthetic HLT observation panel from a held-out validation sequence",
-        "recover shocks with the ROM1 inversion filter under each candidate theta",
+        "recover shocks with the $(rom_desc) inversion filter under each candidate theta",
         "evaluate the direct SEP inversion objective on the same observation panel and parameter grid",
         "evaluate the ROM1-residual surrogate objective with the same recovered-shock architecture",
         "compare direct SEP, ROM1, and surrogate posterior surfaces by means, intervals, MAP ranking, and surface RMSE",
@@ -297,6 +460,11 @@ function bridge_manifest(opts::InversionBridgeOptions)
         "surrogate and ROM1 inversion objectives finite for all candidate anchors",
         "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
         "surface RMSE and MAP ranking are reported as diagnostics; this smoke validates dynamic bridge execution before a direct-SEP-generated panel is available",
+    ] : opts.panel_mode == "direct-sep-rollout" ? [
+        "direct SEP measurement-error objective finite for the truth point and all direct evaluation anchors",
+        "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
+        "surrogate centered surface RMSE, after removing the mean objective offset, is materially below ROM1 centered surface RMSE",
+        "local MAP ranking is reported as a diagnostic; direct SEP is the DGP for this panel",
     ] : [
         "direct SEP inversion objective finite for the truth point and all direct evaluation anchors",
         "surrogate 90 percent intervals overlap direct SEP for every bridge parameter",
@@ -317,10 +485,12 @@ function bridge_manifest(opts::InversionBridgeOptions)
         "feature_dim" => size(X, 1),
         "output_dim" => size(Y, 1),
         "obs_dim" => d_obs,
+        "rom_mode" => String(rom_mode),
         "periods" => opts.periods,
         "truth_mode" => opts.truth_mode,
         "truth_index" => truth_idx,
         "panel_mode" => opts.panel_mode,
+        "direct_objective" => opts.direct_objective,
         "truth_in_training_split" => truth_idx in train_idx,
         "truth_in_validation_split" => truth_idx in val_idx,
         "theta_true" => vec(theta_grid[truth_idx, :]),
@@ -356,12 +526,14 @@ function write_summary(path::String, manifest::Dict{String,Any})
         println(io, "- Dataset: `$(manifest["dataset"])`")
         println(io, "- Surrogate: `$(manifest["surrogate"])`")
         println(io, "- Parameter set: `$(manifest["param_set"])`")
+        println(io, "- ROM mode: `$(manifest["rom_mode"])`")
         println(io, "- Periods: `$(manifest["periods"])`")
         println(io, "- Direct evaluation points: `$(manifest["direct_eval_points"])`")
         println(io, "- SEP horizon/maxit: `$(manifest["sep_horizon"]) / $(manifest["sep_maxit"])`")
         println(io, "- Inversion maxit/tol/lambda: `$(manifest["inversion_maxit"]) / $(manifest["inversion_tol"]) / $(manifest["inversion_lambda"])`")
         println(io, "- Truth index: `$(manifest["truth_index"])`")
         println(io, "- Panel mode: `$(manifest["panel_mode"])`")
+        println(io, "- Direct objective: `$(manifest["direct_objective"])`")
         println(io, "- Truth theta: `$(join(["$(manifest["theta_names"][i])=$(fmt(manifest["theta_true"][i]))" for i in eachindex(manifest["theta_names"])], ", "))`")
         println(io, "- Truth in validation split: `$(manifest["truth_in_validation_split"])`")
         println(io, "- Observation sigma: `$(join(fmt.(manifest["obs_sigma"]), ", "))`")
@@ -385,6 +557,8 @@ function write_summary(path::String, manifest::Dict{String,Any})
         else
             if manifest["panel_mode"] == "surrogate-rollout"
                 println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is a deterministic dynamic rollout from the trained ROM1-residual bridge at one fixed truth theta, using shocks from the grid artifact.")
+            elseif manifest["panel_mode"] == "direct-sep-rollout"
+                println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is a deterministic dynamic rollout from direct SEP at one fixed truth theta, using shocks from the grid artifact.")
             else
                 println(io, "Executable mode completed. See the posterior table and serialized payload in this directory. The panel is assembled from held-out one-step HLT bridge observations, so this is an inversion-objective stress test, not a coherent full-sample DGP.")
             end
@@ -400,6 +574,8 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     theta_names = Symbol.(get(meta, "theta_names", Symbol[]))
     observables = Symbol.(get(meta, "observables", Symbol[]))
     state_names = Symbol.(get(meta, "state_names", Symbol[]))
+    rom_mode_raw = get(meta, "rom_mode", :baseline)
+    rom_mode = rom_mode_raw isa Symbol ? rom_mode_raw : Symbol(rom_mode_raw)
     isempty(state_names) && error("Dataset metadata missing state_names; cannot build ROM predictor.")
     X = Matrix{Float64}(data["X"])
     Y = Matrix{Float64}(data["Y"])
@@ -422,40 +598,27 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     # The bridge surrogate dataset was generated on the OBC HLT state space.
     # Use the same model for ROM state propagation so state/shock dimensions
     # match the trained residual network.
-    model_rom = model_direct
-    obs_idx = indexin(observables, model_rom.var)
-    state_idx = indexin(state_names, model_rom.var)
-    any(isnothing, obs_idx) && error("Observables missing from ROM model.")
-    any(isnothing, state_idx) && error("States missing from ROM model.")
-    theta_param_idx = indexin(theta_names, model_rom.parameters)
-    any(isnothing, theta_param_idx) && error("Theta names missing from ROM model parameters.")
+    model_rom = load_hlt_model(INV_REPO_ROOT, "Smets_Wouters_2007_HLT_obc"; mod = @__MODULE__)
+    obs_idx_raw = indexin(observables, model_rom.var)
+    state_idx_raw = indexin(state_names, model_rom.var)
+    any(isnothing, obs_idx_raw) && error("Observables missing from ROM model.")
+    any(isnothing, state_idx_raw) && error("States missing from ROM model.")
+    obs_idx = Int.(obs_idx_raw)
+    state_idx = Int.(state_idx_raw)
+    theta_param_idx_raw = indexin(theta_names, model_rom.parameters)
+    any(isnothing, theta_param_idx_raw) && error("Theta names missing from ROM model parameters.")
+    theta_param_idx = Int.(theta_param_idx_raw)
 
     base_params = copy(model_rom.parameter_values)
-    MacroModelling.write_parameters_input!(model_rom, base_params, verbose = false)
-    # Avoid the generated state-transition closure used by `RomPredictor` here.
-    # This executable bridge is loaded dynamically, and the closure can hit Julia
-    # world-age errors after the HLT OBC model include. The matrix predictor uses
-    # the same first-order solution matrix and is also the path used by the
-    # inversion validation code where ForwardDiff Jacobians are required.
-    Base.invokelatest(
-        MacroModelling.solve!,
-        model_rom;
-        algorithm = :first_order,
-        dynamics = true,
-        obc = false,
-        silent = true,
-    )
-    rom_full_predict, rom_predict_tuple, nsss = build_matrix_rom_predict(
-        model_rom;
-        state_idx = Int.(state_idx),
-        obs_idx = Int.(obs_idx),
-    )
-    s0 = Float64.(nsss[Int.(state_idx)])
-    shock_sigmas = shock_sigmas_for(model_rom, 1.0)
+    baseline_theta = Float64[base_params[i] for i in theta_param_idx]
+    baseline_rom = solve_matrix_rom_context!(model_rom, theta_names, baseline_theta, state_idx, obs_idx)
+    truth_rom = rom_mode == :baseline ? baseline_rom :
+        solve_matrix_rom_context!(model_rom, theta_names, theta_true, state_idx, obs_idx)
     frozen = bundle["frozen"]
     sur_meta = get(bundle, "meta", Dict{String,Any}())
-    d_state = length(s0)
-    d_eps = length(shock_sigmas)
+    d_state = length(state_idx)
+    d_eps = length(truth_rom.shock_sigmas)
+    panel_initial_state = Float64.(X[1:d_state, panel_idx[1]])
 
     surrogate_theta_names = Symbol.(get(sur_meta, "theta_names", Symbol[]))
     if !isempty(surrogate_theta_names) && length(surrogate_theta_names) != length(theta_names)
@@ -481,8 +644,8 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     else
         residual_predict = (state, shock_t, θ_local) -> predict_frozen(frozen, vcat(state, shock_t, θ_local))[1:d_obs]
     end
-    surrogate_predict = (state, shock_t, θ_local) -> MacroModelling.predict_additive_residual(
-        rom_full_predict,
+    truth_surrogate_predict = (state, shock_t, θ_local) -> MacroModelling.predict_additive_residual(
+        truth_rom.rom_full_predict,
         residual_predict,
         state,
         shock_t,
@@ -496,11 +659,11 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
     elseif opts.panel_mode == "surrogate-rollout"
         size(X, 1) >= d_state + d_eps + length(theta_names) ||
             error("Dataset X has $(size(X, 1)) rows, expected at least state($d_state)+shock($d_eps)+theta($(length(theta_names))).")
-        state_t = Float64.(X[1:d_state, panel_idx[1]])
+        state_t = copy(panel_initial_state)
         shock_panel = Matrix{Float64}(X[d_state + 1:d_state + d_eps, panel_idx])
         out = Matrix{Float64}(undef, d_obs, length(panel_idx))
         for t in axes(out, 2)
-            obs_t, state_next = surrogate_predict(state_t, shock_panel[:, t], theta_true)
+            obs_t, state_next = truth_surrogate_predict(state_t, shock_panel[:, t], theta_true)
             out[:, t] .= Float64.(obs_t)
             state_t = Float64.(state_next)
         end
@@ -510,7 +673,7 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
             "truth_index" => truth_idx,
             "theta_true" => theta_true,
             "panel_idx" => panel_idx,
-            "initial_state" => Float64.(X[1:d_state, panel_idx[1]]),
+            "initial_state" => panel_initial_state,
             "shock_panel" => shock_panel,
             "obs_data" => out,
             "observables" => observables,
@@ -518,8 +681,61 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
             "shock_names" => Symbol.(get(meta, "shock_names", Symbol[])),
         ))
         out
+    elseif opts.panel_mode == "direct-sep-rollout"
+        size(X, 1) >= d_state + d_eps + length(theta_names) ||
+            error("Dataset X has $(size(X, 1)) rows, expected at least state($d_state)+shock($d_eps)+theta($(length(theta_names))).")
+        shock_panel = Matrix{Float64}(X[d_state + 1:d_state + d_eps, panel_idx])
+        write_theta!(model_direct, theta_names, theta_true)
+        state0_full = full_state_from_subset(truth_rom.nsss, state_idx, panel_initial_state)
+        local res
+        try
+            res = MacroModelling.simulate_sep_extended_path(
+                model_direct;
+                periods = size(shock_panel, 2),
+                initial_state = state0_full,
+                shocks = shock_panel,
+                burn_in = 0,
+                sep_horizon = opts.sep_horizon,
+                sep_order = 1,
+                sep_nnodes = 3,
+                sep_sparse_tree = true,
+                sep_maxit = opts.sep_maxit,
+                sep_tol = 1.0e-7,
+                sep_accept_tol = 1.0e-2,
+                sep_linear_solver = :qr,
+                sep_fallback_solver = :normal_equations,
+                sep_recovery = true,
+                sep_recovery_scales = [0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 0.95, 1.0],
+                shock_scaling = :none,
+                silent = true,
+            )
+        catch err
+            error("Direct SEP panel generation failed: $(sprint(showerror, err))")
+        end
+        Bool(res.errorflag) && error("Direct SEP panel generation returned errorflag=true at period $(res.failure_period).")
+        sim = Float64.(Array(res.simulation))
+        size(sim, 2) >= size(shock_panel, 2) + 1 ||
+            error("Direct SEP panel returned too few columns: $(size(sim, 2))")
+        out = Matrix{Float64}(sim[obs_idx, 2:(size(shock_panel, 2) + 1)])
+        serialize(joinpath(opts.out_dir, "synthetic_panel.jls"), Dict{String,Any}(
+            "panel_mode" => opts.panel_mode,
+            "dgp" => "direct SEP dynamic rollout",
+            "truth_index" => truth_idx,
+            "theta_true" => theta_true,
+            "panel_idx" => panel_idx,
+            "initial_state" => panel_initial_state,
+            "initial_state_full" => state0_full,
+            "shock_panel" => shock_panel,
+            "obs_data" => out,
+            "observables" => observables,
+            "state_names" => state_names,
+            "shock_names" => Symbol.(get(meta, "shock_names", Symbol[])),
+            "sep_errors" => hasproperty(res, :sep_errors) ? res.sep_errors : Float64[],
+            "sep_recovery_log" => hasproperty(res, :sep_recovery_log) ? res.sep_recovery_log : Any[],
+        ))
+        out
     else
-        error("Unknown --panel-mode=$(opts.panel_mode). Supported modes: heldout-one-step, surrogate-rollout.")
+        error("Unknown --panel-mode=$(opts.panel_mode). Supported modes: heldout-one-step, surrogate-rollout, direct-sep-rollout.")
     end
     obs_ka = KeyedArray(obs_data; Variable = observables, Time = 1:size(obs_data, 2))
     direct_ll = fill(-Inf, length(candidate_idx))
@@ -534,74 +750,106 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
 
         t0 = time()
         try
-            params = direct_params(model_direct, theta_names, theta)
-            direct_ll[k] = MacroModelling.get_loglikelihood(
-                model_direct,
-                obs_ka,
-                params;
-                algorithm = :stochastic_extended_path,
-                filter = :inversion,
-                verbose = false,
-                on_failure_loglikelihood = -1.0e12,
-                presample_periods = 0,
-                sep_periods = opts.sep_horizon,
-                sep_order = 1,
-                sep_nnodes = 3,
-                sep_sparse_tree = true,
-                sep_maxit = opts.sep_maxit,
-                sep_tol = 1.0e-4,
-                sep_accept_tol = 1.0e-2,
-                sep_shock_scale = 0.5,
-                sep_inv_maxit = 1,
-                sep_inv_step_tol = 1.0e-4,
-                sep_inv_resid_tol = 1.0e-3,
-                sep_inv_lambda = 1.0e-3,
-                sep_inv_predict_tol = 1.0e-10,
-                sep_inv_logdet_method = :exact,
-                sep_inv_logdet_sv_tol = sqrt(eps(Float64)),
+            rom_ctx = rom_mode == :baseline ? baseline_rom :
+                solve_matrix_rom_context!(model_rom, theta_names, theta, state_idx, obs_idx)
+            surrogate_predict = (state, shock_t, θ_local) -> MacroModelling.predict_additive_residual(
+                rom_ctx.rom_full_predict,
+                residual_predict,
+                state,
+                shock_t,
+                θ_local,
+                d_obs;
+                allow_full_residual = false,
             )
-            statuses[k] = isfinite(direct_ll[k]) && direct_ll[k] > -1.0e11 ? "ok" : "direct_failure"
-        catch err
-            statuses[k] = "direct_error: " * sprint(showerror, err)
-            direct_ll[k] = -Inf
-        end
-        elapsed_direct[k] = time() - t0
 
-        try
+            if opts.direct_objective == "exact-inversion"
+                params = direct_params(model_direct, theta_names, theta)
+                direct_ll[k] = MacroModelling.get_loglikelihood(
+                    model_direct,
+                    obs_ka,
+                    params;
+                    algorithm = :stochastic_extended_path,
+                    filter = :inversion,
+                    verbose = false,
+                    on_failure_loglikelihood = -1.0e12,
+                    presample_periods = 0,
+                    sep_periods = opts.sep_horizon,
+                    sep_order = 1,
+                    sep_nnodes = 3,
+                    sep_sparse_tree = true,
+                    sep_maxit = opts.sep_maxit,
+                    sep_tol = 1.0e-4,
+                    sep_accept_tol = 1.0e-2,
+                    sep_shock_scale = 0.5,
+                    sep_inv_maxit = 1,
+                    sep_inv_step_tol = 1.0e-4,
+                    sep_inv_resid_tol = 1.0e-3,
+                    sep_inv_lambda = 1.0e-3,
+                    sep_inv_predict_tol = 1.0e-10,
+                    sep_inv_logdet_method = :exact,
+                    sep_inv_logdet_sv_tol = sqrt(eps(Float64)),
+                )
+            elseif opts.direct_objective == "common-measurement-error"
+                direct_predict = make_direct_sep_eval_predict(
+                    model_direct,
+                    theta_names,
+                    obs_idx,
+                    state_idx,
+                    rom_ctx.nsss,
+                    rom_ctx.rom_predict_tuple,
+                    opts,
+                )
+                ll_direct, _ = MacroModelling.inversion_loglik_per_period(
+                    rom_ctx.rom_predict_tuple,
+                    panel_initial_state,
+                    theta,
+                    obs_data,
+                    obs_sigma,
+                    rom_ctx.shock_sigmas;
+                    eval_predict_fn = direct_predict,
+                    maxit = opts.inversion_maxit,
+                    tol = opts.inversion_tol,
+                    lambda = opts.inversion_lambda,
+                )
+                direct_ll[k] = sum(ll_direct)
+            else
+                error("Unknown --direct-objective=$(opts.direct_objective). Supported: exact-inversion, common-measurement-error.")
+            end
+            statuses[k] = isfinite(direct_ll[k]) && direct_ll[k] > -1.0e9 ? "ok" : "direct_failure"
+
             ll_sur, _ = MacroModelling.inversion_loglik_per_period(
-                rom_predict_tuple,
-                s0,
+                rom_ctx.rom_predict_tuple,
+                panel_initial_state,
                 theta,
                 obs_data,
                 obs_sigma,
-                shock_sigmas;
+                rom_ctx.shock_sigmas;
                 eval_predict_fn = surrogate_predict,
                 maxit = opts.inversion_maxit,
                 tol = opts.inversion_tol,
                 lambda = opts.inversion_lambda,
             )
             surrogate_ll[k] = sum(ll_sur)
-        catch err
-            isfinite(direct_ll[k]) && (statuses[k] *= "; surrogate_error: " * sprint(showerror, err))
-            surrogate_ll[k] = -Inf
-        end
 
-        try
             ll_rom, _ = MacroModelling.inversion_loglik_per_period(
-                rom_predict_tuple,
-                s0,
+                rom_ctx.rom_predict_tuple,
+                panel_initial_state,
                 theta,
                 obs_data,
                 obs_sigma,
-                shock_sigmas;
+                rom_ctx.shock_sigmas;
                 maxit = opts.inversion_maxit,
                 tol = opts.inversion_tol,
                 lambda = opts.inversion_lambda,
             )
             rom1_ll[k] = sum(ll_rom)
-        catch
+        catch err
+            statuses[k] = "error: " * sprint(showerror, err)
+            direct_ll[k] = -Inf
+            surrogate_ll[k] = -Inf
             rom1_ll[k] = -Inf
         end
+        elapsed_direct[k] = time() - t0
 
         println("$(k)/$(length(candidate_idx)) idx=$idx direct=$(fmt(direct_ll[k])) surrogate=$(fmt(surrogate_ll[k])) rom1=$(fmt(rom1_ll[k])) status=$(statuses[k])")
     end
