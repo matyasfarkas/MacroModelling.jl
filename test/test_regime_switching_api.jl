@@ -361,6 +361,26 @@ using MCMCChains
         @test all(isfinite, ll_inv)
         @test all(isfinite, shocks_inv)
 
+        batch_called = Ref(false)
+        ll_batch, _ = MacroModelling.inversion_loglik_per_period(
+            predict_toy,
+            [0.0],
+            [0.0],
+            [1.0 0.5],
+            [0.1],
+            [0.5, 0.0];
+            batch_eval_residual_fn = X_nn -> begin
+                batch_called[] = true
+                fill(0.5, 1, size(X_nn, 2))
+            end,
+            maxit = 12,
+            tol = 1e-8,
+            lambda = 1e-6,
+        )
+        @test batch_called[]
+        @test size(ll_batch) == size(ll_inv)
+        @test sum(ll_batch) < sum(ll_inv)
+
         ll_lin_sampling = MacroModelling.linear_reference_loglik_per_period(
             [0.0],
             [0.0],

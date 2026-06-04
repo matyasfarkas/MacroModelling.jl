@@ -52,6 +52,9 @@ end
             "--out-dir=$out_dir",
             "--periods=2",
             "--direct-eval-points=1",
+            "--surrogate-objective=dynamic-ridge-residual",
+            "--dynamic-calibration-train-points=1",
+            "--dynamic-ridge-lambda=0.01",
             "--dry-run=true",
         ])
         manifest = InversionBridgeTest.run_inversion_bridge(opts)
@@ -59,8 +62,50 @@ end
 
         @test manifest["dry_run"] == true
         @test manifest["truth_in_validation_split"] == true
+        @test manifest["surrogate_objective"] == "dynamic-ridge-residual"
+        @test manifest["dynamic_calibration_train_points"] == 1
+        @test manifest["dynamic_ridge_lambda"] == 0.01
         @test disk["param_set"] == "investment_4p_supported"
         @test isfile(joinpath(out_dir, "SUMMARY.md"))
         @test "direct_inversion_grid.jls" in manifest["artifact_schema"]
+        @test "dynamic_ridge_residual.jls" in manifest["artifact_schema"]
+    end
+
+    @testset "dynamic ridge helper functions" begin
+        predict_tuple = (state, shock, theta) -> begin
+            obs = [state[1] + shock[1] + theta[1]]
+            state_next = [state[1] + 2.0 * shock[1]]
+            return obs, state_next
+        end
+        shocks = reshape([1.0, 2.0, 3.0], 1, :)
+        states, rom_obs = InversionBridgeTest.rollout_path_cache(
+            predict_tuple,
+            [1.0],
+            shocks,
+            [0.5],
+            1,
+        )
+        @test states ≈ reshape([1.0, 3.0, 7.0], 1, :)
+        @test rom_obs ≈ reshape([2.5, 5.5, 10.5], 1, :)
+
+        X_dyn = InversionBridgeTest.dynamic_feature_matrix(
+            states,
+            shocks,
+            [0.5, 0.75],
+            "state-shock-theta-time",
+        )
+        @test size(X_dyn) == (5, 3)
+        @test X_dyn[end, :] ≈ [0.0, 0.5, 1.0]
+
+        X_train = [
+            0.0 1.0 2.0 3.0 4.0;
+            1.0 -1.0 2.0 -2.0 0.5
+        ]
+        Y_train = [
+            1.0 + 2.0 * X_train[1, i] - 0.5 * X_train[2, i] for i in 1:size(X_train, 2)
+        ]'
+        ridge = InversionBridgeTest.fit_dynamic_ridge_residual(X_train, Matrix(Y_train), 0.0)
+        Y_hat = InversionBridgeTest.predict_dynamic_ridge(ridge, X_train)
+        @test Y_hat ≈ Matrix(Y_train) atol = 1.0e-10
     end
 end

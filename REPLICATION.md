@@ -458,30 +458,60 @@ inversion-filter bridge using a held-out validation truth point. The current
 mode verifies dataset/surrogate compatibility, split provenance, observation
 scaling, and artifact schema.
 
-The bounded executable mode can be run on the completed grid-5 artifact:
+The maintained dynamic HLT bridge uses the completed grid-10 artifact and a
+direct-SEP generator-path panel. This mode mirrors the HLT estimator's online
+architecture more closely: ROM1 recovers shocks and propagates states, while the
+surrogate supplies an observation-only residual correction in the likelihood
+evaluation. The direct SEP objective uses the same recovered shocks under a
+common measurement-error likelihood. The fixed one-step NN residual is retained
+as a failure diagnostic; the maintained passing run uses a path-calibrated ridge
+residual trained on direct SEP residuals along dynamic ROM1 inversion paths.
 
 ```bash
 julia --project=. scripts/hlt_bridge_inversion_filter_compare.jl \
-  --dataset=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid5_full_sweep_20260527/hlt_sep_surrogate_dataset.jls \
-  --surrogate=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid5_full_sweep_20260527/hlt_sep_surrogate_trained_investment4p_supported_grid5_full_sweep_20260527.jls \
-  --out-dir=.local_artifacts/hlt_reduced_bridge_validation/inversion_bridge_grid5_exec_smoke_20260527_retry4 \
+  --dataset=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid10_full_sweep_20260527/hlt_sep_surrogate_dataset.jls \
+  --surrogate=.local_artifacts/hlt_reduced_bridge_validation/investment4p_supported_grid10_full_sweep_20260527/hlt_sep_surrogate_trained_investment4p_supported_grid10_full_sweep_20260527.jls \
+  --out-dir=.local_artifacts/hlt_reduced_bridge_validation/full_dynamic_hlt_profile_dynamic_ridge_floor01_20260602 \
   --param-set=investment_4p_supported \
-  --periods=4 \
-  --direct-eval-points=5 \
+  --periods=8 \
+  --direct-eval-points=10 \
+  --panel-mode=direct-sep-rollout \
+  --direct-panel-solver=generator-path \
+  --direct-objective=common-measurement-error \
+  --surrogate-objective=dynamic-ridge-residual \
+  --dynamic-calibration-train-points=5 \
+  --dynamic-ridge-lambda=1e-4 \
+  --dynamic-feature-mode=state-shock-theta-time \
+  --obs-sigma-floor=0.1 \
   --sep-horizon=2 \
-  --sep-maxit=40 \
-  --inversion-maxit=6 \
+  --sep-maxit=120 \
+  --inversion-maxit=10 \
+  --profile-direct-repeats=1 \
+  --profile-fast-repeats=20 \
   --dry-run=false
 ```
 
-This 2026-05-27 executable stress test evaluated five nearby direct-SEP
-inversion anchors without numerical failure, but it did not pass the
-shape-matching criterion. The surrogate and direct objectives differ by a large
-mean surface offset (`35.13` nats), and after removing that offset the centered
-surface RMSE is `1.2067` for the surrogate versus `0.5169` for ROM1, with no
-local MAP agreement. Because the panel is assembled from held-out one-step
-bridge observations rather than a coherent synthetic time-series DGP, this is a
-plumbing/stress-test result, not a paper validation artifact.
+Three corrected 2026-06-02 dynamic diagnostics are recorded. The four-period
+smoke
+`.local_artifacts/hlt_reduced_bridge_validation/full_dynamic_hlt_profile_generator_smoke_fixed_20260602/`
+passes on three nearby anchors: all direct-SEP objectives are finite, local MAP
+agreement holds, surrogate intervals overlap direct SEP, and centered surface
+RMSE falls from `1.190` under ROM1 to `0.861` under the residual surrogate. The
+fixed one-step NN eight-period run
+`.local_artifacts/hlt_reduced_bridge_validation/full_dynamic_hlt_profile_generator_moderate_20260602/`
+is finite at all direct-SEP anchors but fails the dynamic surface criterion:
+centered surface RMSE is `1.872` for the surrogate versus `1.395` for ROM1, with
+a large mean objective offset. The path-calibrated dynamic ridge run shown above
+supersedes that failure for the reduced bridge. It uses five calibration anchors
+and five held-out anchors, reaches held-out residual RMSE `0.011818`, reduces
+held-out centered surface RMSE from `1.437` under ROM1 to `0.703` under the
+dynamic residual, matches the direct local MAP, and has interval overlap for all
+four bridge parameters. Direct SEP takes a median `34.63` seconds per
+eight-period candidate (`4.33` seconds per period), while the dynamic surrogate
+takes a median about `0.001` seconds per candidate after 20-repeat averaging.
+The projected direct cost for 10 anchors and 265 periods is about `3.19` hours.
+This result validates the reduced dynamic bridge; a full 18-parameter
+direct-SEP HMC comparison remains a scaling target.
 
 ## Artifact Map
 

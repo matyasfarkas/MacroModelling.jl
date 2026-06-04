@@ -789,10 +789,11 @@ function inversion_loglik_per_period(predict_fn::Function,
     # recovered shocks. This allows ForwardDiff to track gradients through the
     # evaluation function w.r.t. theta, while the shocks are treated as constants.
     Ttheta = eltype(theta)
-    if Ttheta === Float64 && eval_predict_fn === nothing
+    if Ttheta === Float64 && eval_predict_fn === nothing && batch_eval_residual_fn === nothing
         # No AD active and no separate eval function — return Float64 results directly.
         # Gate-conditional correction (if active) is already applied in Phase 1.
-        # Phase 2 is only needed for ForwardDiff gradient tracking.
+        # Phase 2 is needed for ForwardDiff gradient tracking or batch residual
+        # corrections; do not skip it when batch_eval_residual_fn is provided.
         return ll_f64, shocks_out
     end
 

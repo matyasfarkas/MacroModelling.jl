@@ -142,11 +142,15 @@ The maintained replication package contains three layers.
 
 \paragraph{Main limitation.}
 The full 18-parameter Smets--Wouters--HLT application is not validated by a
-full direct-SEP HMC run. The current medium-scale bridge is a finite-support,
-one-period known-feature comparison over the investment block. It is strong
-evidence that the residual target is learned on the relevant nonlinear channel;
-it is not a complete certificate for the full multi-period inversion-filter
-posterior.
+full direct-SEP HMC run. The medium-scale bridge has two maintained parts. The
+first is a finite-support, one-period known-feature comparison over the
+investment block. It is strong evidence that the residual target is learned on
+the relevant nonlinear channel. The second is a short dynamic inversion bridge.
+The fixed one-step NN residual fails the harder eight-period diagnostic, but a
+path-calibrated residual trained on dynamic ROM1 states and recovered shocks
+passes on held-out anchors. This is evidence for the dynamic residual target on
+the reduced HLT bridge; it is not a complete certificate for the full
+18-parameter multi-period posterior.
 
 \section{Claim Map}
 \label{apptech:claim_map}
@@ -173,6 +177,11 @@ The residual surrogate learns the HLT investment-channel correction & 10,000
 supported HLT bridge cells; prediction RMSE falls from 0.143574 to 0.000749395;
 surface RMSE falls from 88.0719 to 0.0534526 & One-period, known-feature,
 finite-support HLT bridge \\
+The dynamic HLT bridge requires path-aware residuals & The fixed one-step NN
+fails the eight-period diagnostic; a path-calibrated residual trained on five
+dynamic anchors passes on five held-out anchors, reducing held-out centered
+surface RMSE from 1.437 under ROM1 to 0.703 & Reduced HLT bridge, not full
+18-parameter direct-SEP HMC \\
 The ELB/OBC pipeline passes the reported small-model diagnostics & Gal\'i
 actual-floor ELB validation
 package; two-parameter matched direct/surrogate HMC over
@@ -810,6 +819,18 @@ and samples an 18-dimensional parameter vector. The correct interpretation is:
 the bridge validates the hardest medium-scale numerical object that is
 currently affordable and directly relevant to the investment channel, while
 leaving the full inversion-filter HMC bridge as a scaling target.
+
+A corrected dynamic bridge now exists as an explicit diagnostic. A
+four-period generator-path smoke passes on three nearby anchors. A harder
+eight-period, ten-anchor run shows why the dynamic correction must be
+path-aware: the fixed one-step NN residual keeps all direct-SEP objectives
+finite but fails the surface-shape criterion, with centered RMSE 1.872 for the
+surrogate and 1.395 for ROM1. The path-calibrated version fits a ridge residual
+on five dynamic anchors and evaluates five held-out anchors. It has held-out
+residual RMSE 0.0118, local MAP agreement with direct SEP, interval overlap for
+all four bridge parameters, and held-out centered surface RMSE 0.703 versus
+1.437 for ROM1. This validates the reduced dynamic bridge, while leaving the
+full 18-parameter direct-SEP HMC comparison as a scaling target.
 
 \section{Empirical Pipeline Record}
 \label{apptech:empirical_record}
