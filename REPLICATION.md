@@ -259,6 +259,54 @@ This is a provenance smoke test, not a submission-grade posterior comparison.
 It verifies that the direct SEP inversion likelihood now returns a finite
 exact-determinant value under the bounded HLT three-parameter harness.
 
+### 11. HLT Nonlinearity-Source Ablations
+
+Fixed high-Kimball neighborhood diagnostic:
+
+```bash
+julia --project=. scripts/kimball_curvature_sensitivity.jl \
+  --no-chain-theta \
+  --curvp-values=77.3 \
+  --cprobp-values=0.667 \
+  --cfc-values=1.2 \
+  --param-overrides=calfa=0.2,cg=0.18,chabb=0.67,clandaw=1.1,constebeta=0.3,constepinf=0.7,crdy=0.0,crpi=1.5,crr=0.73,cry=0.125,csadjcost=4.89,csigl=2.0,ctou=0.025,ctrend=0.4,curvw=8.31,czcap=0.431818 \
+  --out=.local_artifacts/kimball_curvature_sensitivity/hlt_reported_full_mapped_maxit400_20260606
+```
+
+Posterior-region local ablation:
+
+```bash
+JULIA_BIN=julia bash scripts/run_hlt_posterior_region_ablation_queued.sh
+```
+
+The posterior-region run writes:
+
+```text
+.local_artifacts/counterfactual_decomposition/
+  hlt_posterior_region_local10_40draws_scales012505_queued_20260609/
+```
+
+The completed paper artifact uses 40 representative posterior draws and shock
+scales 0.1, 0.25, and 0.5. SEP coverage is 100 percent for all variants and
+scales. Kimball curvature is the largest local sensitivity in 5, 0, and 0
+percent of draws across those scales; investment-adjustment and utilization
+curvature are largest in the remaining 95, 100, and 100 percent. This is the
+posterior-region evidence behind the paper's claim that the dominant local
+nonlinearity is real-side investment curvature rather than nonlinear
+Phillips-curve curvature.
+
+## Paper Result Provenance
+
+The lightweight provenance ledger for the current paper draft is:
+
+```text
+docs/SurrogateNN_paper/RESULTS_PROVENANCE_2026-06-10.md
+```
+
+That file records the run ids, artifact paths, and headline numbers used by
+the manuscript. Heavy `.jls`, `.log`, and timestamped `.local_artifacts`
+outputs remain local by design.
+
 ### 11. Reduced HLT Validation Bridge
 
 Econometrica development starts from a reduced SW07-HLT investment-block bridge:

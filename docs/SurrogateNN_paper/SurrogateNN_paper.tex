@@ -156,7 +156,7 @@
 \noindent
 \footnotesize
 This paper asks what the first-order approximation to Smets--Wouters misses. In the
-Holden--Lind\'e--Trabandt (HLT) specification and audited support studied here,
+Harding--Lind\'e--Trabandt (HLT) specification and audited support studied here,
 the largest measured gap is not mainly the effective lower bound or Kimball
 pricing. It is the investment block. A stochastic-extended-path decomposition
 assigns 69 percent of the nonlinear-minus-linear solution gap to investment and
@@ -205,7 +205,7 @@ Nonlinear DSGE estimation is usually motivated by the effective lower bound
 (ELB). The ELB matters, and a large literature has built nonlinear tools to
 handle it \citep{gust2012effects,boehl2022monetary,guerrieri2015occbin}. This
 paper asks a different question: in the Smets--Wouters model as implemented by
-Holden--Lind\'e--Trabandt (HLT), where is the largest nonlinear error from
+Harding--Lind\'e--Trabandt (HLT), where is the largest nonlinear error from
 using the first-order approximation?
 
 The answer is the investment block. I solve the nonlinear model by stochastic
@@ -543,7 +543,7 @@ Table~\ref{tab:equation_block} delivers the central result: the investment and c
 
 The adjustment cost $S'$ itself contributes only 2 percent of the state-level gap, but its nonlinearity propagates through Tobin's $q$ into the stochastic discount factor $\xi_t$, which enters every forward-looking equation. The investment channel generates the nonlinear impulse; the discount factor transmits it economy-wide.
 
-Structural parameters explain 11 percent of nonlinearity variation in separate diagnostic regressions. The strongest correlates are government spending persistence $\rho_g$ ($+0.18$), risk-premium volatility $\sigma_b$ ($+0.17$), and Kimball curvature $\varepsilon_p$ ($-0.11$)---higher curvature flattens demand and makes the model \emph{more} linear. Current-period shocks contribute negligibly ($R^2 = 0.0003$). Nonlinearity accumulates through persistent displacement, clustering in temporal bursts with autocorrelation 0.81 and mean duration 12.5 quarters; per-observable diagnostic $R^2$ values remain below 12 percent.
+Structural parameters explain 11 percent of nonlinearity variation in separate diagnostic regressions. The strongest correlates are government spending persistence $\rho_g$ ($+0.18$), risk-premium volatility $\sigma_b$ ($+0.17$), and Kimball curvature $\varepsilon_p$ ($-0.11$)---higher curvature flattens demand and makes the model \emph{more} linear. Current-period shocks contribute negligibly ($R^2 = 0.0003$). Nonlinearity accumulates through persistent displacement, clustering in temporal bursts with autocorrelation 0.81 and mean duration 12.5 quarters; per-observable diagnostic $R^2$ values remain below 12 percent. A fixed-calibration stress check at the \citet{harding2022missingdeflation} high-curvature neighborhood, mapping their reported $\varphi_p=1.20$, $\xi_p=0.667$, and $\varepsilon_p=77.3$ values plus the matching reported core and shock-process parameters into the maintained code, gives an investment/capital share of 76.5 percent and a price Phillips share of 2.0 percent. A posterior-region local ablation gives the complementary check: across 40 representative posterior draws and shock scales 0.1, 0.25, and 0.5, all SEP paths converge; Kimball curvature is the largest local sensitivity in 5, 0, and 0 percent of draws, while investment-adjustment and utilization curvature are largest in the remaining 95, 100, and 100 percent. Thus nonlinear Phillips-curve effects can be generated at selected high-curvature calibrations, but the estimated posterior region studied here puts the largest local nonlinear residual in the real investment block.
 
 These patterns suggest possible parameter shifts, but the sign can depend on
 the sample period, objective, gate, and posterior basin. In the baseline
@@ -996,7 +996,7 @@ The calibration sets $\beta = 0.99$ (quarterly), $\sigma=1$, $\varphi=1$, $\xi_p
 \subsection{SW07-HLT Model Specification}
 \label{app:sw07_model}
 
-The 18-parameter estimation in Sections~\ref{subsec:nonlinearity_sources}--\ref{par:results_18param_switching} uses a nonlinear version of the \citet{smets2007shocks} model, extended with habit formation in consumption, variable capital utilization, and investment adjustment costs (the Holden--Lind\'e--Trabandt, or HLT, occasionally binding constraint extension). This subsection summarizes the key equations; the full system has 66 endogenous variables and 7 exogenous shocks.
+The 18-parameter estimation in Sections~\ref{subsec:nonlinearity_sources}--\ref{par:results_18param_switching} uses a nonlinear version of the \citet{smets2007shocks} model, extended with habit formation in consumption, variable capital utilization, and investment adjustment costs (the Harding--Lind\'e--Trabandt, or HLT, occasionally binding constraint extension). This subsection summarizes the key equations; the full system has 66 endogenous variables and 7 exogenous shocks.
 
 \paragraph{Households.} The representative household maximizes
 \[
@@ -2613,7 +2613,7 @@ The architecture-comparison table is also excluded because its posterior-mode er
 \label{app:hlt_vs_ft}
 \label{app:ft_comparison}
 
-The linear HMC baseline in Table~\ref{tab:18param_posterior} uses the Holden--Lind\'e--Trabandt (HLT) reparameterization of the \citet{smets2007shocks} model, which differs from the original specification in ways that affect posterior comparison with earlier work. This appendix documents these differences, compares the 18-parameter HMC posterior to the results in \citet{farkas2020bayesian}, and reports a sensitivity analysis restoring the moving-average (MA) markup structure.
+The linear HMC baseline in Table~\ref{tab:18param_posterior} uses the Harding--Lind\'e--Trabandt (HLT) reparameterization of the \citet{smets2007shocks} model, which differs from the original specification in ways that affect posterior comparison with earlier work. This appendix documents these differences, compares the 18-parameter HMC posterior to the results in \citet{farkas2020bayesian}, and reports a sensitivity analysis restoring the moving-average (MA) markup structure.
 
 \subsection{Model Differences}
 

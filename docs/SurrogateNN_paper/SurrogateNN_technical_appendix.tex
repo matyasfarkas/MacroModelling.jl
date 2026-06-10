@@ -1126,6 +1126,36 @@ It records the direct, ROM1, and surrogate grid comparison. This supports the
 prediction-RMSE improvement from 0.143574 to 0.000749395 and the surface-RMSE
 improvement from 88.0719 to 0.0534526.
 
+\item[HLT high-Kimball neighborhood stress.]
+\begin{verbatim}
+.local_artifacts/
+  kimball_curvature_sensitivity/
+  hlt_reported_full_mapped_maxit400_20260606/
+  KIMBALL_CURVATURE_SENSITIVITY_SUMMARY.md
+\end{verbatim}
+records a fixed-calibration decomposition at the
+\citet{harding2022missingdeflation} high-curvature point
+\((\varphi_p,\xi_p,\varepsilon_p)=(1.20,0.667,77.3)\), with reported matching
+core and shock-process parameters mapped into the maintained code where the
+repo has a direct analogue. It supports the statement that the
+investment/capital block remains dominant in this neighborhood.
+
+\item[HLT posterior-region local ablation.]
+\begin{verbatim}
+.local_artifacts/counterfactual_decomposition/
+  hlt_posterior_region_local10_40draws_scales012505_queued_20260609/
+  COUNTERFACTUAL_ABLATION_SUMMARY.md
+\end{verbatim}
+records the posterior-region local \(10\%\) ablation. The run uses 40
+representative draws from the pooled 8,000-draw HLT surrogate posterior and
+shock scales 0.1, 0.25, and 0.5. All SEP paths converge. Kimball curvature is
+the largest local log-MSE sensitivity in \(5\%\), \(0\%\), and \(0\%\) of
+posterior draws across the three scales, while investment-adjustment and
+capital-utilization curvature are largest in \(95\%\), \(100\%\), and
+\(100\%\). This supports the statement that nonlinear Phillips-curve
+curvature is not the dominant local source of the SEP--ROM1 gap in the
+estimated posterior region.
+
 \item[Gal\'i validation package.]
 \begin{verbatim}
 .local_artifacts/gali_validation_package/

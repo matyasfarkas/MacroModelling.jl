@@ -20,6 +20,9 @@ workflow, start with `REPLICATION.md` at the repository root and
 - `scripts/mode_sensitivity_report.jl` — chain-level mode sensitivity report.
 - `scripts/oos_forecast_evaluate.jl` and `scripts/oos_gate_recalibration.jl` — quiet-sample OOS and gate recalibration diagnostics.
 - `scripts/sep_sensitivity_study.jl` — SEP tolerance/node sensitivity study; the checked paper artifact is the bounded 40-period pilot, and the completed full 265-period rerun is documented in `docs/review/SEP_265_RUN_STATUS.md`.
+- `scripts/kimball_curvature_sensitivity.jl` — fixed-calibration high-Kimball stress diagnostic for the HLT/JME neighborhood.
+- `scripts/hlt_counterfactual_decomposition.jl` — mechanism ablation engine for investment, pricing, policy, and local +/-10 percent posterior-region sensitivity designs.
+- `scripts/run_hlt_posterior_region_ablation_queued.sh` — queued wrapper for the 40-draw posterior-region local ablation used in the paper provenance ledger.
 
 ## SEP / Dynare comparisons
 - `scripts/HLT_comparison.jl` — HLT IRF comparison (perturbation vs SEP).

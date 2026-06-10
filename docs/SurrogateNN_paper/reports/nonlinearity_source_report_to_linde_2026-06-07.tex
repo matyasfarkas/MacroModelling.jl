@@ -1,0 +1,132 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.74in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{setspace}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+\setstretch{1.0}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.42em}
+
+\title{\vspace{-2.5em}Where Does the Nonlinearity Come From?\\
+\large Evidence from a Smets--Wouters--HLT Benchmark}
+\author{M\'aty\'as Farkas}
+\date{June 7, 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.7em}
+
+\section*{Purpose}
+
+This note summarizes what we learn when we compare the first-order solution of a Smets--Wouters type model with a stochastic extended path (SEP) solution at the same states, shocks, and parameters. The question is simple. If the nonlinear and linearized models give different likelihoods and different posterior implications, which part of the model is responsible for the difference?
+
+The short answer is that the main source is not the Kimball price block. It is not mainly the effective lower bound either, except in exercises designed to make the bound bind. In the maintained estimated model, most of the gap comes from the investment-capital block. This remains true in a fixed-calibration stress check at the high price-curvature neighborhood reported by Harding, Lind\'e, and Trabandt (2022). In that check, the price Phillips curve share rises, but it remains small relative to the investment-capital share.
+
+The interpretation is therefore narrow and useful. The exercise does not say that price curvature is unimportant in all DSGE models. It says that, in this Smets--Wouters environment and in the empirically relevant region examined here, the first place to look for economically large nonlinear likelihood differences is the investment adjustment-cost mechanism and its interaction with Tobin's $q$, utilization, and discounting.
+
+\section*{Object Being Compared}
+
+For a parameter vector $\theta$, a previous state $s_{t-1}$, and a structural shock vector $\varepsilon_t$, let
+\[
+  y_t^{\mathrm{SEP}} = g^{\mathrm{SEP}}(s_{t-1},\varepsilon_t;\theta),
+  \qquad
+  y_t^{\mathrm{ROM1}} = g^{\mathrm{ROM1}}(s_{t-1},\varepsilon_t;\theta).
+\]
+The first term is computed with stochastic extended path. The second term is the first-order reduced-order model. The basic object is the one-step solution gap
+\[
+  d_t = y_t^{\mathrm{SEP}} - y_t^{\mathrm{ROM1}}.
+\]
+The comparison always holds fixed the same state, same shocks, same parameters, same observables, and same timing convention. This matters because the exercise is not asking whether two estimated models fit different data. It asks where the nonlinear model moves away from the linear approximation, conditional on the same economic environment.
+
+The likelihood implications are then studied by passing either the linear solution, the direct SEP solution, or the residual-corrected surrogate through the same observation and inversion-filter machinery. The surrogate is not trained to learn the whole policy map. It is trained to learn the residual $y^{\mathrm{SEP}}-y^{\mathrm{ROM1}}$. This is the right object for the paper because the linear solution already captures the local dynamics well. The neural network is asked to learn what the first-order solution misses, not to relearn the DSGE model from scratch.
+
+\section*{How the Source Is Attributed}
+
+The decomposition is mechanical. For each accepted draw in the diagnostic grid, the code evaluates the SEP and ROM1 residuals equation by equation. The total squared gap is allocated across blocks. The blocks are investment-capital, consumption-Euler, output-resource, labor-supply, price Phillips, wage Phillips, and monetary policy. A block share is therefore not a structural causal effect. It is an accounting share of the nonlinear residual at the evaluated state, shock, and parameter.
+
+This accounting is useful because it is hard to read the source of a nonlinear likelihood gap from the likelihood alone. A 36-nat likelihood difference tells us that the nonlinear benchmark fits the observed path better under the maintained filter. It does not tell us which equilibrium restrictions generate the improvement. The block decomposition fills that gap. It points to the restrictions whose nonlinear residuals are largest in the empirically relevant part of the state space.
+
+The main full-sample diagnostic uses 22,080 accepted evaluations. In that diagnostic, the investment-capital block accounts for 68.9 percent of the squared SEP--ROM1 equation gap. The consumption-Euler block accounts for 13.5 percent, the wage Phillips block for 10.8 percent, and the price Phillips block for 0.2 percent. The remaining shares are small. These numbers are not close calls. The investment block is several times larger than any other block.
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Exercise & Accepted cells & Investment & Price Phillips & Wage Phillips \\
+\midrule
+Baseline estimated-region grid & 22,080 & 68.9 & 0.2 & 10.8 \\
+HLT high-curvature stress check & 4 & 76.5 & 2.0 & 7.8 \\
+HLT high-price block only & 6 & 72.9 & 0.1 & 1.1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The HLT stress check fixes the model near the high price-curvature calibration reported by Harding, Lind\'e, and Trabandt (2022): gross steady-state markup 1.20, Calvo price parameter about 0.667, and price demand curvature about 77.3. It also maps the reported preference, policy, adjustment-cost, and shock-persistence values into the current repository wherever a direct analogue exists. This is not a full replication of their package. Some model-specific objects that are not directly available in the maintained Smets--Wouters code remain at the repository defaults. Still, the check is informative because it puts the price block in the neighborhood where one would expect Kimball curvature to matter most. The result does not overturn the baseline. The price Phillips share rises to 2.0 percent, while the investment-capital share is 76.5 percent.
+
+A posterior-region local ablation gives the complementary result. The exercise takes 40 representative posterior draws from the pooled HLT surrogate chain and perturbs four curvature parameters by plus or minus 10 percent: investment adjustment costs, utilization curvature, price Kimball curvature, and wage Kimball curvature. At shock scales 0.1, 0.25, and 0.5, all SEP paths converge. Kimball curvature is the largest local source in 5 percent, 0 percent, and 0 percent of posterior draws across those scales. The real-side curvature parameters are largest in the remaining 95 percent, 100 percent, and 100 percent. This is the cleanest current evidence on the posterior region: the price and wage curvature terms can matter in selected calibrations, but active estimation places the model in a region where the local nonlinear gap is dominated by investment adjustment and utilization.
+
+\section*{Economic Interpretation}
+
+The result is initially surprising because the investment adjustment-cost function is often described as a smooth device used to discipline investment dynamics. At first order it is indeed quiet. In the usual level adjustment-cost specification, $S(1)=0$ and $S'(1)=0$, so the steady-state level and first derivative do not move the linear approximation in an obvious way.
+
+The nonlinear solution sees more. Away from the steady state, the adjustment-cost term interacts with the expected value of installed capital, Tobin's $q$, variable utilization, and the stochastic discount factor. These are not separate small terms once the economy is displaced by shocks. The investment Euler equation contains products and forward-looking terms that a first-order solution evaluates locally. SEP re-evaluates them along a nonlinear path. That is where the residual appears.
+
+This also explains why the finding survives the high-Kimball check. A high Kimball curvature parameter can make the price-setting problem very nonlinear when relative prices are far from their steady-state configuration. In the evaluated region, however, the price block does not generate the dominant residual. Price dispersion and reset-price terms do move, and the HLT check raises their share. But the larger displacement still comes from the capital accumulation and investment pricing conditions. The nonlinear model changes the shadow value and timing of investment more than it changes the price Phillips restriction.
+
+The effective lower bound has a different role. It is a sharp nonlinearity, not a smooth curvature term. When the bound binds for several periods, the nonlinear and linearized policy-rate paths can diverge strongly. We can see this clearly in the Gal\'i OBC simulations: using the same shocks, the constrained model holds the policy rate at the floor while the linear model wants a lower rate; output and inflation then respond differently. That exercise validates that the code can detect a hard nonlinearity. It does not imply that the ELB is the main source of the Smets--Wouters likelihood gap in the U.S. posterior region studied here.
+
+\section*{Numerical Procedure and Surrogate}
+
+The computational difficulty is that direct SEP likelihood evaluation is expensive and can fail when the nonlinear solver is initialized poorly. The paper therefore uses a residual surrogate. The maintained pipeline works as follows.
+
+First, solve the ROM1 model. Second, generate SEP evaluations at selected states, shocks, and parameters. Third, train a neural network on the residual $y^{\mathrm{SEP}}-y^{\mathrm{ROM1}}$ for the observables used in the filter. Fourth, use a gate so that the correction is applied only where the state is close to the training support. Fifth, pass the corrected observation map through the same inversion likelihood used for the linear benchmark.
+
+This design is important. A direct map from states and shocks to SEP observables has to learn the full model solution. That is a harder statistical problem and, in our experiments, it is less accurate. The ROM1 residual is smaller, more structured, and economically interpretable. If the residual is zero, the surrogate collapses to the linear solution. If the residual is large, the correction tells us where the first-order approximation is missing nonlinear behavior.
+
+The most direct HLT bridge validation is a reduced four-parameter investment-channel exercise. A 10-by-10-by-10-by-10 support sweep solved all 10,000 direct-SEP cells on the supported grid. On that grid, the raw ROM1 residual prediction error fell from about 0.144 to 0.00075 after the surrogate correction. The log-posterior surface RMSE fell from about 88.1 to 0.053. This is strong evidence that, on the reduced HLT bridge problem and inside the documented support, the surrogate is learning the SEP residual rather than inventing a separate likelihood.
+
+The dynamic validation is more mixed, and it should be reported that way. Fixed one-step corrections do not automatically give a fully accurate multi-period likelihood path. A path-calibrated residual improves the dynamic surface error, but the full direct-SEP HMC comparison remains costly. This is not a failure of the decomposition result. It is a limitation on how strongly we can claim that the full posterior has been globally validated against direct SEP. The paper should say that the posterior comparison is conditional on the documented surrogate support and the high-likelihood basin.
+
+\section*{What This Means for the Paper}
+
+The paper should not frame the result as a generic statement that linearization creates structural bias in DSGE estimation. That sentence is too broad. The evidence supports a sharper claim. In a Smets--Wouters model with level investment adjustment costs, the nonlinear posterior benchmark shifts relative to the linear benchmark, and the main local source of the nonlinear gap is the investment-capital block. This conclusion is robust to a high price-curvature stress check in the HLT neighborhood.
+
+The paper should also keep the ARMA issue visible. Restoring the markup ARMA terms improves the linear likelihood by a magnitude comparable to the nonlinear gain. That means part of the empirical story is about a known likelihood-shape problem in Smets--Wouters estimation, not only about nonlinear solution methods. This is exactly where prior work on flat posterior targets from ARMA shock structures is useful. The honest interpretation is that the nonlinear benchmark and the markup-shock specification both matter for the posterior surface.
+
+For a referee, the strongest version of the paper is therefore:
+\begin{quote}
+We show how to audit nonlinear DSGE likelihood gains by decomposing SEP--ROM1 residuals into economic mechanisms. In the Smets--Wouters application, the dominant mechanism is the investment-capital block, not the price Phillips curve, even near the high Kimball-curvature region emphasized by Harding, Lind\'e, and Trabandt. A residual neural-network surrogate can reproduce the direct-SEP surface on a documented HLT bridge grid, which makes the diagnostic feasible at the scale of Bayesian estimation.
+\end{quote}
+
+This is a cleaner contribution than a broad claim about linearization bias. It tells the reader what is done, how it is done, and what is found. It also gives the reader a diagnostic that can be used in other DSGE models: compare SEP with ROM1 at common states, train only the residual, and decompose the residual by equilibrium block before making claims about the source of the likelihood gain.
+
+\section*{Caveats and Next Check}
+
+The current HLT stress check should be described as a mapped calibration exercise. It uses the reported high-curvature neighborhood and all directly matched reported parameters available in the current repository. It is not yet an archival replication of the Harding--Lind\'e--Trabandt code. The posterior-region local ablation is stronger for the paper's maintained empirical claim because it uses estimated posterior draws rather than a single mapped calibration. Before circulating the fixed-calibration table as definitive evidence to the original authors, I would still run a larger fixed-calibration sweep in the same mapped neighborhood: more shock paths, more periods, and a table with solver residuals and failure rates.
+
+The larger publication claim should remain conditional in four ways. First, the empirical result is for one model and one country. Second, the posterior comparison is conditional on the high-likelihood mode used by the surrogate chain. Third, the surrogate is validated on documented support, not globally over the entire prior. Fourth, COVID observations stress the gate and should be treated as out-of-support unless the support diagnostics say otherwise.
+
+With those caveats, the central nonlinearity result is strong. The investment channel survives the high-Kimball neighborhood. The price block becomes somewhat more visible, but it does not dominate. The paper should lean into that result because it is specific, testable, and economically interpretable.
+
+\vspace{0.5em}
+\begingroup
+\scriptsize
+\raggedright
+\textbf{Sources and artifacts.} Harding, Lind\'e, and Trabandt (2022), ``Resolving the Missing Deflation Puzzle,'' \emph{Journal of Monetary Economics}, 126, 15--34. Main repository artifacts:
+\par\path{.local_artifacts/kimball_curvature_sensitivity/hlt_reported_full_mapped_maxit400_20260606/}
+\par\path{.local_artifacts/counterfactual_decomposition/hlt_posterior_region_local10_40draws_scales012505_queued_20260609/}
+\par\path{.local_artifacts/kimball_curvature_sensitivity/hlt_region_pilot_20260606/}
+\par\path{.local_artifacts/hlt_reduced_bridge_validation/posterior_grid_compare_investment4p_supported_grid10_full_sweep_20260527/}
+\endgroup
+
+\end{document}
