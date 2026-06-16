@@ -194,6 +194,53 @@ and observables. The same structure makes nonlinear estimation expensive.
 \end{frame}
 
 % -----------------------------------------------------------------------------
+\begin{frame}{Literature Review}
+\small
+\begin{itemize}
+  \item {\bf Nonlinear DSGE likelihoods and filters:}
+    \begin{itemize}
+      \scriptsize
+      \item Fernandez-Villaverde and Rubio-Ramirez (2007);
+            Fernandez-Villaverde, Rubio-Ramirez, and Schorfheide (2016);
+            Herbst and Schorfheide (2019).
+      \item These papers make nonlinear likelihood-based estimation credible,
+            but repeated nonlinear filtering remains costly in medium-scale models.
+    \end{itemize}
+
+  \item {\bf Occasionally binding constraints and piecewise-linear filtering:}
+    \begin{itemize}
+      \scriptsize
+      \item Guerrieri and Iacoviello (2015);
+            Cuba-Borda, Guerrieri, Iacoviello, and Zhong (2019);
+            Aruoba, Cuba-Borda, Higa-Flores, Schorfheide, and Villalvazo (2021).
+      \item These methods are stable and useful for OBCs, but keep the solution
+            close to linear or piecewise-linear objects.
+    \end{itemize}
+
+  \item {\bf Neural network solvers and estimation:}
+    \begin{itemize}
+      \scriptsize
+      \item Maliar, Maliar, and Winant (2021);
+            Azinovic, Gaegauf, and Scheidegger (2022);
+            Kase, Melosi, and Rottner (2025, MKR);
+            Naubert (2025).
+      \item Closest paper: MKR use neural networks to make nonlinear structural
+            estimation feasible in heterogeneous-agent models.
+    \end{itemize}
+
+  \item {\bf This paper: improvements relative to MKR and related work}
+    \begin{itemize}
+      \scriptsize
+      \item \textbf{SEP teacher:} the NN is trained and audited against direct global nonlinear solves.
+      \item \textbf{Residual target:} learn \(g^{\sep}-g^{\rom}\), so the method collapses to ROM1 when linearization is enough.
+      \item \textbf{Gated likelihood:} the correction is active only where support has been checked.
+      \item \textbf{Economic output:} the residual identifies which DSGE mechanisms create the nonlinear gap.
+    \end{itemize}
+\end{itemize}
+\sourcefoot{MKR denotes Kase, Melosi, and Rottner, ``Estimating Nonlinear Heterogeneous Agent Models with Neural Networks'' (2025).}
+\end{frame}
+
+% -----------------------------------------------------------------------------
 \begin{frame}{The Computational Problem}
 \claim{The nonlinear solver sits in the wrong loop.}
 
