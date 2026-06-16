@@ -1,0 +1,841 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{%
+  \hfill\usebeamerfont{footline}\usebeamercolor[fg]{footline}%
+  \insertframenumber/\inserttotalframenumber\hspace{1em}\vspace{0.65em}
+}
+\setbeamertemplate{blocks}[default]
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{enumerate items}[default]
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric}
+\emergencystretch=3em
+\pdfstringdefDisableCommands{%
+  \def\translate#1{#1}%
+}
+
+\graphicspath{{../figures/}}
+
+\definecolor{DeepBlue}{RGB}{28,54,99}
+\definecolor{MidBlue}{RGB}{48,91,150}
+\definecolor{PaleBlue}{RGB}{235,241,249}
+\definecolor{PaleGreen}{RGB}{235,247,239}
+\definecolor{PaleOrange}{RGB}{253,242,225}
+\definecolor{PaleRed}{RGB}{252,236,236}
+\definecolor{DarkGreen}{RGB}{39,116,75}
+\definecolor{DarkOrange}{RGB}{158,93,21}
+\definecolor{DarkRed}{RGB}{150,56,56}
+
+\setbeamercolor{structure}{fg=DeepBlue}
+\setbeamercolor{normal text}{fg=black,bg=white}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{frametitle}{fg=DeepBlue,bg=white}
+\setbeamercolor{title}{fg=DeepBlue}
+\setbeamercolor{subtitle}{fg=black}
+\setbeamercolor{block title}{fg=DeepBlue,bg=white}
+\setbeamercolor{block body}{fg=black,bg=white}
+\setbeamercolor{alerted text}{fg=DarkRed}
+\setbeamercolor{footline}{fg=black!55}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamerfont{title}{series=\bfseries}
+\setbeamerfont{block title}{series=\bfseries}
+\setbeamerfont{footline}{size=\scriptsize}
+\setbeamertemplate{frametitle}{%
+  \vspace{0.22cm}
+  \insertframetitle\par
+  \vspace{-0.08cm}
+  {\color{DeepBlue!45}\rule{\textwidth}{0.45pt}}
+}
+
+\newcommand{\sep}{\mathrm{SEP}}
+\newcommand{\rom}{\mathrm{ROM1}}
+\newcommand{\nn}{\mathrm{NN}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\thetao}{\theta}
+\newcommand{\state}{s}
+\newcommand{\obs}{y}
+\newcommand{\stephead}[2]{%
+  \begin{block}{#1}
+  #2
+  \end{block}
+}
+\newcommand{\smallnote}[1]{%
+  \vspace{0.25em}
+  \begin{center}
+  \parbox{0.92\linewidth}{\centering\footnotesize #1}
+  \end{center}
+}
+\newcommand{\sourcefoot}[1]{%
+  \vspace{-0.55em}
+  \begin{flushleft}
+  \parbox{0.96\linewidth}{\raggedright\tiny\textit{#1}}
+  \end{flushleft}
+}
+\newcommand{\claim}[1]{%
+  \begin{center}
+  \parbox{0.94\linewidth}{\centering\large\bfseries #1}
+  \end{center}
+}
+\newcommand{\softline}{\par\vspace{0.12em}\noindent{\color{DeepBlue!45}\rule{0.88\linewidth}{0.45pt}}\par\vspace{0.25em}}
+
+\title[Nonlinear DSGE Estimation with NN Surrogates]{Bayesian Estimation of Nonlinear DSGE Models\\with Neural-Network Surrogate Solvers}
+\subtitle{A Stochastic Extended Path to HMC pipeline}
+\author[M. Farkas]{M\'aty\'as Farkas}
+\institute[IMF]{International Monetary Fund}
+\date{Computational Economics Conference \\ 30-minute talk draft}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+\begin{frame}
+  \titlepage
+  \vspace{-0.5em}
+  \begin{center}
+  \footnotesize Views expressed are my own and do not necessarily represent the IMF.
+  \end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Main Takeaway First}
+\claim{Do not put the global nonlinear solver inside the posterior sampler.}
+
+\vspace{1.1em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{What I do}
+
+\softline
+I solve the nonlinear model offline with Stochastic Extended Path, train a
+differentiable residual surrogate, and use that surrogate inside HMC.
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Why it matters}
+
+\softline
+This turns nonlinear solution cost from a per-likelihood cost into an
+offline training and validation cost.
+\end{column}
+\end{columns}
+
+\smallnote{The contribution is computational: make Bayesian nonlinear DSGE estimation operational without pretending the nonlinear solver is cheap.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{The Hook}
+\claim{Nonlinear DSGE models are economically natural and computationally awkward.}
+
+\vspace{0.5em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.50\textwidth}
+\textbf{Economists care about nonlinear states.}
+\begin{itemize}
+  \item Effective lower bounds.
+  \item Occasionally binding constraints.
+  \item Large shocks and crisis periods.
+  \item Curvature in pricing, wages, investment, and utilization.
+\end{itemize}
+\end{column}
+\begin{column}{0.46\textwidth}
+\textbf{But estimation usually retreats to linear tools.}
+\begin{itemize}
+  \item Perturbation is fast.
+  \item Kalman filtering is stable.
+  \item The full nonlinear likelihood is too expensive.
+  \item Particle filters can be fragile in high dimension.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.55em}
+\begin{center}
+\normalsize The question is not whether nonlinearities matter. The question is whether we can estimate them at scale.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Question}
+\claim{How can we estimate nonlinear DSGE models without solving the model at every posterior draw?}
+
+\vspace{0.8em}
+\textbf{The empirical problem}
+
+\softline
+Medium-scale DSGE models are useful because they connect mechanisms, shocks,
+and observables. The same structure makes nonlinear estimation expensive.
+
+\vspace{0.7em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{What we want}
+\begin{itemize}
+  \item Structural parameters with posterior uncertainty.
+  \item Likelihood comparisons across nonlinear mechanisms.
+  \item Diagnostics that say when linearization is misleading.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{What blocks us}
+\begin{itemize}
+  \item Repeated nonlinear solves.
+  \item Numerical failures away from the mode.
+  \item Slow or noisy likelihood evaluations.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{The Computational Problem}
+\claim{The nonlinear solver sits in the wrong loop.}
+
+\vspace{0.25em}
+\begin{center}
+\begin{tikzpicture}[
+  node distance=0.68cm,
+  box/.style={draw, rounded corners, thick, align=center, font=\small, minimum height=0.68cm, minimum width=2.45cm},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+\node[box, fill=PaleOrange] (theta) {Draw $\theta$};
+\node[box, fill=PaleOrange, right=of theta] (solve) {Solve nonlinear\\ model};
+\node[box, fill=PaleOrange, right=of solve] (filter) {Evaluate\\ likelihood};
+\node[box, fill=PaleOrange, right=of filter] (hmc) {Repeat inside\\ HMC};
+\draw[arr] (theta) -- (solve);
+\draw[arr] (solve) -- (filter);
+\draw[arr] (filter) -- (hmc);
+\end{tikzpicture}
+
+\vspace{0.15em}
+\footnotesize Repeated many times inside HMC.
+\end{center}
+
+\vspace{0.45em}
+\textbf{The nested-loop bottleneck}
+
+\softline
+\begin{center}
+\[
+  \theta
+  \longmapsto
+  g^{\sep}_{\theta}
+  \longmapsto
+  p(\obs_{1:T}\mid\theta)
+  \longmapsto
+  \text{MCMC proposal}
+\]
+\end{center}
+The expensive object is recomputed exactly where the sampler needs speed.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{The Solution in One Picture}
+\claim{Move the expensive nonlinear solve offline.}
+
+\vspace{0.4em}
+\begin{center}
+\begin{tikzpicture}[
+  node distance=1.0cm,
+  box/.style={draw, rounded corners, thick, align=center, minimum height=0.82cm, minimum width=2.65cm},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+\node[box, fill=PaleBlue] (sep) {Offline\\ SEP solves};
+\node[box, fill=PaleBlue, right=of sep] (rom) {ROM1\\ baseline};
+\node[box, fill=PaleGreen, right=of rom] (train) {Train residual\\ NN};
+\node[box, fill=PaleGreen, below=of train] (audit) {Validate on\\ direct SEP};
+\node[box, fill=PaleOrange, left=of audit] (like) {Fast likelihood\\ evaluation};
+\node[box, fill=PaleOrange, left=of like] (post) {HMC posterior\\ draws};
+
+\draw[arr] (sep) -- (rom);
+\draw[arr] (rom) -- (train);
+\draw[arr] (train) -- (audit);
+\draw[arr] (train) -- (like);
+\draw[arr] (like) -- (post);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.5em}
+\begin{center}
+\normalsize
+\textbf{SEP is the teacher. ROM1 is the baseline. The NN learns the nonlinear correction.}
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Roadmap}
+\begin{enumerate}
+  \item Takeaway, motivation, and question \(\checkmark\)
+  \item The computational bottleneck \(\checkmark\)
+  \item The SEP--ROM1--NN--HMC pipeline
+  \item Small-model validation with a hard nonlinearity
+  \item Smets--Wouters extension and open work
+\end{enumerate}
+
+\vspace{0.8em}
+\begin{center}
+\small Timing guide: 6 min setup, 12 min pipeline, 7 min validation,
+4 min medium-scale extension, 1 min close.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 0: Choose the Estimation Target}
+\claim{Be explicit about the object before approximating it.}
+
+\vspace{0.5em}
+Start with a nonlinear model, a parameter vector \(\theta\), observed data
+\(\obs_{1:T}\), and a likelihood or profiled likelihood criterion.
+
+\vspace{0.4em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{Inputs}
+\begin{itemize}
+  \item Model equations.
+  \item Parameter support.
+  \item Shock process and observables.
+  \item Measurement-error or inversion design.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Audit trail}
+\begin{itemize}
+  \item Which parameters vary?
+  \item What region is trained?
+  \item What likelihood is approximated?
+  \item What is held fixed?
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 1: Solve the Nonlinear Model Offline}
+\claim{Use SEP as an offline teacher.}
+
+\vspace{0.4em}
+For sampled triples \((\state,\eps,\theta)\), compute the nonlinear transition
+\[
+  \state^+_{\sep} = g^{\sep}_{\theta}(\state,\eps).
+\]
+
+\vspace{0.4em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{Why SEP?}
+\begin{itemize}
+  \item Keeps the nonlinear equations.
+  \item Handles occasionally binding constraints.
+  \item Gives direct objects for validation.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{What must be reported}
+\begin{itemize}
+  \item Solver tolerances.
+  \item Failed and successful points.
+  \item Shock and parameter support.
+  \item Initialization strategy.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 2: Compute the Linear Baseline at the Same Points}
+\claim{Use the linear solution as the baseline, not as the answer.}
+
+\vspace{0.4em}
+At the same inputs, compute
+\[
+  \state^+_{\rom} = g^{\rom}_{\theta}(\state,\eps).
+\]
+
+\vspace{0.4em}
+\textbf{Reason}
+
+\softline
+The linear solution is cheap and often accurate near the steady state. The NN
+should not waste capacity relearning what ROM1 already does well.
+
+\vspace{0.4em}
+\begin{center}
+\large
+\[
+  \text{Nonlinear object}
+  =
+  \text{linear baseline}
+  +
+  \text{nonlinear correction}.
+\]
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 3: Train the Residual Surrogate}
+\claim{Train the nonlinear correction.}
+
+\vspace{0.4em}
+Train \(r_{\phi}\) on the residual
+\[
+  r_{\phi}(\state,\eps,\theta)
+  \approx
+  g^{\sep}_{\theta}(\state,\eps)
+  -
+  g^{\rom}_{\theta}(\state,\eps).
+\]
+
+\vspace{0.5em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{Why residual learning}
+\begin{itemize}
+  \item Smaller target.
+  \item Easier extrapolation around the linear region.
+  \item Directly measures what linearization misses.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Resulting transition}
+\[
+  g_{\phi}(\state,\eps,\theta)
+  =
+  g^{\rom}_{\theta}(\state,\eps)
+  +
+  r_{\phi}(\state,\eps,\theta).
+\]
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 4: Validate the Surrogate Before Estimation}
+\claim{Do not estimate before the surrogate passes basic audits.}
+
+\vspace{0.25em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\includegraphics[width=\textwidth,height=0.56\textheight,keepaspectratio]{zlb_rrmse_comparison.png}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Checks}
+\begin{itemize}
+  \item Held-out direct SEP points.
+  \item RMSE and relative RMSE by observable.
+  \item Regime-specific accuracy: binding, non-binding, near-boundary.
+  \item Finite likelihood and finite-gradient checks.
+\end{itemize}
+\vspace{0.25em}
+\textbf{Rule}
+
+\softline
+The surrogate is only credible on the support where it has been audited.
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 5: Build the Likelihood}
+\claim{The likelihood determines what the validation has to prove.}
+
+\vspace{0.4em}
+\textbf{Small validation model}
+
+\softline
+Use a direct measurement-error likelihood. Compare direct SEP-HMC with
+surrogate-HMC on the same synthetic data.
+
+\vspace{0.4em}
+\textbf{Medium-scale empirical model}
+
+\softline
+Use an inversion step to recover shocks period by period, then propagate with
+\[
+  \widehat{\state}_{t+1}
+  =
+  g^{\rom}_{\theta}(\state_t,\widehat{\eps}_{t+1})
+  +
+  r_{\phi}(\state_t,\widehat{\eps}_{t+1},\theta).
+\]
+
+\smallnote{The medium-scale target is a profiled hybrid criterion. That caveat should be explicit.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 6: Sample Parameters with HMC}
+\claim{The differentiable surrogate is what makes HMC practical.}
+
+\vspace{0.4em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.50\textwidth}
+\textbf{Why HMC}
+\begin{itemize}
+  \item Uses gradients to move through correlated DSGE posteriors.
+  \item Needs many fast target evaluations.
+  \item Works naturally with differentiable surrogates.
+\end{itemize}
+\end{column}
+\begin{column}{0.46\textwidth}
+\textbf{What is matched in validation}
+\begin{itemize}
+  \item Same data.
+  \item Same priors.
+  \item Same transforms.
+  \item Same seeds and HMC settings.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.55em}
+\textbf{Comparison}
+
+\softline
+The surrogate posterior should match the direct SEP posterior within Monte
+Carlo error, with no systematic directional distortion.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Step 7: Audit the Whole Pipeline}
+\claim{A surrogate paper lives or dies by its audit trail.}
+
+\vspace{0.35em}
+\begin{table}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Object & Question & Failure mode \\
+\midrule
+SEP support & Did the solver cover the region? & Hidden selection \\
+Surrogate fit & Is the map accurate where used? & Biased likelihood \\
+Gradients & Are target derivatives finite? & Bad HMC geometry \\
+HMC chains & Do chains mix and agree? & Unreliable posterior \\
+Direct audits & Does SEP confirm key cells? & Unsupported extrapolation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.4em}
+\begin{center}
+\small The replication package should make these checks mechanical, not narrative.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{The Complete Pipeline}
+\claim{The method is a sequence of auditable approximations.}
+
+\vspace{0.25em}
+\begin{enumerate}
+  \item Define model, observables, parameter support, and likelihood target.
+  \item Draw training states, shocks, and parameters.
+  \item Solve direct nonlinear transitions with SEP.
+  \item Compute ROM1 transitions at identical inputs.
+  \item Train the NN on the SEP--ROM1 residual.
+  \item Validate the map on held-out direct SEP points.
+  \item Insert \(g^{\rom}+r_{\phi}\) into the likelihood.
+  \item Run HMC and audit the posterior against direct SEP where feasible.
+\end{enumerate}
+
+\vspace{0.25em}
+\textbf{The discipline}
+
+\softline
+Every empirical number should trace back to raw artifacts: support, errors,
+diagnostics, and sampler output.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Validation: A Hard Nonlinearity}
+\claim{The validation needs a region where linearization actually fails.}
+
+\vspace{0.2em}
+\begin{center}
+\includegraphics[width=0.84\textwidth,height=0.62\textheight,keepaspectratio]{fig_zlb_binding_simulation.png}
+\end{center}
+\sourcefoot{Same shocks, nonlinear occasionally-binding model versus linearized model.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Validation: What the Small Model Shows}
+\claim{The small model is a pipeline test, not a victory lap.}
+
+\vspace{0.4em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{Design}
+\begin{itemize}
+  \item Nonlinear New Keynesian prototype.
+  \item Synthetic data generated by the nonlinear model.
+  \item Selected shock-scale parameters estimated.
+  \item Direct SEP-HMC compared to surrogate-HMC.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Interpretation}
+\begin{itemize}
+  \item The pipeline can recover parameters in a controlled nonlinear setting.
+  \item The validation is local to the model and support.
+  \item It is a feasibility proof, not a universal theorem.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Scaling Up: Smets--Wouters}
+\claim{The medium-scale model is where the computational problem becomes real.}
+
+\vspace{0.4em}
+\textbf{Medium-scale target}
+
+\softline
+Smets--Wouters style model with investment adjustment costs, variable
+utilization, Kimball pricing and wages, and occasionally binding constraints.
+
+\vspace{0.4em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\textbf{Why this is useful}
+\begin{itemize}
+  \item Standard empirical DSGE laboratory.
+  \item Rich enough to stress nonlinear mechanisms.
+  \item Economically interpretable posterior shifts.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Why this is hard}
+\begin{itemize}
+  \item Higher-dimensional state.
+  \item Fragile nonlinear solves.
+  \item Strong need for out-of-support diagnostics.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Where the Nonlinear Forecast Error Comes From}
+\claim{Around the posterior region, real-side curvature is the first suspect.}
+
+\vspace{0.2em}
+\begin{center}
+\includegraphics[width=0.84\textwidth,height=0.57\textheight,keepaspectratio]{fig_hlt_curvature_surface_sw07_hlt_baseline_13x13_std2_shock01.png}
+\end{center}
+\sourcefoot{Around the baseline/posterior region, investment and utilization curvature move the SEP--ROM1 forecast error more than Kimball curvature.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Stress Test: High-Kimball Region}
+\claim{Kimball can dominate, but only in the right neighborhood.}
+
+\vspace{0.35em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\includegraphics[width=\textwidth,height=0.60\textheight,keepaspectratio]{fig_hlt_curvature_surface_highkimball_13x13_std2_shock01.png}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{What changes}
+
+\softline
+If the calibration is deliberately moved to a high price/wage-curvature
+neighborhood, Kimball curvature can dominate the local forecast-error surface.
+
+\vspace{0.55em}
+\textbf{What this means}
+
+\softline
+The investment-channel result is a posterior-region finding, not a global
+claim about every DSGE calibration.
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Computational Accounting}
+\claim{The computational gain is amortization.}
+
+\vspace{0.35em}
+\begin{table}
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Task & Timing & Role \\
+\midrule
+SEP solves & offline & expensive teacher \\
+ROM1 solution & offline/online & cheap baseline \\
+NN training & offline & amortize nonlinear correction \\
+Surrogate likelihood & online & fast target evaluations \\
+Direct SEP-HMC & benchmark & small-model validation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.55em}
+\begin{center}
+\normalsize The win is not that SEP becomes cheap.\\
+The win is that SEP is no longer called at every HMC step.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{What Is Validated Today}
+\claim{What is proven today, and what is not.}
+
+\vspace{0.45em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.50\textwidth}
+\textbf{Validated components}
+\begin{itemize}
+  \item SEP training-data generation on documented supports.
+  \item ROM1-residual surrogate on held-out direct SEP solves.
+  \item Small-model ELB/OBC matched HMC diagnostics.
+  \item Reduced HLT bridge grid: direct SEP, ROM1, and surrogate surfaces.
+\end{itemize}
+\end{column}
+\begin{column}{0.46\textwidth}
+\textbf{Still open}
+\begin{itemize}
+  \item Full 18-parameter direct-SEP HMC benchmark.
+  \item More robust SEP initialization.
+  \item Gate design in calm samples and crisis samples.
+  \item Formal accounting for surrogate error in posterior uncertainty.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Practical Lessons}
+\claim{The practical lesson is discipline, not automation.}
+
+\vspace{0.35em}
+\begin{enumerate}
+  \item \textbf{Train the correction, not the whole model.}
+  ROM1-residual learning is easier to audit than a direct map.
+  \item \textbf{Report solver coverage.}
+  Failed SEP points are information, not bookkeeping noise.
+  \item \textbf{Validate where the posterior lives.}
+  Average approximation accuracy is not enough.
+  \item \textbf{Keep the empirical claim conditional.}
+  Medium-scale results are only as strong as the validated support.
+\end{enumerate}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Closing Takeaways}
+\claim{The method is promising because it is auditable step by step.}
+
+\vspace{0.35em}
+\begin{enumerate}
+  \item The computational obstacle is clear: global nonlinear solves are too
+        expensive for the inner likelihood loop.
+  \item The proposed solution is simple: use SEP offline, learn the ROM1 residual,
+        and put a differentiable surrogate inside HMC.
+  \item The small nonlinear validation supports the pipeline.
+  \item The Smets--Wouters extension shows where the hard work remains:
+        solver stability, surrogate error, and posterior-region coverage.
+\end{enumerate}
+
+\smallnote{The remaining work is clear: more robust SEP initialization, tighter posterior-region audits, and broader direct benchmarks.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}
+\begin{center}
+\Large Thank you
+
+\vspace{1em}
+\normalsize Questions and comments welcome.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\appendix
+
+\begin{frame}{Backup: Target and Surrogate Error}
+\[
+  e_{\phi}(\state,\eps,\theta)
+  =
+  g^{\sep}_{\theta}(\state,\eps)
+  -
+  \left[
+    g^{\rom}_{\theta}(\state,\eps)
+    +
+    r_{\phi}(\state,\eps,\theta)
+  \right].
+\]
+
+\vspace{0.5em}
+\begin{block}{Validation quantity}
+\[
+  \mathrm{RMSE}_{\mathrm{val}}
+  =
+  \left(
+  \frac{1}{N}\sum_{i=1}^{N}
+  \| e_{\phi}(\state_i,\eps_i,\theta_i) \|^2
+  \right)^{1/2}.
+\]
+\end{block}
+
+\begin{center}
+\small The same held-out inputs are evaluated under direct SEP, ROM1, and the surrogate.
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Backup: Matched HMC Validation Design}
+\begin{itemize}
+  \item Same synthetic data.
+  \item Same prior and parameter transforms.
+  \item Same initial values and random seeds.
+  \item Same NUTS settings: warmup, draws, target acceptance, tree depth.
+  \item Compare posterior means, MCSEs, and 90 percent intervals.
+\end{itemize}
+
+\vspace{0.5em}
+\begin{block}{Pass criterion}
+The surrogate posterior should overlap the direct SEP posterior within Monte
+Carlo uncertainty, with no systematic directional distortion.
+\end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Backup: Why SEP?}
+\begin{itemize}
+  \item Keeps the original nonlinear equations.
+  \item Handles occasionally binding constraints directly.
+  \item Produces a simulation object that can be compared with perturbation.
+  \item Expensive, but parallel over training points.
+\end{itemize}
+
+\vspace{0.5em}
+\begin{block}{Tradeoff}
+SEP is a good offline teacher, but a poor online likelihood engine.
+\end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Backup: Posterior Interpretation}
+\begin{itemize}
+  \item The small-model validation targets direct likelihood comparisons.
+  \item The medium-scale empirical exercise uses an inversion/profiled criterion.
+  \item Surrogate HMC results should be read as criterion-based posterior
+        diagnostics until a full direct-SEP HMC benchmark is feasible.
+\end{itemize}
+
+\vspace{0.5em}
+\begin{center}
+\small The method is promising because the validation pieces work, not because every medium-scale empirical caveat is already solved.
+\end{center}
+\end{frame}
+
+\end{document}
