@@ -269,6 +269,71 @@ The expensive object is recomputed exactly where the sampler needs speed.
 \end{frame}
 
 % -----------------------------------------------------------------------------
+\begin{frame}{How the Gate Operates}
+\claim{The gate is an audit rule inside the likelihood.}
+
+\vspace{0.15em}
+\begin{center}
+\begin{tikzpicture}[
+  node distance=0.54cm and 0.74cm,
+  box/.style={draw, rounded corners, thick, align=center, font=\scriptsize, minimum height=0.64cm, minimum width=2.0cm},
+  wide/.style={draw, rounded corners, thick, align=center, font=\scriptsize, minimum height=0.76cm, minimum width=2.55cm},
+  arr/.style={-{Latex[length=1.8mm]}, thick},
+  soft/.style={-{Latex[length=1.8mm]}, thick, dashed}
+]
+\node[box, fill=PaleBlue] (data) {data\\ $\obs_t$};
+\node[box, fill=PaleBlue, right=of data] (inv) {inversion\\ $\widehat{\eps}_t(\theta)$};
+\node[box, fill=PaleBlue, right=of inv] (dist) {support score\\ $d_t$};
+\node[wide, fill=PaleGreen, above right=0.18cm and 0.72cm of dist] (nn) {inside support\\ ROM1 $+$ NN residual};
+\node[wide, fill=PaleOrange, below right=0.18cm and 0.72cm of dist] (romonly) {weak support\\ ROM1 weight rises};
+\node[box, fill=PaleOrange] (like) at ($(nn.east)!0.5!(romonly.east)+(1.55,0)$) {likelihood\\ contribution};
+\draw[arr] (data) -- (inv);
+\draw[arr] (inv) -- (dist);
+\draw[arr] (dist) -- node[above, sloped, font=\tiny] {$\omega_t \approx 1$} (nn);
+\draw[arr] (dist) -- node[below, sloped, font=\tiny] {$\omega_t \approx 0$} (romonly);
+\draw[arr] (nn) -- (like);
+\draw[arr] (romonly) -- (like);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.05em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.50\textwidth}
+\small
+\textbf{Soft transition map}
+\[
+  \widehat g_t =
+  g^{\rom}_{\theta}
+  + \omega_t r_{\phi},
+  \qquad
+  0\leq \omega_t\leq 1 .
+\]
+\end{column}
+\begin{column}{0.46\textwidth}
+\small
+\textbf{What the gate reports}
+\begin{itemize}
+  \item Where the NN correction is active.
+  \item Where the linear fallback dominates.
+  \item Which periods need direct SEP audit.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{-0.05em}
+\begin{center}
+\begin{tikzpicture}[x=0.40cm,y=0.28cm]
+\draw[black!35] (0,0) -- (20.5,0);
+\foreach \x/\w/\c in {0/4/PaleBlue,4.1/2.1/PaleGreen,6.3/5.0/PaleBlue,11.5/2.4/PaleOrange,14.1/3.4/PaleGreen,17.7/2.2/PaleBlue}
+  \draw[fill=\c,draw=black!35] (\x,-0.25) rectangle ++(\w,0.5);
+\node[font=\tiny,anchor=west] at (0,-0.78) {mostly ROM1};
+\node[font=\tiny,anchor=west] at (4.1,-0.78) {NN correction};
+\node[font=\tiny,anchor=west] at (11.5,-0.78) {audit / weak support};
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
 \begin{frame}{Roadmap}
 \begin{enumerate}
   \item Takeaway, motivation, and question \(\checkmark\)
@@ -561,6 +626,80 @@ diagnostics, and sampler output.
 \includegraphics[width=0.84\textwidth,height=0.62\textheight,keepaspectratio]{fig_zlb_binding_simulation.png}
 \end{center}
 \sourcefoot{Same shocks, nonlinear occasionally-binding model versus linearized model.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{IRF Ladder: Local to Global}
+\claim{The clean visual test is one shock, one calibration, and all solution methods on the same axes.}
+
+\vspace{-0.05em}
+\begin{center}
+\begin{tikzpicture}[
+  x=0.25cm,
+  y=0.17cm,
+  axis/.style={black!45, thin},
+  one/.style={black, very thick},
+  two/.style={MidBlue, very thick, dashed},
+  three/.style={DarkGreen, very thick, densely dotted},
+  pf/.style={DarkOrange, very thick, dash dot},
+  sepstyle/.style={DarkRed, very thick}
+]
+% Panel 1
+\begin{scope}[shift={(0,0)}]
+\node[font=\small\bfseries] at (7.0,13.2) {Policy rate};
+\draw[axis,->] (0,0) -- (14.8,0);
+\draw[axis,->] (0,-8.8) -- (0,11.5);
+\node[font=\tiny,anchor=west] at (14.9,-0.1) {quarters};
+\node[font=\tiny,rotate=90] at (-1.55,4.8) {response};
+\draw[black!35, dashed] (0,0) -- (14.4,0);
+\draw[one] plot[smooth] coordinates {(0,0) (1,-6.8) (2,-7.2) (3,-4.9) (4,-2.5) (5,-0.6) (6,0.7) (8,1.6) (11,2.1) (14,2.25)};
+\draw[two] plot[smooth] coordinates {(0,0) (1,-5.8) (2,-6.5) (3,-4.8) (4,-2.7) (5,-1.0) (6,0.4) (8,1.4) (11,2.0) (14,2.2)};
+\draw[three] plot[smooth] coordinates {(0,0) (1,-4.8) (2,-5.9) (3,-4.6) (4,-2.8) (5,-1.2) (6,0.2) (8,1.3) (11,1.95) (14,2.18)};
+\draw[pf] plot[smooth] coordinates {(0,0) (1,0) (2,0) (3,0) (4,0.15) (5,0.55) (6,0.95) (8,1.55) (11,2.0) (14,2.22)};
+\draw[sepstyle] plot[smooth] coordinates {(0,0) (1,0) (2,0) (3,0) (4,0.05) (5,0.42) (6,0.86) (8,1.48) (11,1.98) (14,2.22)};
+\node[font=\tiny,anchor=west,DarkRed] at (0.3,-7.9) {ELB binds};
+\end{scope}
+
+% Panel 2
+\begin{scope}[shift={(16.5,0)}]
+\node[font=\small\bfseries] at (7.0,13.2) {Inflation};
+\draw[axis,->] (0,0) -- (14.8,0);
+\draw[axis,->] (0,-8.8) -- (0,11.5);
+\node[font=\tiny,anchor=west] at (14.9,-0.1) {quarters};
+\draw[black!35, dashed] (0,0) -- (14.4,0);
+\draw[one] plot[smooth] coordinates {(0,0) (1,-4.4) (2,-5.8) (3,-5.4) (4,-4.2) (5,-3.0) (7,-1.3) (10,-0.2) (14,0.1)};
+\draw[two] plot[smooth] coordinates {(0,0) (1,-4.8) (2,-6.4) (3,-6.1) (4,-4.8) (5,-3.4) (7,-1.5) (10,-0.25) (14,0.1)};
+\draw[three] plot[smooth] coordinates {(0,0) (1,-5.0) (2,-6.8) (3,-6.5) (4,-5.2) (5,-3.7) (7,-1.7) (10,-0.32) (14,0.1)};
+\draw[pf] plot[smooth] coordinates {(0,0) (1,-6.0) (2,-8.0) (3,-7.5) (4,-5.8) (5,-3.9) (7,-1.7) (10,-0.25) (14,0.1)};
+\draw[sepstyle] plot[smooth] coordinates {(0,0) (1,-6.5) (2,-8.4) (3,-7.7) (4,-5.6) (5,-3.7) (7,-1.55) (10,-0.2) (14,0.12)};
+\end{scope}
+
+% Panel 3
+\begin{scope}[shift={(33.0,0)}]
+\node[font=\small\bfseries] at (7.0,13.2) {Output};
+\draw[axis,->] (0,0) -- (14.8,0);
+\draw[axis,->] (0,-8.8) -- (0,11.5);
+\node[font=\tiny,anchor=west] at (14.9,-0.1) {quarters};
+\draw[black!35, dashed] (0,0) -- (14.4,0);
+\draw[one] plot[smooth] coordinates {(0,0) (1,-5.5) (2,-7.2) (3,-6.6) (4,-5.4) (5,-4.0) (7,-2.0) (10,-0.6) (14,-0.05)};
+\draw[two] plot[smooth] coordinates {(0,0) (1,-6.0) (2,-8.0) (3,-7.2) (4,-5.8) (5,-4.25) (7,-2.1) (10,-0.65) (14,-0.05)};
+\draw[three] plot[smooth] coordinates {(0,0) (1,-6.4) (2,-8.4) (3,-7.5) (4,-6.0) (5,-4.35) (7,-2.2) (10,-0.7) (14,-0.06)};
+\draw[pf] plot[smooth] coordinates {(0,0) (1,-7.0) (2,-8.6) (3,-7.9) (4,-6.2) (5,-4.5) (7,-2.25) (10,-0.7) (14,-0.06)};
+\draw[sepstyle] plot[smooth] coordinates {(0,0) (1,-7.4) (2,-8.9) (3,-8.0) (4,-6.1) (5,-4.35) (7,-2.1) (10,-0.62) (14,-0.04)};
+\end{scope}
+
+% Legend
+\begin{scope}[shift={(2.1,-12.1)},x=0.78cm,y=1cm]
+\draw[one] (0,0) -- (0.55,0); \node[font=\tiny,anchor=west] at (0.65,0) {first order};
+\draw[two] (2.45,0) -- (3.0,0); \node[font=\tiny,anchor=west] at (3.1,0) {second order};
+\draw[three] (5.1,0) -- (5.65,0); \node[font=\tiny,anchor=west] at (5.75,0) {third order};
+\draw[pf] (7.65,0) -- (8.2,0); \node[font=\tiny,anchor=west] at (8.3,0) {perfect foresight};
+\draw[sepstyle] (10.95,0) -- (11.5,0); \node[font=\tiny,anchor=west] at (11.6,0) {SEP};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+
+\sourcefoot{Schematic slide template. For a results slide, the same shock vector and calibration should be run through each solver and the artifact path should be reported.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
