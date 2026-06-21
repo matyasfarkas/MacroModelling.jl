@@ -28,6 +28,22 @@ Small TeX table snapshots needed for paper compilation live under
 Recommended Julia version: 1.12.x. The top-level `Project.toml` and
 `Manifest.toml` define the replication environment.
 
+On a fresh Mac clone:
+
+```bash
+git clone <repository-url>
+cd <repository-directory>
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+RUN_PAPER=0 bash scripts/replication_smoke.sh
+```
+
+If Julia is not on `PATH`, either install it with `juliaup` or pass an explicit
+binary path to the long-running wrappers:
+
+```bash
+JULIA_BIN=/path/to/julia bash scripts/run_hlt_unitshock_rebuild.sh base
+```
+
 ```bash
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 ```
@@ -72,6 +88,60 @@ LaTeX outputs and the generated PDF are ignored by Git.
 The commands below are the reproducible entry points for regenerating the main
 classes of results. They are intentionally explicit about output paths so that
 artifacts do not overwrite the checked-in package state.
+
+### Current Corrected Unit-Shock HLT Pipeline
+
+The current full-scale target is the corrected unit-shock HLT pipeline. In the
+HLT and Galí model files, shock standard deviations enter the equations, so
+SEP shock nodes and inverted shocks should be unit structural innovations:
+`--shock-scaling=none` for dataset generation and the default
+`sep_inv_shock_scaling=:none` for inversion likelihoods.
+
+The wrapper below is the production entry point. It writes one log per stage
+under `$RUN_ROOT/logs/`, checkpoints dataset generation after each theta point,
+and keeps the full gate+NN and linear+gate HMC runs exactly matched except for
+`--disable-nn-correction`.
+
+```bash
+export RUN_ROOT=.local_artifacts/hlt_18param_validation_unitshock_full_$(date +%Y%m%d)
+
+screen -dmS hlt_unit_base bash scripts/run_hlt_unitshock_rebuild.sh base
+screen -dmS hlt_unit_zlb  bash scripts/run_hlt_unitshock_rebuild.sh zlb
+
+# Monitor:
+tail -f "$RUN_ROOT/logs/base_dataset.log"
+tail -f "$RUN_ROOT/logs/zlb_dataset.log"
+
+# After both datasets complete:
+bash scripts/run_hlt_unitshock_rebuild.sh combine-train
+
+# Required before full HMC:
+bash scripts/run_hlt_unitshock_rebuild.sh hmc-smoke-full
+bash scripts/run_hlt_unitshock_rebuild.sh hmc-smoke-lineargate
+
+# Full matched estimation, one chain at a time:
+HMC_SEED=42 FULL_ADAPT=500 FULL_SAMPLES=1000 \
+  screen -dmS hlt_unit_fullnn bash scripts/run_hlt_unitshock_rebuild.sh hmc-full
+
+HMC_SEED=42 FULL_ADAPT=500 FULL_SAMPLES=1000 \
+  screen -dmS hlt_unit_lineargate bash scripts/run_hlt_unitshock_rebuild.sh hmc-lineargate
+```
+
+Default inputs for the HMC stages are:
+
+```text
+DATA_PATH=.local_artifacts/hlt_18param_realdata/hlt_real_data_payload_extended_18p_unitshock_nonobc_20260620.jls
+GATE_PATH=.local_artifacts/hlt_18param_realdata/gate_calibration_extended_18p_unitshock_20260619.jls
+INIT_FROM=.local_artifacts/hlt_18param_realdata/hlt_linear_hmc_extended_18p_2000.jls
+SURROGATE_PATH=$RUN_ROOT/hlt_sep_surrogate_trained_with_zlb_unitshock.jls
+```
+
+Acceptance checks before reporting the full run are: completed base and ZLB
+datasets with documented solver coverage, validation RMSE below the ROM1
+baseline in every observable, finite log posterior and finite finite-difference
+gradient at the initialization point, zero or negligible post-warmup
+divergences, and a fixed-theta comparison of full gate+NN versus linear+gate at
+the two posterior means.
 
 ### 1. Generate SEP Surrogate Dataset
 
@@ -294,6 +364,55 @@ curvature are largest in the remaining 95, 100, and 100 percent. This is the
 posterior-region evidence behind the paper's claim that the dominant local
 nonlinearity is real-side investment curvature rather than nonlinear
 Phillips-curve curvature.
+
+### 12. HLT Density-Scaled Curvature Surfaces
+
+This visual diagnostic plots the RMSE of one-step observable forecast errors
+`SEP - ROM1` over parameter surfaces around a chosen HLT parameter center. The
+paper surfaces compare real-side curvature (`csadjcost`, `czcap`) against
+Kimball curvature (`curvp`, `curvw`) using common shock paths in every grid
+cell. The current manuscript uses density-scaled 13-by-13 grids at +/-1 and
++/-2 local standard deviations around two centers: the maintained SW07--HLT
+baseline calibration and the HLT high-Kimball stress point.
+
+```bash
+julia --project=. scripts/hlt_posterior_mean_curvature_surface.jl \
+  --plot-only=true \
+  --run-id=sw07_hlt_baseline_surface_13x13_std2_bounded_shock01_1path_20260611 \
+  --paper-figure-stem=fig_hlt_curvature_surface_sw07_hlt_baseline_13x13_std2_shock01
+```
+
+The diagnostic writes CSV/JLS payloads, contour plots, 3D surfaces, and
+center cross-sections under:
+
+```text
+.local_artifacts/hlt_posterior_mean_curvature_surface/<run-id>/
+```
+
+The locked manuscript figure set is:
+
+```text
+docs/SurrogateNN_paper/figures/fig_hlt_curvature_surface_sw07_hlt_baseline_13x13_std1_shock01.png
+docs/SurrogateNN_paper/figures/fig_hlt_curvature_surface_sw07_hlt_baseline_13x13_std2_shock01.png
+docs/SurrogateNN_paper/figures/fig_hlt_curvature_surface_highkimball_13x13_std1_shock01.png
+docs/SurrogateNN_paper/figures/fig_hlt_curvature_surface_highkimball_13x13_std2_shock01.png
+```
+
+The baseline charts show real-side dominance over +/-1 and +/-2 local
+standard deviations. The high-Kimball stress charts show that price/wage
+Kimball curvature can dominate when the center is deliberately moved to the
+HLT high-curvature neighborhood. This is why the manuscript states the
+investment-channel conclusion as a posterior-region finding, not a global
+theorem.
+
+To regenerate only the figures from the saved surface payload:
+
+```bash
+julia --project=. scripts/hlt_posterior_mean_curvature_surface.jl \
+  --plot-only=true \
+  --run-id=<run-id> \
+  --paper-figure-stem=<figure-stem>
+```
 
 ## Paper Result Provenance
 

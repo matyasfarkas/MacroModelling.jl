@@ -873,6 +873,34 @@ The win is that SEP is no longer called at every HMC step.
 \end{frame}
 
 % -----------------------------------------------------------------------------
+\begin{frame}{What Would a Full SEP--NN Run Take?}
+\claim{On this workstation, budget about one week for the production run.}
+
+\vspace{0.2em}
+\scriptsize
+\begin{table}
+\centering
+\begin{tabular}{p{0.25\linewidth}p{0.34\linewidth}p{0.29\linewidth}}
+\toprule
+Component & Measured anchor & Production budget \\
+\midrule
+Base SEP data & 1,664 corrected unit-shock samples in 2.8 hours & 2--4 days for 125 parameter blocks at longer sample and horizon \\
+ZLB SEP data & 1,536 binding samples in 6.3 hours & 2--5 days to obtain about 5,000 accepted binding points \\
+Combine and train & 3,200 points trained quickly; NN lowers ROM1 residual RMSE by 87--94 percent & Less than 2 hours unless the dataset is much larger \\
+Surrogate HMC & 100 warmup + 100 draws in 25 minutes at tree depth 5 & 3--8 hours per 1,500-iteration chain \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.25em}
+\small
+If base and ZLB data jobs run in parallel, the end-to-end wall-clock estimate is
+\textbf{5--8 days}, including training and matched HMC checks.
+
+\smallnote{The upper tail is solver risk: difficult SEP points, retries, and initialization matter more than neural-network training time.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
 \begin{frame}{What Is Validated Today}
 \claim{What is proven today, and what is not.}
 
@@ -881,18 +909,19 @@ The win is that SEP is no longer called at every HMC step.
 \begin{column}{0.50\textwidth}
 \textbf{Validated components}
 \begin{itemize}
-  \item SEP training-data generation on documented supports.
-  \item ROM1-residual surrogate on held-out direct SEP solves.
+  \item Corrected unit-shock HLT MVP: 3,200 direct SEP training points.
+  \item ROM1-residual NN cuts observable residual RMSE by 87--94 percent.
   \item Small-model ELB/OBC matched HMC diagnostics.
   \item Reduced HLT bridge grid: direct SEP, ROM1, and surrogate surfaces.
+  \item Full-NN and linear+gate MVP HMC smokes run without divergences.
 \end{itemize}
 \end{column}
 \begin{column}{0.46\textwidth}
 \textbf{Still open}
 \begin{itemize}
-  \item Full 18-parameter direct-SEP HMC benchmark.
-  \item More robust SEP initialization.
-  \item Gate design in calm samples and crisis samples.
+  \item Full 18-parameter SEP--NN posterior run.
+  \item Larger prior/posterior support for the corrected unit-shock dataset.
+  \item Robust SEP initialization for the hardest binding points.
   \item Formal accounting for surrogate error in posterior uncertainty.
 \end{itemize}
 \end{column}

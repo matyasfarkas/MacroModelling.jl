@@ -195,7 +195,7 @@ function run_sep(mdl, shocks_matrix, sim_p, burn_p, seed_val)
             sep_lm_lambda_max = 1e4,
             sep_shock_scale  = 1.0,
             sep_accept_tol   = sep_accept_tol,
-            shock_scaling    = :parameter,
+            shock_scaling    = :none,
             shocks           = shocks_matrix,
             random_seed      = seed_val,
             silent           = true,

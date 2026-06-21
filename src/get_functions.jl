@@ -3476,6 +3476,7 @@ If occasionally binding constraints are present in the model, they are not taken
 - `presample_periods` [Default: `0`, Type: `Int`]: periods at the beginning of the data for which the loglikelihood is discarded.
 - `initial_covariance` [Default: `:theoretical`, Type: `Symbol`]: defines the method to initialise the Kalman filters covariance matrix. It can be initialised with the theoretical long run values (option `:theoretical`) or large values (10.0) along the diagonal (option `:diagonal`).
 - `on_failure_loglikelihood` [Default: `-Inf`, Type: `AbstractFloat`]: value to return if the loglikelihood calculation fails. Setting this to a finite value can avoid errors in codes that rely on finite loglikelihood values, such as e.g. slice samplers (in Pigeons.jl).
+- `sep_inv_shock_scaling` [Default: `:none`, Type: `Symbol` or `String`]: for `algorithm=:stochastic_extended_path, filter=:inversion`, controls the Gaussian prior on inverted SEP shocks. Use `:none` when shock standard deviations enter the model equations, e.g. `std_z * eps_z[x]`; use `:parameter` only when the exogenous variables themselves are parameter-scaled.
 - $QME®
 - $SYLVESTER®
 - $LYAPUNOV®
@@ -3540,6 +3541,7 @@ function get_loglikelihood(𝓂::ℳ,
                             sep_inv_predict_tol::Union{Nothing,Float64} = nothing,
                             sep_inv_logdet_method::Union{Nothing,Symbol,String} = nothing,
                             sep_inv_logdet_sv_tol::Union{Nothing,Float64} = nothing,
+                            sep_inv_shock_scaling::Union{Nothing,Symbol,String} = nothing,
                             verbose::Bool = DEFAULT_VERBOSE)::S where {S <: Real, U <: AbstractFloat}
                             # timer::TimerOutput = TimerOutput(),
 
@@ -3599,7 +3601,8 @@ function get_loglikelihood(𝓂::ℳ,
                                                     sep_inv_lambda = sep_inv_lambda,
                                                     sep_inv_predict_tol = sep_inv_predict_tol,
                                                     sep_inv_logdet_method = sep_inv_logdet_method,
-                                                    sep_inv_logdet_sv_tol = sep_inv_logdet_sv_tol)
+                                                    sep_inv_logdet_sv_tol = sep_inv_logdet_sv_tol,
+                                                    sep_inv_shock_scaling = sep_inv_shock_scaling)
     else
         get_relevant_steady_state_and_state_update(Val(algorithm), parameter_values, 𝓂, opts = opts)
     end

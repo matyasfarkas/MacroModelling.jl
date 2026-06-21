@@ -139,11 +139,7 @@ function draw_shocks(rng::AbstractRNG, model, total_periods::Int, shock_scale::F
     obc_mask = contains.(string.(shock_names_local), "ᵒᵇᶜ")
     structural_idx = findall(!, obc_mask)
     isempty(structural_idx) && return shocks
-    sigmas = ones(length(structural_idx))
-    for (i, idx) in enumerate(structural_idx)
-        sigmas[i] = MacroModelling.sep_irf_shock_std(model, shock_names_local[idx])
-    end
-    sigmas .*= shock_scale
+    sigmas = fill(shock_scale, length(structural_idx))
     shocks[structural_idx, :] .= Diagonal(sigmas) * randn(rng, length(structural_idx), total_periods)
     return shocks
 end
@@ -315,7 +311,7 @@ for mkey in model_keys
                     sep_lm_lambda_max = 1e4,
                     sep_shock_scale  = 1.0,
                     sep_accept_tol   = sep_accept_tol,
-                    shock_scaling    = :parameter,
+                    shock_scaling    = :none,
                     shocks           = shocks,
                     random_seed      = trajectory_seed,
                     silent           = true,

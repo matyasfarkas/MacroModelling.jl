@@ -31,6 +31,30 @@ function parse_int_list(arg::AbstractString)
     return [parse(Int, strip(x)) for x in split(String(arg), ",")]
 end
 
+function format_duration(seconds::Real)
+    sec = max(0, floor(Int, seconds))
+    hours = sec ÷ 3600
+    minutes = (sec % 3600) ÷ 60
+    seconds_left = sec % 60
+    return @sprintf("%02d:%02d:%02d", hours, minutes, seconds_left)
+end
+
+function format_theta_preview(theta_names::Vector{Symbol}, theta::AbstractVector{<:Real};
+                              max_params::Int = 6)
+    if isempty(theta)
+        return "[]"
+    end
+    n_show = min(length(theta), max_params)
+    parts = String[]
+    for j in 1:n_show
+        push!(parts, @sprintf("%s=%.6g", String(theta_names[j]), theta[j]))
+    end
+    if length(theta) > n_show
+        push!(parts, "...")
+    end
+    return "[" * join(parts, ", ") * "]"
+end
+
 grid_points = parse_arg_int(ARGS, "--grid", 5)
 theta_samples = parse_arg_int(ARGS, "--theta-samples", grid_points^3)
 theta_max_attempts = parse_arg_int(ARGS, "--theta-max-attempts", theta_samples * 10)
@@ -89,7 +113,7 @@ subdiff_alpha_maxit = parse_arg_int(ARGS, "--subdiff-alpha-maxit", 20)
 subdiff_alpha_tol = parse_arg_float(ARGS, "--subdiff-alpha-tol", 1e-3)
 subdiff_verbose = parse_arg_bool(ARGS, "--subdiff-verbose", false)
 seed0 = parse_arg_int(ARGS, "--seed", 42)
-shock_scaling = parse_arg_symbol(ARGS, "--shock-scaling", :parameter)
+shock_scaling = parse_arg_symbol(ARGS, "--shock-scaling", :none)
 shock_scale = parse_arg_float(ARGS, "--shock-scale", 0.25)
 theta_sampling = parse_arg_symbol(ARGS, "--theta-sampling", :prior)
 param_set = parse_arg_symbol(ARGS, "--param-set", :legacy_3params)
@@ -98,6 +122,7 @@ rom_orders = parse_int_list(parse_arg_string(ARGS, "--rom-orders", "1,2"))
 rom_mode = parse_arg_symbol(ARGS, "--rom-mode", :baseline)
 output_dir_arg = parse_arg_string(ARGS, "--output-dir", "")
 checkpoint_every = parse_arg_int(ARGS, "--checkpoint-every", 10)
+progress_every = parse_arg_int(ARGS, "--progress-every", 10)
 resume = "--resume" in ARGS
 timing = "--timing" in ARGS
 force_obc = "--use-obc" in ARGS
@@ -120,6 +145,8 @@ if force_no_obc
 end
 theta_attempts_per_theta >= 1 || error("--theta-attempts-per-theta must be >= 1.")
 seed_attempt_stride >= 1 || error("--seed-attempt-stride must be >= 1.")
+checkpoint_every >= 0 || error("--checkpoint-every must be >= 0.")
+progress_every >= 0 || error("--progress-every must be >= 0.")
 (0.0 < retry_shock_scale_backoff <= 1.0) || error("--retry-shock-scale-backoff must be in (0, 1].")
 min_total_samples >= 0 || error("--min-total-samples must be >= 0.")
 rom_orders = sort(unique(rom_orders))
@@ -568,6 +595,8 @@ else
         "theta_samples" => theta_samples,
         "theta_max_attempts" => theta_max_attempts,
         "theta_attempts_per_theta" => theta_attempts_per_theta,
+        "checkpoint_every" => checkpoint_every,
+        "progress_every" => progress_every,
         "seed_attempt_stride" => seed_attempt_stride,
         "retry_on_early_failure" => retry_on_early_failure,
         "retry_shock_scale_backoff" => retry_shock_scale_backoff,
@@ -636,6 +665,7 @@ println("Sample length: $T_obs, samples_per_theta: $samples_per_theta, burn-in: 
 println("Shock scaling: $shock_scaling (scale=$(shock_scale))")
 println("SEP settings: horizon=$sep_horizon order=$sep_order nnodes=$sep_nnodes tol=$sep_tol maxit=$sep_maxit sparse_tree=$sep_sparse_tree")
 println("SEP solver: line_search=$sep_line_search maxit=$sep_line_search_maxit factor=$sep_line_search_factor min_alpha=$sep_line_search_min_alpha lm_lambda=$sep_lm_lambda")
+println("Progress: checkpoint_every=$checkpoint_every progress_every=$progress_every timing=$timing")
 if theta_sampling != :prior || stable_prefix
     println("Retry policy: attempts_per_theta=$theta_attempts_per_theta seed_stride=$seed_attempt_stride retry_on_early_failure=$retry_on_early_failure shock_backoff=$retry_shock_scale_backoff")
 end
@@ -876,17 +906,21 @@ for theta_i in start_theta:theta_target
         println("Saved checkpoint: $checkpoint_path")
     end
 
-    if theta_i % 10 == 0 || theta_i == length(theta_grid)
+    if progress_every > 0 && (theta_i % progress_every == 0 || theta_i == length(theta_grid) || stop_early)
         elapsed = time() - run_start
         done = theta_i - start_theta + 1
         avg_per = done > 0 ? elapsed / done : 0.0
         remaining = max(theta_target - theta_i, 0)
         eta_sec = remaining * avg_per
-        eta = @sprintf("%02d:%02d:%02d",
-                       floor(Int, eta_sec / 3600),
-                       floor(Int, (eta_sec % 3600) / 60),
-                       floor(Int, eta_sec % 60))
-        println("Processed theta $theta_i / $(length(theta_grid)) (ETA $eta)")
+        status = theta_success[theta_i] ? (theta_full_success[theta_i] ? "full" : "partial") : "failed"
+        theta_elapsed = timing ? @sprintf("%.1f", theta_times[theta_i]) : "NA"
+        theta_preview = format_theta_preview(theta_names, theta_grid[theta_i])
+        @printf("PROGRESS theta=%d/%d status=%s attempts=%d stable_periods=%d failure_period=%d cursor=%d elapsed=%s theta_sec=%s eta=%s shock_scale=%.6g theta=%s\n",
+                theta_i, length(theta_grid), status, theta_attempts[theta_i],
+                theta_stable_periods[theta_i], failure_periods[theta_i], cursor,
+                format_duration(elapsed), theta_elapsed, format_duration(eta_sec),
+                shock_scale, theta_preview)
+        flush(stdout)
     end
 
     if stop_early

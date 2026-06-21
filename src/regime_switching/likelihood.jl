@@ -761,7 +761,8 @@ function inversion_loglik_per_period(predict_fn::Function,
                 y_nn_t = clamp.(y_nn_t, -correction_clamp, correction_clamp)
             end
             obs_pred = obs_rom .+ y_nn_t[1:d_obs]
-            state_next = state_rom_next .+ y_nn_t[(d_obs+1):end]
+            state_resid = y_nn_t[(d_obs + 1):end]
+            state_next = isempty(state_resid) ? state_rom_next : state_rom_next .+ state_resid
         elseif do_interleave
             obs_pred, state_next = eval_fn(state_inv, eps_full, theta_f64)
         else
@@ -824,7 +825,8 @@ function inversion_loglik_per_period(predict_fn::Function,
                         y_nn = clamp.(y_nn, -correction_clamp, correction_clamp)
                     end
                     obs_pred[:, t] = obs_t .+ y_nn[1:d_obs]
-                    state_rom = state_next .+ y_nn[(d_obs+1):end]
+                    state_resid = y_nn[(d_obs + 1):end]
+                    state_rom = isempty(state_resid) ? state_next : state_next .+ state_resid
                 else
                     obs_pred[:, t] = obs_t  # placeholder — batch-corrected below
                     state_rom = state_next  # ROM1 only

@@ -136,6 +136,7 @@ function dataset_generation_cmd(opts::SweepOptions, dataset_dir::String)
         "--sep-horizon=2",
         "--sep-maxit=40",
         "--sep-accept-tol=1e-2",
+        "--shock-scaling=none",
         "--shock-scale=0.05",
         "--use-obc",
         "--theta-attempts-per-theta=2",

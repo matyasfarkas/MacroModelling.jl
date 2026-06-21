@@ -250,11 +250,19 @@ function _sep_inv_observable_indices(𝓂::ℳ, observables::Union{Vector{String
     return Int.(idx_any)
 end
 
-function _sep_inv_shock_sigmas(𝓂::ℳ, parameter_values::AbstractVector{<:Real})
+function _sep_inv_shock_sigmas(𝓂::ℳ,
+                               parameter_values::AbstractVector{<:Real};
+                               shock_scaling::Symbol = :none)
+    shock_scaling in (:none, :parameter) ||
+        error("Unsupported SEP inversion shock scaling: $(shock_scaling). Use :none or :parameter.")
     sigmas = zeros(Float64, length(𝓂.exo))
     for (i, shock_name) in enumerate(𝓂.exo)
         if contains(string(shock_name), "ᵒᵇᶜ")
             sigmas[i] = 0.0
+            continue
+        end
+        if shock_scaling == :none
+            sigmas[i] = 1.0
             continue
         end
         pidx = findfirst(==(Symbol("z_", shock_name)), 𝓂.parameters)
@@ -339,6 +347,7 @@ function _sep_inv_predict_step(sep_ctx::NamedTuple,
         tol = predict_tol,
         verbose = false,
         shock_scale = sep_ctx.sep_shock_scale,
+        shock_scaling = sep_ctx.sep_inv_shock_scaling,
         sparse_tree = sep_ctx.sep_sparse_tree,
         deterministic_shocks = shock_sequence,
     )
@@ -475,7 +484,15 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
         return zero(R)
     end
 
-    sep_ctx = merge(sep_ctx, (shock_sigmas = _sep_inv_shock_sigmas(sep_ctx.model, sep_ctx.parameters),))
+    sep_inv_shock_scaling = Symbol(get(sep_ctx, :sep_inv_shock_scaling, :none))
+    sep_ctx = merge(sep_ctx, (
+        shock_sigmas = _sep_inv_shock_sigmas(
+            sep_ctx.model,
+            sep_ctx.parameters;
+            shock_scaling = sep_inv_shock_scaling,
+        ),
+        sep_inv_shock_scaling = sep_inv_shock_scaling,
+    ))
     shock_sigmas = sep_ctx.shock_sigmas
     structural_idx = findall(shock_sigmas .> 0)
     n_struct = length(structural_idx)
@@ -529,6 +546,7 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
             "sep_inv_predict_tol" => sep_inv_predict_tol,
             "sep_inv_logdet_method" => String(logdet_method),
             "sep_inv_logdet_sv_tol" => logdet_sv_tol,
+            "sep_inv_shock_scaling" => String(sep_inv_shock_scaling),
         )
         if msg !== nothing
             d["message"] = msg
@@ -749,6 +767,7 @@ function calculate_inversion_filter_loglikelihood(::Val{:stochastic_extended_pat
         "sep_inv_predict_tol" => sep_inv_predict_tol,
         "sep_inv_logdet_method" => String(logdet_method),
         "sep_inv_logdet_sv_tol" => logdet_sv_tol,
+        "sep_inv_shock_scaling" => String(sep_inv_shock_scaling),
         "ll_total" => ll_total,
         "final_state_finite" => all(isfinite, state_dev),
     ))

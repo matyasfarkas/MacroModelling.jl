@@ -325,6 +325,8 @@ function run_compare(opts::CompareOptions)
         "dgp_noise_seed" => opts.dgp_noise_seed,
         "obs_sigma" => obs_sigma,
         "observables" => String.(get(meta, "observables", Symbol[])),
+        "shock_scaling" => String(get(meta, "shock_scaling", "unknown")),
+        "shock_scale" => get(meta, "shock_scale", "unknown"),
         "prior_logpdf" => prior,
         "direct_logpost" => direct_logpost,
         "surrogate_logpost" => surrogate_logpost,
@@ -367,6 +369,7 @@ function run_compare(opts::CompareOptions)
         println(io, "- Truth in validation split: `$(result["truth_in_validation_split"])`")
         println(io, "- Observation sigma: `$(join(fmt.(obs_sigma), ", "))`")
         println(io, "- DGP measurement-noise scale/seed: `$(opts.dgp_noise_scale)` / `$(opts.dgp_noise_seed)`")
+        println(io, "- Dataset shock scaling/scale: `$(result["shock_scaling"])` / `$(result["shock_scale"])`")
         println(io)
         println(io, "## Fit Against Direct SEP Grid")
         println(io)

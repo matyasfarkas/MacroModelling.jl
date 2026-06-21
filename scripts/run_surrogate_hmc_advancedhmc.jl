@@ -80,6 +80,10 @@ checkpoint_every = parse_kv_int(ARGS, "--checkpoint-every", 100)
 # Init from a previous chain (e.g., Kalman posterior mean)
 init_from_path = parse_kv_string(ARGS, "--init-from", "")
 
+# Fixed-theta evaluation mode: builds the same likelihood object but exits before HMC.
+eval_only = parse_kv_bool(ARGS, "--eval-only", false) || any(==("--eval-only"), ARGS)
+eval_theta_from_path = parse_kv_string(ARGS, "--eval-theta-from", "")
+
 # Gate calibration: regime-switching (surrogate on gate periods, Kalman on rest)
 gate_path = parse_kv_string(ARGS, "--gate-calibration", "")
 gate_mode = Symbol(parse_kv_string(ARGS, "--gate-mode", "soft"))
@@ -120,6 +124,7 @@ println("  Init from:      $(init_from_path == "" ? "(blended calib/prior)" : in
 println("  Gate calib:     $(gate_path == "" ? "(none — full surrogate)" : gate_path)")
 println("  Gate mode:      $gate_mode")
 println("  NN correction:  $(disable_nn_correction ? "disabled (linear+gate ablation)" : "enabled")")
+println("  Eval only:      $(eval_only ? "yes" : "no")")
 
 # ============================================================================
 # Step 1: Load Data Payload
@@ -353,7 +358,13 @@ if val_rmse !== nothing && length(val_rmse) == frozen.d_out
     if disable_nn_correction
         println("  Correction clamp: disabled (NN correction zeroed)")
     else
-        println("  Correction clamp: ±3×RMSE (obs max=$(round(maximum(nn_correction_clamp[1:d_obs]), sigdigits=3)), state max=$(round(maximum(nn_correction_clamp[(d_obs+1):end]), sigdigits=3)))")
+        obs_max = maximum(nn_correction_clamp[1:min(d_obs, end)])
+        if length(nn_correction_clamp) > d_obs
+            state_max = maximum(nn_correction_clamp[(d_obs + 1):end])
+            println("  Correction clamp: ±3×RMSE (obs max=$(round(obs_max, sigdigits=3)), state max=$(round(state_max, sigdigits=3)))")
+        else
+            println("  Correction clamp: ±3×RMSE (obs-only max=$(round(obs_max, sigdigits=3)))")
+        end
     end
 else
     nn_correction_clamp = nothing
@@ -696,6 +707,79 @@ println("  Inversion eval:     $(round(cost_per_eval_ms, digits=1)) ms")
 println("  Gradient (FD, $n_theta evals): $(round(cost_per_grad_ms, digits=1)) ms")
 println("  Est. per NUTS draw: $(round(est_time_per_draw_s, digits=1)) s (worst case, depth=$max_depth)")
 println("  Est. total:         $(round(est_total_hours, digits=1)) hours (worst case)")
+
+if eval_only
+    println("\n" * "-" ^ 72)
+    println("EVAL-ONLY MODE: Fixed-theta likelihood evaluation")
+    println("-" ^ 72)
+
+    eval_thetas = Vector{Pair{String,Vector{Float64}}}()
+    push!(eval_thetas, "init" => copy(θ_init))
+
+    if eval_theta_from_path != ""
+        println("  Loading evaluation theta from: $eval_theta_from_path")
+        eval_payload = deserialize(eval_theta_from_path)
+        eval_names = get(eval_payload, "theta_names", theta_names)
+        Symbol.(eval_names) == Symbol.(theta_names) ||
+            error("Theta names in evaluation payload do not match this run")
+
+        if haskey(eval_payload, "theta_post_mean")
+            push!(eval_thetas, "theta_post_mean" => Float64.(eval_payload["theta_post_mean"]))
+        elseif haskey(eval_payload, "chain") && eval_payload["chain"] isa AbstractMatrix
+            push!(eval_thetas, "chain_mean" => Float64.(vec(mean(eval_payload["chain"], dims=1))))
+        else
+            error("Cannot extract theta from $eval_theta_from_path: no theta_post_mean or chain matrix")
+        end
+    end
+
+    evaluations = Dict{String,Any}()
+    for (label, θ_eval) in eval_thetas
+        length(θ_eval) == n_theta || error("Theta vector '$label' has length $(length(θ_eval)); expected $n_theta")
+        for i in 1:n_theta
+            lb, ub = prior_bounds[i]
+            θ_eval[i] = clamp(θ_eval[i], lb + 1e-10, ub - 1e-10)
+        end
+        local eval_t0 = time()
+        ll = total_loglik(θ_eval)
+        eval_elapsed = time() - eval_t0
+        lp = log_prior(θ_eval)
+        x_eval = constrained_to_unconstrained(θ_eval)
+        lj = log_jacobian(x_eval)
+        ld = ll + lp + lj
+        evaluations[label] = Dict(
+            "theta" => copy(θ_eval),
+            "ll" => ll,
+            "lp" => lp,
+            "log_jacobian" => lj,
+            "log_density" => ld,
+            "elapsed_seconds" => eval_elapsed,
+        )
+        println("  $label: LL=$(round(ll, digits=3)), LP=$(round(lp, digits=3)), LJ=$(round(lj, digits=3)), LD=$(round(ld, digits=3)), elapsed=$(round(eval_elapsed, digits=3))s")
+    end
+
+    result = Dict(
+        "timestamp" => string(now()),
+        "surrogate_path" => surrogate_path,
+        "data_path" => data_path,
+        "gate_path" => gate_path,
+        "gate_mode" => string(gate_mode),
+        "disable_nn_correction" => disable_nn_correction,
+        "eval_theta_from" => eval_theta_from_path,
+        "theta_names" => theta_names,
+        "observables" => observables,
+        "obs_sigma" => obs_sigma,
+        "prior_bounds" => prior_bounds,
+        "evaluations" => evaluations,
+    )
+
+    mkpath(dirname(out_path))
+    serialize(out_path, result)
+    println("  Saved eval-only result: $out_path")
+    println("\n" * "=" ^ 72)
+    println("EVAL-ONLY COMPLETE")
+    println("=" ^ 72)
+    exit(0)
+end
 
 # ============================================================================
 # Step 7: AdvancedHMC Setup

@@ -39,7 +39,7 @@ function state_index(model)
     )))
 end
 
-function default_shock_sigmas(model; shock_scaling::Symbol = :parameter, shock_scale::Float64 = 1.0)
+function default_shock_sigmas(model; shock_scaling::Symbol = :none, shock_scale::Float64 = 1.0)
     sigmas = zeros(Float64, length(model.exo))
     obc_mask = contains.(string.(model.exo), "ᵒᵇᶜ")
     for i in eachindex(model.exo)
@@ -81,7 +81,7 @@ function build_hlt_real_data_payload(; csv_path::AbstractString,
                                        sample_start::Int = 47,
                                        sample_end::Int = 290,
                                        prefix_end::Int = 46,
-                                       shock_scaling::Symbol = :parameter,
+                                       shock_scaling::Symbol = :none,
                                        shock_scale::Float64 = 1.0,
                                        obs_sigma_mode::Symbol = :data_std,
                                        obs_sigma_scale::Float64 = 0.1,
@@ -195,7 +195,7 @@ function main(args)
     sample_start = parse_arg_int(args, "--sample-start", 47)
     sample_end = parse_arg_int(args, "--sample-end", 290)
     prefix_end = parse_arg_int(args, "--prefix-end", 46)
-    shock_scaling = parse_arg_symbol(args, "--shock-scaling", :parameter)
+    shock_scaling = parse_arg_symbol(args, "--shock-scaling", :none)
     shock_scale = parse_arg_float(args, "--shock-scale", 1.0)
     obs_sigma_mode = parse_arg_symbol(args, "--obs-sigma-mode", :data_std)
     obs_sigma_scale = parse_arg_float(args, "--obs-sigma-scale", 0.1)

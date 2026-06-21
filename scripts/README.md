@@ -5,9 +5,15 @@ workflow, start with `REPLICATION.md` at the repository root and
 `scripts/replication_smoke.sh`.
 
 ## HLT SEP surrogate + regime switching
+- Shock convention: HLT and Galí model files multiply unit structural shocks by
+  volatility parameters inside the equations. New HLT/Galí SEP runs should use
+  `shock_scaling=:none` and the default `sep_shock_scaling=:none`; use
+  `:parameter` only to reproduce historical pre-2026-06-17 artifacts.
 - `scripts/hlt_sep_surrogate_dataset_generate.jl` — build SEP training data (supports stable-prefix sampling).
 - `scripts/hlt_sep_surrogate_train.jl` — train surrogate (ROM1 residual + observables).
 - `scripts/hlt_sep_surrogate_synthetic_data.jl` — generate synthetic SEP data with a high‑volatility window.
+- `scripts/run_hlt_unitshock_rebuild.sh` — corrected unit-shock full-scale wrapper: base/ZLB dataset generation, combined obs-only ROM1-residual surrogate training, matched full gate+NN HMC, and matched linear+gate HMC.
+- `scripts/run_hlt_unitshock_mvp.sh` — smaller corrected unit-shock MVP wrapper used for the current dynamic HLT HMC smoke evidence.
 - `scripts/hlt_regime_switching_illustration.jl` — ROM1 vs ROM1+delta error/IRF plots.
 - `scripts/hlt_sep_surrogate_gate_calibration.jl` — gate calibration using ROM vs surrogate errors.
 - `scripts/hlt_sep_surrogate_synthetic_estimation.jl` — synthetic estimation (regime switching).
@@ -23,6 +29,7 @@ workflow, start with `REPLICATION.md` at the repository root and
 - `scripts/kimball_curvature_sensitivity.jl` — fixed-calibration high-Kimball stress diagnostic for the HLT/JME neighborhood.
 - `scripts/hlt_counterfactual_decomposition.jl` — mechanism ablation engine for investment, pricing, policy, and local +/-10 percent posterior-region sensitivity designs.
 - `scripts/run_hlt_posterior_region_ablation_queued.sh` — queued wrapper for the 40-draw posterior-region local ablation used in the paper provenance ledger.
+- `scripts/hlt_posterior_mean_curvature_surface.jl` — SEP-minus-ROM1 forecast-error surfaces for visualizing local curvature around a chosen HLT parameter center; supports multiplier grids and density-scaled standard-deviation grids. The manuscript uses locked 13-by-13 standard-deviation exports for the SW07--HLT baseline and the HLT high-Kimball stress center.
 
 ## SEP / Dynare comparisons
 - `scripts/HLT_comparison.jl` — HLT IRF comparison (perturbation vs SEP).

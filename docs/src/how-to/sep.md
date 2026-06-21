@@ -96,6 +96,14 @@ irf = get_sep_irf(MyModel,
 If you store shock standard deviations in parameters named `z_<shock>` and want
 Dynare-style scaling, pass `shock_scaling = :parameter`.
 
+The SEP expectation tree also defaults to unit structural innovations
+(`sep_shock_scaling = :none`). This is the correct convention for model files
+that already multiply shocks by volatility parameters inside the equations, for
+example `z_em * em[x]` or `std_a * eps_a[x]`. Use
+`sep_shock_scaling = :parameter` only for models whose shock variables are
+already measured in scaled units and whose equations do not apply the standard
+deviation parameters separately.
+
 ### Example: Technology Shock IRF
 
 ```julia

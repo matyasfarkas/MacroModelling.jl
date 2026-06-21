@@ -332,7 +332,7 @@ function shock_sigmas_for(model, shock_scale::Float64)
     obc_mask = contains.(string.(shock_names), "ᵒᵇᶜ")
     for (i, name) in enumerate(shock_names)
         if !obc_mask[i]
-            sigmas[i] = MacroModelling.sep_irf_shock_std(model, name)
+            sigmas[i] = 1.0
         end
     end
     return sigmas .* shock_scale
@@ -1089,7 +1089,7 @@ function run_executable_bridge(opts::InversionBridgeOptions, manifest::Dict{Stri
             native_seed_vec = get(meta, "theta_seeds", Int[])
             native_seed = length(native_seed_vec) >= truth_idx ? Int(native_seed_vec[truth_idx]) : opts.split_seed
             native_shock_scale = Float64(get(meta, "shock_scale", 0.05))
-            native_shock_scaling = meta_symbol(get(meta, "shock_scaling", :parameter), :parameter)
+            native_shock_scaling = meta_symbol(get(meta, "shock_scaling", :none), :none)
             native_fallback_solver = get(meta, "sep_fallback_solver", nothing)
             native_fallback_solver = native_fallback_solver == :none ? nothing : native_fallback_solver
             native_total_periods = opts.periods + native_burn_in

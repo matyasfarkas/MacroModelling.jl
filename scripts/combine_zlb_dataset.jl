@@ -5,19 +5,30 @@
 # normal (shock_scale=0.1) and ZLB-binding (shock_scale=0.4) episodes.
 #
 # Usage:
-#   julia --project=. scripts/combine_zlb_dataset.jl
+#   julia --project=. scripts/combine_zlb_dataset.jl \
+#     --base=<baseline_dataset.jls> \
+#     --zlb=<zlb_dataset_or_checkpoint.jls> \
+#     --out=<combined_dataset.jls>
 
 using Serialization, Statistics, Dates
 
 const REPO_ROOT = dirname(@__DIR__)
 
+function parse_arg(args::Vector{String}, key::String, default::String)
+    prefix = key * "="
+    for arg in args
+        startswith(arg, prefix) && return arg[length(prefix) + 1:end]
+    end
+    return default
+end
+
 # ── Paths ──
-combined_v2_path = joinpath(REPO_ROOT,
-    ".local_artifacts/hlt_18param_validation_v2_combined/hlt_sep_surrogate_dataset_combined_v2.jls")
-zlb_path = joinpath(REPO_ROOT,
-    ".local_artifacts/hlt_18param_validation_v2_combined/zlb_binding/hlt_sep_surrogate_dataset_checkpoint.jls")
-out_path = joinpath(REPO_ROOT,
-    ".local_artifacts/hlt_18param_validation_v2_combined/hlt_sep_surrogate_dataset_combined_with_zlb.jls")
+combined_v2_path = parse_arg(ARGS, "--base", joinpath(REPO_ROOT,
+    ".local_artifacts/hlt_18param_validation_v2_combined/hlt_sep_surrogate_dataset_combined_v2.jls"))
+zlb_path = parse_arg(ARGS, "--zlb", joinpath(REPO_ROOT,
+    ".local_artifacts/hlt_18param_validation_v2_combined/zlb_binding/hlt_sep_surrogate_dataset_checkpoint.jls"))
+out_path = parse_arg(ARGS, "--out", joinpath(REPO_ROOT,
+    ".local_artifacts/hlt_18param_validation_v2_combined/hlt_sep_surrogate_dataset_combined_with_zlb.jls"))
 
 # ── Load combined_v2 ──
 println("Loading combined_v2 dataset...")
@@ -32,7 +43,7 @@ println("  combined_v2: X=$(size(X2)), Y=$(size(Y2)), Y_rom1=$(size(Y2_rom1)), N
 # ── Load ZLB checkpoint ──
 println("Loading ZLB dataset...")
 dz = deserialize(zlb_path)
-cursor = dz["cursor"]
+cursor = haskey(dz, "cursor") ? dz["cursor"] : size(dz["X"], 2)
 Xz = dz["X"][:, 1:cursor]
 Yz = dz["Y"][:, 1:cursor]
 Yz_rom1 = dz["Y_rom1"][:, 1:cursor]
@@ -91,6 +102,15 @@ meta_combined["n_samples_zlb"] = Nz
 meta_combined["n_samples_total"] = N_total
 meta_combined["zlb_shock_scale"] = 0.4
 meta_combined["base_shock_scale"] = get(meta2, "shock_scale", 0.1)
+meta_combined["base_shock_scaling"] = get(meta2, "shock_scaling", "unknown")
+if haskey(dz, "meta")
+    meta_combined["zlb_shock_scale"] = get(dz["meta"], "shock_scale", meta_combined["zlb_shock_scale"])
+    meta_combined["zlb_shock_scaling"] = get(dz["meta"], "shock_scaling", "unknown")
+else
+    meta_combined["zlb_shock_scaling"] = "unknown"
+end
+meta_combined["base_path"] = combined_v2_path
+meta_combined["zlb_path"] = zlb_path
 meta_combined["combined_date"] = string(Dates.now())
 
 # ── Save ──

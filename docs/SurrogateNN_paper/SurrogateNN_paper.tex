@@ -245,7 +245,12 @@ posterior-mean profiled hybrid criterion by 35.92 nats, and the linear smoother
 requires risk-premium shocks of \(56\sigma\) during COVID. This comparison is
 not a Bayes factor. It is conditional on one U.S. sample, one HLT
 specification, one explored posterior basin, the surrogate approximation, the
-profiled inversion objective, the gate, and COVID out-of-distribution risk.
+profiled inversion objective, the gate, and COVID out-of-distribution risk. A
+corrected unit-shock dynamic MVP confirms that the gate, inversion filter, and
+HMC stack run end to end on the 18-parameter real-data payload, but in that
+narrow run the full gate+NN and linear+gate objectives are nearly
+indistinguishable. I therefore do not interpret the empirical criterion gap as a
+stand-alone estimate of the neural residual's contribution.
 
 One specification issue is central. The HLT baseline suppresses the ARMA(1,1)
 price- and wage-markup shock terms used by \citet{smets2007shocks}. This is the
@@ -543,7 +548,18 @@ Table~\ref{tab:equation_block} delivers the central result: the investment and c
 
 The adjustment cost $S'$ itself contributes only 2 percent of the state-level gap, but its nonlinearity propagates through Tobin's $q$ into the stochastic discount factor $\xi_t$, which enters every forward-looking equation. The investment channel generates the nonlinear impulse; the discount factor transmits it economy-wide.
 
-Structural parameters explain 11 percent of nonlinearity variation in separate diagnostic regressions. The strongest correlates are government spending persistence $\rho_g$ ($+0.18$), risk-premium volatility $\sigma_b$ ($+0.17$), and Kimball curvature $\varepsilon_p$ ($-0.11$)---higher curvature flattens demand and makes the model \emph{more} linear. Current-period shocks contribute negligibly ($R^2 = 0.0003$). Nonlinearity accumulates through persistent displacement, clustering in temporal bursts with autocorrelation 0.81 and mean duration 12.5 quarters; per-observable diagnostic $R^2$ values remain below 12 percent. A fixed-calibration stress check at the \citet{harding2022missingdeflation} high-curvature neighborhood, mapping their reported $\varphi_p=1.20$, $\xi_p=0.667$, and $\varepsilon_p=77.3$ values plus the matching reported core and shock-process parameters into the maintained code, gives an investment/capital share of 76.5 percent and a price Phillips share of 2.0 percent. A posterior-region local ablation gives the complementary check: across 40 representative posterior draws and shock scales 0.1, 0.25, and 0.5, all SEP paths converge; Kimball curvature is the largest local sensitivity in 5, 0, and 0 percent of draws, while investment-adjustment and utilization curvature are largest in the remaining 95, 100, and 100 percent. Thus nonlinear Phillips-curve effects can be generated at selected high-curvature calibrations, but the estimated posterior region studied here puts the largest local nonlinear residual in the real investment block.
+Structural parameters explain 11 percent of nonlinearity variation in separate diagnostic regressions. The strongest correlates are government spending persistence $\rho_g$ ($+0.18$), risk-premium volatility $\sigma_b$ ($+0.17$), and Kimball curvature $\varepsilon_p$ ($-0.11$)---higher curvature flattens demand and makes the model \emph{more} linear. Current-period shocks contribute negligibly ($R^2 = 0.0003$). Nonlinearity accumulates through persistent displacement, clustering in temporal bursts with autocorrelation 0.81 and mean duration 12.5 quarters; per-observable diagnostic $R^2$ values remain below 12 percent. A posterior-region local ablation gives the complementary check: across 40 representative posterior draws and shock scales 0.1, 0.25, and 0.5, all SEP paths converge; Kimball curvature is the largest local sensitivity in 5, 0, and 0 percent of draws, while investment-adjustment and utilization curvature are largest in the remaining 95, 100, and 100 percent.
+
+Figure~\ref{fig:posterior_mean_curvature_surface} shows the same comparison as a density-scaled local surface around the maintained SW07--HLT baseline calibration. The axes are measured in local standard deviations, using documented prior/posterior scales where available and calibration-scale proxies for fixed parameters. In the plotted units, RMSE times 1,000, the $\pm 1$ s.d. grid has range 11.4 for the real-side surface and 1.4 for the Kimball surface; over the $\pm 2$ s.d. grid the corresponding ranges are 23.5 and 2.6. Thus, around the baseline and estimated posterior region, the investment-adjustment and utilization parameters move the SEP--ROM1 forecast error much more than price and wage Kimball curvature.
+
+This ranking is not a global theorem. A fixed-calibration stress check at the \citet{harding2022missingdeflation} high-curvature neighborhood, mapping their reported $\varphi_p=1.20$, $\xi_p=0.667$, and $\varepsilon_p=77.3$ values plus the matching reported core and shock-process parameters into the maintained code, gives an investment/capital share of 76.5 percent and a price Phillips share of 2.0 percent in the block decomposition. But local surface plots centered at that high-Kimball point show that sufficiently large price and wage curvature can dominate the short-run ROM1 forecast-error surface: at $\pm 1$ s.d., the real-side and Kimball ranges are 37.0 and 54.7; at $\pm 2$ s.d., they are 53.9 and 210.6. The conclusion is therefore precise: nonlinear Phillips-curve effects can be large at selected high-curvature calibrations, but active estimation places the maintained HLT specification in a region where the largest local nonlinear residual is in the real investment block.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_hlt_curvature_surface_sw07_hlt_baseline_13x13_std2_shock01.png}
+\caption{Baseline ROM1 forecast-error contours. The metric is \(1{,}000\) times the RMSE of one-step observable forecast errors, SEP minus ROM1, evaluated at the same SEP state, same shocks, and same parameter vector. Panels~A and~B plot filled contours over a \(\pm 2\) local-standard-deviation neighborhood around the maintained SW07--HLT baseline calibration; black contour lines are equal forecast-error levels, and both panels use the same color scale. Panel~C plots cross-sections through the center cell. Panel~D reports the RMSE range over each grid. The real-side surface combines investment-adjustment and capital-utilization parameters; the Kimball surface combines price and wage curvature parameters.}
+\label{fig:posterior_mean_curvature_surface}
+\end{figure}
 
 These patterns suggest possible parameter shifts, but the sign can depend on
 the sample period, objective, gate, and posterior basin. In the baseline
@@ -784,28 +800,33 @@ $Q_{\text{surr}}$ (regime-switching objective) & $-1{,}830.44$ & $-1{,}781.68$ \
 \tablenotes{\textit{Notes}: $\hat{\theta}_{\text{lin}}$ is the linear NUTS-HMC posterior mean (extended sample, 2{,}000 draws); $\hat{\theta}_{\text{surr}}$ is the pooled mean across four warm-started surrogate chains. Kalman cells are exact log-likelihood evaluations; surrogate cells are profiled hybrid objectives on the same data and omit the shock-prior and determinant/Laplace terms required for a marginal-likelihood comparison.}
 \end{table}
 
-The off-diagonal entries provide a chain-mean accounting exercise. At $\hat{\theta}_{\text{surr}}$, the linear Kalman likelihood falls by 35.04 nats relative to its own posterior mean ($-1{,}852.63$ versus $-1{,}817.59$): the linear model does not absorb the surrogate's parameters. At $\hat{\theta}_{\text{lin}}$, the surrogate objective is 12.85 nats below the linear posterior-mean likelihood---swapping criteria without re-tuning loses ground because each parameter vector is fitted to its own criterion. Symmetrically averaging the two path decompositions of the gap (model-change-then-parameters and parameters-then-model-change) assigns 29.05 nats (80.9 percent) to the criterion change and 6.86 nats (19.1 percent) to parameter relocation. This is consistent with the nonlinear correction being the main source of the criterion gain within the high-objective surrogate mode, but it is an accounting exercise, not a likelihood decomposition or model-selection statistic.
+The off-diagonal entries provide a chain-mean accounting exercise. At $\hat{\theta}_{\text{surr}}$, the linear Kalman likelihood falls by 35.04 nats relative to its own posterior mean ($-1{,}852.63$ versus $-1{,}817.59$): the linear model does not absorb the surrogate's parameters. At $\hat{\theta}_{\text{lin}}$, the surrogate objective is 12.85 nats below the linear posterior-mean likelihood---swapping criteria without re-tuning loses ground because each parameter vector is fitted to its own criterion. Symmetrically averaging the two path decompositions of the gap (model-change-then-parameters and parameters-then-model-change) assigns 29.05 nats (80.9 percent) to the criterion change and 6.86 nats (19.1 percent) to parameter relocation. This shows that most of the reported gap is tied to changing the profiled objective within the high-objective surrogate mode, but it does not by itself identify whether that change comes from the residual surrogate, the gate, the inversion filter, or their interaction.
 
-The remaining design concern is whether the gain comes from the gate/inversion architecture itself rather than from the learned nonlinear residual. I therefore evaluate a fixed-parameter ablation that keeps the same gate, inversion filter, observation scaling, and soft criterion mixing, but sets the NN residual correction to zero. Table~\ref{tab:linear_gate_ablation} reports this no-NN objective at the same two chain means. The gate/inversion architecture alone lowers the criterion at both parameter vectors; the NN residual correction is what produces the positive gain. Symmetrically averaging across the two fixed parameter vectors gives a $-18.22$-nat gate/inversion contribution and a $+47.28$-nat NN-residual contribution. This fixed-parameter ablation does not replace a dedicated no-NN HMC chain, but it provides evidence against the simplest fixed-parameter version of the concern that the 35.92-nat result is mechanically generated by the gate or inversion filter.
+The remaining design concern is whether the gain comes from the gate/inversion architecture itself rather than from the learned nonlinear residual. I therefore run a corrected unit-shock MVP that keeps the same real-data payload, gate, inversion filter, observation scaling, priors, seed, and NUTS settings, but sets the NN residual correction to zero. Table~\ref{tab:linear_gate_ablation} reports the matched HMC runs and fixed-theta cross-evaluations.
+
+The result is sharper, and less favorable to an NN-residual interpretation, than the earlier fixed-parameter diagnostic. Both 18-parameter chains complete with zero post-warmup divergences, land in almost the same posterior region, and deliver almost identical objectives. At the full gate+NN posterior mean, switching off the NN residual changes the objective by only \(0.006\) nats; the same is true at the linear+gate posterior mean. I therefore read this corrected MVP as validation of the dynamic gate/inversion/HMC stack, not as evidence that the learned residual correction delivers a large additional real-data likelihood gain in this design.
 
 \begin{table}[htbp]
 \centering
-\caption{Fixed-parameter ablation: gate/inversion architecture versus NN residual.}
+\caption{Corrected unit-shock MVP: gate+NN versus linear+gate.}
 \label{tab:linear_gate_ablation}
 \begin{tabular}{lcc}
 \toprule
-& $\hat{\theta}_{\text{lin}}$ & $\hat{\theta}_{\text{surr}}$ \\
+& Full gate+NN & Linear+gate, no NN \\
 \midrule
-$Q_{\text{lin}}$ (Kalman likelihood) & $-1{,}817.59$ & $-1{,}852.63$ \\
-$Q_{\text{gate}}$ (gate+inversion, no NN) & $-1{,}845.10$ & $-1{,}861.57$ \\
-$Q_{\text{surr}}$ (gate+inversion+NN) & $-1{,}830.44$ & $-1{,}781.68$ \\
+Post-warmup draws & 100 & 100 \\
+Divergences & 0 & 0 \\
+Mean acceptance & 0.840 & 0.812 \\
+Posterior-mean objective & $-1{,}382.805$ & $-1{,}382.877$ \\
 \midrule
-Gate/inversion gain over Kalman & $-27.51$ & $-8.94$ \\
-NN residual gain over gate-only & $+14.66$ & $+79.89$ \\
+$Q_{\text{full}}(\hat{\theta}_{\text{full}})$ & $-1{,}382.805307$ &  \\
+$Q_{\text{gate}}(\hat{\theta}_{\text{full}})$ & $-1{,}382.799759$ &  \\
+$Q_{\text{full}}(\hat{\theta}_{\text{gate}})$ &  & $-1{,}382.882119$ \\
+$Q_{\text{gate}}(\hat{\theta}_{\text{gate}})$ &  & $-1{,}382.876532$ \\
 \bottomrule
 \end{tabular}
 \smallskip
-\tablenotes{\textit{Notes}: Fixed-parameter criterion evaluations on the extended sample. The no-NN row uses the same soft gate and inversion-filter objective as the surrogate row but zeros the neural residual correction. A full posterior or target-level ablation requires rerunning HMC with \texttt{--disable-nn-correction=true}.}
+\tablenotes{\textit{Notes}: Corrected unit-shock MVP on the non-OBC HLT real-data payload. Both chains use 100 warmup draws, 100 post-warmup draws, the same soft gate, the same inversion filter, and seed 21. \(Q_{\text{full}}\) is the gate+NN profiled hybrid objective. \(Q_{\text{gate}}\) is the same objective with \texttt{--disable-nn-correction=true}. The artifact root is \texttt{.local\_artifacts/hlt\_18param\_validation\_unitshock\_mvp\_20260620/}.}
 \end{table}
 
 The extended-sample results are directionally consistent with the decomposition predictions. The theory predicts that the linear model's estimated shock processes may be inflated relative to the nonlinear model when the missing investment-channel amplification is quantitatively important. The baseline estimation on 1959--2004 is consistent with this qualitatively for some margins, though $\sigma_b$ rises rather than falls in the baseline; extending through 2025 provides a more demanding test where the direction of the $\sigma_b$ shift aligns with the prediction. The COVID window generates observations that the linear posterior mean rationalizes only with extreme shock realizations. The regime-switching surrogate achieves a higher profiled hybrid objective with smaller estimated shock volatilities, with the largest reduction in $\sigma_b$ ($-49$ percent)---the shock that feeds most directly into the investment Euler equation.
@@ -880,9 +901,13 @@ caveats matter.
 The methodological contribution is the residual surrogate. It gives a
 transparent target, \(g^{\mathrm{SEP}}-g^{\mathrm{ROM1}}\), and lets the paper
 compare a direct nonlinear benchmark with a feasible criterion-based HMC
-estimator. The next step is clear: extend the direct validation beyond the
-reported HLT bridge and test the investment result in other medium-scale models
-with adjustment costs.
+estimator. The current validation record is strongest for the deterministic
+decomposition and the reduced HLT bridge; the corrected 18-parameter dynamic
+MVP validates the execution stack but does not show a large incremental
+real-data gain from the neural residual. The next step is clear: extend the
+direct validation beyond the reported HLT bridge, run the corrected full-scale
+unit-shock estimation, and test the investment result in other medium-scale
+models with adjustment costs.
 
 
 \pagebreak
@@ -2150,6 +2175,7 @@ HLT posterior-grid bridge & Passes one-period held-out comparison: surrogate pre
 Four-period HLT inversion-bridge smoke & Corrected generator-path diagnostic passes on three anchors: direct SEP is finite, local MAP and 90 percent intervals agree, and centered surface RMSE falls from 1.190 under ROM1 to 0.861 under the residual surrogate \\
 Eight-period fixed-NN HLT inversion diagnostic & Direct SEP is finite at 10 of 10 anchors, but the fixed one-step NN fails the dynamic surface-shape criterion: centered surface RMSE is 1.872 for the surrogate versus 1.395 for ROM1 \\
 Eight-period dynamic-calibrated HLT inversion bridge & Passes held-out dynamic bridge: five calibration anchors, five held-out anchors, held-out residual RMSE 0.0118, centered surface RMSE falls from 1.437 under ROM1 to 0.703 under the dynamic residual, local MAP agrees, and all four 90 percent intervals overlap direct SEP \\
+Corrected unit-shock HLT HMC MVP & Full gate+NN and linear+gate 18-parameter real-data NUTS smokes both complete with 100 post-warmup draws and zero divergences; fixed-theta objective differences are below 0.006 nats, so this validates the dynamic gate/inversion/HMC stack but not a large incremental NN-residual gain \\
 Full Gal\'i three-parameter direct SEP-HMC & Scaling target rather than a result in this draft \\
 Full Gal\'i three-parameter surrogate-HMC comparison & Scaling target on the same direct-SEP DGP, priors, seeds, and chain lengths \\
 Full HLT inversion-filter/HMC bridge & Scaling target; the current HLT bridge is a finite-support known-feature grid comparison \\
@@ -2158,7 +2184,7 @@ Historical HLT direct-FOM diagnostic & Available as a diagnostic check, not a po
 \bottomrule
 \end{tabular}
 \smallskip
-\tablenotes{\textit{Notes}: The package-level audit validates the ROM1-residual, inversion-filter, and matched-HMC layers in a smaller hard-ELB Gal\'i OBC exercise. The HLT bridge validates the ROM1-residual target against direct SEP on finite support in the medium-scale model, but it is not a full 18-parameter direct-SEP HMC certificate. The corrected dynamic HLT smoke uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_generator\_smoke\_fixed\_20260602/}. The fixed-NN eight-period diagnostic uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_generator\_moderate\_20260602/}. The dynamic-calibrated eight-period bridge uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_dynamic\_ridge\_floor01\_20260602/}. The $\sigma_\nu$ probes are reported as identification diagnostics rather than approximation failures.}
+\tablenotes{\textit{Notes}: The package-level audit validates the ROM1-residual, inversion-filter, and matched-HMC layers in a smaller hard-ELB Gal\'i OBC exercise. The HLT bridge validates the ROM1-residual target against direct SEP on finite support in the medium-scale model, but it is not a full 18-parameter direct-SEP HMC certificate. The corrected dynamic HLT smoke uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_generator\_smoke\_fixed\_20260602/}. The fixed-NN eight-period diagnostic uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_generator\_moderate\_20260602/}. The dynamic-calibrated eight-period bridge uses artifact \texttt{.local\_artifacts/hlt\_reduced\_bridge\_validation/full\_dynamic\_hlt\_profile\_dynamic\_ridge\_floor01\_20260602/}. The corrected unit-shock HLT HMC MVP uses artifact \texttt{.local\_artifacts/hlt\_18param\_validation\_unitshock\_mvp\_20260620/}. The $\sigma_\nu$ probes are reported as identification diagnostics rather than approximation failures.}
 \end{table}
 
 

@@ -91,6 +91,7 @@ function write_report(path::String, payload_path::String, data)
         println(io, "- Successful cells: `$(length(ok_idx)) / $n`")
         println(io, "- Failed cells: `$(length(fail_idx)) / $n`")
         println(io, "- SEP horizon/maxit/accept_tol: `$(get(meta, "sep_horizon", "unknown")) / $(get(meta, "sep_maxit", "unknown")) / $(get(meta, "sep_accept_tol", "unknown"))`")
+        println(io, "- Shock scaling: `$(get(meta, "shock_scaling", "unknown"))`")
         println(io, "- Shock scale: `$(get(meta, "shock_scale", "unknown"))`")
         if res !== nothing
             println(io, "- Finite residual count: `$(res["count"])`")

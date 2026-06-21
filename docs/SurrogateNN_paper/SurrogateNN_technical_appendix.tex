@@ -575,23 +575,31 @@ periods are derived and included.
 The maintained empirical script supports a no-NN ablation flag. This keeps the
 inversion filter, gate, state propagation convention, priors, and sampler
 structure, but sets
-\(\widehat{\Delta}_w=0\). The fixed-parameter ablation artifact evaluates three
-objects at the linear and surrogate posterior means:
+\(\widehat{\Delta}_w=0\). After rebuilding the HLT validation payload with
+unit shock scaling, I run a small dynamic real-data MVP with the same payload,
+gate, priors, seeds, and NUTS settings under the full gate+NN objective and the
+linear+gate objective. Each run uses 100 adaptation draws and 100 post-warmup
+draws. Both runs complete with zero post-warmup divergences:
 \[
 \begin{array}{lcc}
- & \theta_{\mathrm{linear}} & \theta_{\mathrm{surrogate}} \\
-\text{Linear Kalman} & -1817.59 & -1852.63 \\
-\text{Linear+gate, no NN} & -1845.10 & -1861.57 \\
-\text{Full gate+NN} & -1830.44 & -1781.68 .
+ & \text{Mean objective} & \text{Mean acceptance} \\
+\text{Full gate+NN} & -1382.805 & 0.840 \\
+\text{Linear+gate, no NN} & -1382.877 & 0.812 .
 \end{array}
 \]
-The fixed-parameter result is informative but not final. At
-\(\theta_{\mathrm{surrogate}}\), the NN residual improves the objective by
-79.89 nats relative to the no-NN gate. At
-\(\theta_{\mathrm{linear}}\), the gate architecture alone worsens the objective
-by 27.51 nats and the NN residual recovers 14.66 nats. Because these are
-fixed-parameter evaluations, a dedicated no-NN HMC run is still required before
-presenting the ablation as a posterior comparison.
+I also evaluate both objectives at the two posterior means. At the full gate+NN
+posterior mean, the full objective is \(-1382.805307\) and the linear+gate
+objective is \(-1382.799759\). At the linear+gate posterior mean, the full
+objective is \(-1382.882119\) and the linear+gate objective is
+\(-1382.876532\). The fixed-theta differences are about \(0.006\) nats in
+absolute value.
+
+This result changes the interpretation of the ablation. The corrected MVP
+validates the gate, inversion filter, observation scaling, state propagation,
+and HMC implementation as an end-to-end dynamic empirical pipeline. It does not
+show a material incremental real-data likelihood gain from the NN residual
+correction. The relevant artifact is
+\texttt{.local\_artifacts/hlt\_18param\_validation\_unitshock\_mvp\_20260620/}.
 
 \section{Prior, Parameter Transform, and HMC}
 \label{apptech:hmc}
@@ -1155,6 +1163,31 @@ capital-utilization curvature are largest in \(95\%\), \(100\%\), and
 \(100\%\). This supports the statement that nonlinear Phillips-curve
 curvature is not the dominant local source of the SEP--ROM1 gap in the
 estimated posterior region.
+
+\item[HLT curvature-surface figures.]
+\begin{verbatim}
+.local_artifacts/hlt_posterior_mean_curvature_surface/
+  sw07_hlt_baseline_surface_13x13_std1_shock01_1path_20260611/
+  sw07_hlt_baseline_surface_13x13_std2_bounded_shock01_1path_20260611/
+  hlt_highkimball_surface_13x13_std1_shock01_1path_20260611/
+  hlt_highkimball_surface_13x13_std2_shock01_1path_20260611/
+  CURVATURE_SURFACE_SUMMARY.md
+docs/SurrogateNN_paper/figures/
+  fig_hlt_curvature_surface_*_13x13_std*_shock01.png
+\end{verbatim}
+records the figure-level local surfaces. The metric is the RMSE of one-step
+observable forecast errors, SEP minus ROM1, evaluated at the same SEP state,
+shocks, and parameter vector. Each figure uses common shock paths across cells,
+a 13-by-13 grid, and standard-deviation coordinates. For parameters estimated
+in the HLT chain, the scale is the posterior or prior scale reported in the
+configuration; for fixed calibration parameters, the scale is a documented
+local calibration proxy. The baseline \(\pm 1\) s.d. ranges, in RMSE times
+1,000, are 11.4 for the real-side surface and 1.4 for the Kimball surface. The
+baseline \(\pm 2\) s.d. ranges are 23.5 and 2.6. At the high-Kimball stress
+center, the corresponding ranges are 37.0 and 54.7 for \(\pm 1\) s.d., and
+53.9 and 210.6 for \(\pm 2\) s.d. All cells in the high-Kimball surfaces
+are accepted; one isolated baseline Kimball cell fails ROM1 construction and
+is filled only for plotting, while the raw CSV records the failure.
 
 \item[Gal\'i validation package.]
 \begin{verbatim}

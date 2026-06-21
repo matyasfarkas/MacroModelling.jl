@@ -259,11 +259,7 @@ function draw_shocks(rng::AbstractRNG, model, total_periods::Int,
     if isempty(structural_idx_local)
         return shocks
     end
-    sigmas = ones(length(structural_idx_local))
-    for (i, idx) in enumerate(structural_idx_local)
-        sigmas[i] = MacroModelling.sep_irf_shock_std(model, shock_names_local[idx])
-    end
-    sigmas .*= shock_scale
+    sigmas = fill(shock_scale, length(structural_idx_local))
     shocks[structural_idx_local, :] .= Diagonal(sigmas) * randn(rng, length(structural_idx_local), total_periods)
     return shocks
 end
@@ -312,7 +308,7 @@ function run_single_trajectory(model, params::Vector{Float64}, shock_scale::Floa
             sep_lm_lambda_max = 1e4,
             sep_shock_scale  = 1.0,
             sep_accept_tol   = sep_accept_tol,
-            shock_scaling    = :parameter,
+            shock_scaling    = :none,
             shocks           = shocks,
             random_seed      = trajectory_seed,
             silent           = !verbose,

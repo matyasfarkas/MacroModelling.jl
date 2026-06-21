@@ -553,6 +553,7 @@ function simulate_sep_extended_path(
                sep_lm_lambda_min = sep_lm_lambda_min,
                sep_lm_lambda_max = sep_lm_lambda_max,
                sep_shock_scale = shock_scale,
+               sep_shock_scaling = shock_scaling,
                sep_initial_guess = initial_guess,
                sep_initial_state = state_col,
                sep_deterministic_shocks = shock_seq,

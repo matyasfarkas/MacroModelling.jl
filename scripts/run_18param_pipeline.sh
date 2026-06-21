@@ -53,7 +53,7 @@ echo "=== Step 3: Synthetic Data Generation ==="
 echo "Started: $(date)"
 julia --project=. scripts/hlt_sep_surrogate_synthetic_data.jl \
     --sample-length=184 --burn-in=100 \
-    --shock-scaling=parameter --shock-scale=0.1 \
+    --shock-scaling=none --shock-scale=0.1 \
     --sep-horizon=20 --sep-order=1 --sep-nnodes=3 \
     --sep-maxit=200 --sep-tol=1e-5 \
     --sep-linear-solver=normal_equations \

@@ -54,6 +54,7 @@ struct SEPSolverOptions
     tol::Float64         # Convergence tolerance
     verbose::Bool        # Print iteration info
     shock_scale::Float64 # Scale factor for GH nodes
+    shock_scaling::Symbol # :none for unit structural shocks, :parameter for z_<shock>-scaled shocks
     sparse_tree::Bool    # Use fishbone sparse tree (default: false for full tree)
     linear_solver::Symbol # Linear solve strategy for Newton step
     fallback_solver::Union{Symbol,Nothing} # Optional fallback solver when stalled
@@ -96,6 +97,7 @@ struct SEPSolverOptions
         tol=1e-7,
         verbose=true,
         shock_scale=1.0,
+        shock_scaling::Symbol=:none,
         sparse_tree=false,
         # OPTIMIZATION Wave 4: QR decomposition 30-60% faster for sparse Jacobians
         # Typical SEP Jacobian: nnz < 1% (3M entries / 30M total)
@@ -144,6 +146,7 @@ struct SEPSolverOptions
         @assert lm_lambda_scale > 1 "lm_lambda_scale must be > 1 (got $lm_lambda_scale)"
         @assert lm_lambda_min > 0 "lm_lambda_min must be > 0 (got $lm_lambda_min)"
         @assert lm_lambda_max >= lm_lambda "lm_lambda_max must be >= lm_lambda (got $lm_lambda_max)"
+        @assert shock_scaling ∈ [:none, :parameter] "shock_scaling must be :none or :parameter (got $shock_scaling)"
         # Validation
         if !isnothing(deterministic_shocks)
             @assert size(deterministic_shocks, 1) == periods "Deterministic shock sequence must have $periods rows (got $(size(deterministic_shocks, 1)))"
@@ -155,7 +158,7 @@ struct SEPSolverOptions
         @assert hmc_leapfrog_steps >= 1 "hmc_leapfrog_steps must be >= 1 (got $hmc_leapfrog_steps)"
         @assert hmc_step_size > 0 "hmc_step_size must be > 0 (got $hmc_step_size)"
         @assert obc_penalty_weight > 0 "obc_penalty_weight must be > 0 (got $obc_penalty_weight)"
-        new(periods, order, nnodes, maxit, tol, verbose, shock_scale, sparse_tree,
+        new(periods, order, nnodes, maxit, tol, verbose, shock_scale, shock_scaling, sparse_tree,
             linear_solver, fallback_solver, stall_iters, stall_rel_tol, stall_abs_tol,
             line_search, line_search_maxit, line_search_factor, line_search_min_alpha,
             lm_lambda, lm_lambda_scale, lm_lambda_min, lm_lambda_max, deterministic_shocks,
@@ -165,6 +168,47 @@ struct SEPSolverOptions
             subdiff_alpha_tol, subdiff_verbose,
             enforce_obc, obc_penalty_weight)
     end
+end
+
+function _sep_shock_covariance(𝓂::ℳ,
+                               parameters::AbstractVector{<:Real},
+                               stochastic_idx,
+                               shock_names;
+                               shock_scaling::Symbol = :none,
+                               verbose::Bool = false)
+    shock_scaling in (:none, :parameter) ||
+        error("Unsupported SEP shock scaling: $(shock_scaling). Use :none or :parameter.")
+
+    dε = length(stochastic_idx)
+    Σ = zeros(Float64, dε, dε)
+
+    for (i, shock_pos) in enumerate(stochastic_idx)
+        shock_name = shock_names[shock_pos]
+        if shock_scaling == :none
+            Σ[i, i] = 1.0
+            if verbose
+                @info "Shock $shock_name: σ = 1.0 (unit structural innovation)"
+            end
+            continue
+        end
+
+        param_name = Symbol("z_", shock_name)
+        param_idx = findfirst(==(param_name), 𝓂.parameters)
+        if param_idx !== nothing
+            σ = Float64(parameters[param_idx])
+            Σ[i, i] = σ^2
+            if verbose
+                @info "Shock $shock_name: σ = $σ (from parameter $param_name)"
+            end
+        else
+            if verbose
+                @warn "Shock std parameter $param_name not found, using default 1.0"
+            end
+            Σ[i, i] = 1.0
+        end
+    end
+
+    return Σ
 end
 
 """
@@ -1717,29 +1761,14 @@ function sep_solve_mm!(
         end
     end
 
-    # Get shock covariance from model parameters
-    # MacroModelling stores shock std devs as parameters named "z_{shock_name}"
-    Σ = zeros(dε, dε)
-    for (i, shock_pos) in enumerate(stochastic_idx)
-        shock_name = shock_names[shock_pos]
-        # Look for parameter z_{shock_name}
-        param_name = Symbol("z_", shock_name)
-        param_idx = findfirst(==(param_name), 𝓂.parameters)
-
-        if param_idx !== nothing
-            σ = parameters[param_idx]
-            Σ[i, i] = σ^2  # Variance = std^2
-            if opts.verbose
-                @info "Shock $shock_name: σ = $σ (from parameter $param_name)"
-            end
-        else
-            # Fallback to unit variance if parameter not found (Dynare-style)
-            if opts.verbose
-                @warn "Shock std parameter $param_name not found, using default 1.0"
-            end
-            Σ[i, i] = 1.0
-        end
-    end
+    # Get shock covariance for the expectation nodes. In this repository's
+    # estimated DSGE models, shock volatility parameters enter the equations
+    # directly (e.g. z_em / 100 * em[x]), so the default shock variable is a
+    # unit structural innovation. Use shock_scaling=:parameter only for models
+    # whose shock variables are already in scaled units.
+    Σ = _sep_shock_covariance(𝓂, parameters, stochastic_idx, shock_names;
+                              shock_scaling = opts.shock_scaling,
+                              verbose = opts.verbose)
 
     if opts.verbose
         @info "Shock covariance matrix Σ:" Σ

@@ -378,11 +378,7 @@ function draw_shocks_for_model(rng_local::AbstractRNG, model, total_periods::Int
     obc_mask = contains.(string.(shock_names_local), "ᵒᵇᶜ")
     structural_idx = findall(!, obc_mask)
     isempty(structural_idx) && return shocks
-    sigmas = ones(length(structural_idx))
-    for (i, idx) in enumerate(structural_idx)
-        sigmas[i] = MacroModelling.sep_irf_shock_std(model, shock_names_local[idx])
-    end
-    sigmas .*= shock_scale
+    sigmas = fill(shock_scale, length(structural_idx))
     shocks[structural_idx, :] .= Diagonal(sigmas) * randn(rng_local, length(structural_idx), total_periods)
     return shocks
 end
@@ -527,7 +523,7 @@ function run_sep_on_model(mdl, shocks_matrix, sim_periods, burn_in, seed_val;
                 sep_accept_tol   = sep_accept_tol,
                 sep_recovery     = attempt.recovery,
                 sep_recovery_scales = sep_recovery_scales,
-                shock_scaling    = :parameter,
+                shock_scaling    = :none,
                 shocks           = shocks_matrix,
                 random_seed      = seed_val,
                 silent           = true,

@@ -1,5 +1,6 @@
 using Test
 using Random
+using LinearAlgebra
 using MacroModelling
 
 println("="^80)
@@ -15,6 +16,47 @@ println("="^80)
         diag = MacroModelling._sep_inv_logdet_diagnostics(J; method = :svd_pseudodet)
         @test diag["sep_inv_logdet_method"] == "svd_pseudodet"
         @test diag["sep_inv_logdet_rank"] == 1
+    end
+
+    @testset "SEP inversion uses unit structural shocks by default" begin
+        include("../models/Smets_Wouters_2007_HLT_obc.jl")
+        sig_none = MacroModelling._sep_inv_shock_sigmas(
+            Smets_Wouters_2007_HLT_obc,
+            Smets_Wouters_2007_HLT_obc.parameter_values;
+            shock_scaling = :none,
+        )
+        sig_param = MacroModelling._sep_inv_shock_sigmas(
+            Smets_Wouters_2007_HLT_obc,
+            Smets_Wouters_2007_HLT_obc.parameter_values;
+            shock_scaling = :parameter,
+        )
+
+        structural_idx = findall(.!contains.(string.(Smets_Wouters_2007_HLT_obc.exo), "ᵒᵇᶜ"))
+        @test all(sig_none[structural_idx] .== 1.0)
+
+        em_idx = findfirst(==(:em), Smets_Wouters_2007_HLT_obc.exo)
+        z_em_idx = findfirst(==(:z_em), Smets_Wouters_2007_HLT_obc.parameters)
+        @test em_idx !== nothing
+        @test z_em_idx !== nothing
+        @test sig_param[em_idx] == abs(Smets_Wouters_2007_HLT_obc.parameter_values[z_em_idx])
+
+        cov_none = MacroModelling._sep_shock_covariance(
+            Smets_Wouters_2007_HLT_obc,
+            Smets_Wouters_2007_HLT_obc.parameter_values,
+            structural_idx,
+            Smets_Wouters_2007_HLT_obc.exo;
+            shock_scaling = :none,
+        )
+        cov_param = MacroModelling._sep_shock_covariance(
+            Smets_Wouters_2007_HLT_obc,
+            Smets_Wouters_2007_HLT_obc.parameter_values,
+            structural_idx,
+            Smets_Wouters_2007_HLT_obc.exo;
+            shock_scaling = :parameter,
+        )
+        @test diag(cov_none) == ones(length(structural_idx))
+        em_struct_idx = findfirst(==(em_idx), structural_idx)
+        @test cov_param[em_struct_idx, em_struct_idx] == Smets_Wouters_2007_HLT_obc.parameter_values[z_em_idx]^2
     end
 
     include("../models/RBC_Dynare.jl")
@@ -57,6 +99,7 @@ println("="^80)
         @test diag isa AbstractDict
         @test get(diag, "status", nothing) == "ok"
         @test get(diag, "kind", nothing) == "sep_inversion_filter"
+        @test get(diag, "sep_inv_shock_scaling", nothing) == "none"
         @test get(diag, "n_periods", 0) == size(data, 2)
         @test get(diag, "sep_order", nothing) !== nothing
     end
@@ -106,6 +149,7 @@ println("="^80)
             sep_inv_lambda = 1e-4,
             sep_inv_predict_tol = 1e-9,
             sep_inv_logdet_method = :svd_pseudodet,
+            sep_inv_shock_scaling = :parameter,
         )
 
         @test isfinite(ll)
@@ -120,5 +164,6 @@ println("="^80)
         @test get(diag, "sep_inv_maxit", nothing) == 8
         @test get(diag, "sep_inv_predict_tol", nothing) == 1e-9
         @test get(diag, "sep_inv_logdet_method", nothing) == "svd_pseudodet"
+        @test get(diag, "sep_inv_shock_scaling", nothing) == "parameter"
     end
 end
