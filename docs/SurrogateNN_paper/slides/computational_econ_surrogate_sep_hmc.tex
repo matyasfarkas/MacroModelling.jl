@@ -102,7 +102,7 @@
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Main Takeaway First}
-\claim{Estimate with a switching solution-order likelihood.}
+\claim{Use the linear solution unless the likelihood needs the nonlinear correction.}
 
 \vspace{1.1em}
 \begin{columns}[T,onlytextwidth]
@@ -110,24 +110,24 @@
 \textbf{What I do}
 
 \softline
-I start each likelihood evaluation from ROM1, switch in the learned nonlinear
-correction only on validated support, and keep direct SEP as the teacher and benchmark.
+Each period starts from ROM1. A neural net adds only the SEP--ROM1 residual,
+and only where the training support says that correction is reliable.
 \end{column}
 \begin{column}{0.48\textwidth}
 \textbf{Why it matters}
 
 \softline
-This puts the order of approximation inside the likelihood: cheap where the
-model is locally linear, richer where the posterior asks for nonlinear dynamics.
+The nonlinear solver is not called inside HMC. The sampler sees one smooth
+likelihood, while the likelihood records whether each period used ROM1 or ROM1+NN.
 \end{column}
 \end{columns}
 
-\smallnote{The contribution is computational and econometric: the sampler sees one differentiable target, while the solution rule switches between ROM1, ROM1+NN, and direct SEP benchmark calls.}
+\smallnote{Frontier contribution: a differentiable likelihood whose solution order is observed period by period: linear where it is enough, nonlinear where it improves the likelihood, direct SEP as the teacher and benchmark.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{The Intuition: Precompute the Hard Object}
-\claim{A surrogate is a modern lookup table for a hard economic function.}
+\claim{A surrogate is useful only when we are clear about the hard function it replaces.}
 
 \vspace{0.2em}
 \begin{columns}[T,onlytextwidth]
@@ -150,7 +150,7 @@ model is locally linear, richer where the posterior asks for nonlinear dynamics.
 \vspace{0.55em}
 \begin{center}
 \normalsize
-I use the same idea for a nonlinear DSGE transition map:
+Here the hard function is the SEP transition map:
 \[
   (\state_t,\eps_{t+1},\theta)
   \mapsto
@@ -163,7 +163,7 @@ I use the same idea for a nonlinear DSGE transition map:
 
 % -----------------------------------------------------------------------------
 \begin{frame}{The Hook}
-\claim{Nonlinear DSGE models are economically natural and computationally awkward.}
+\claim{The economics wants nonlinear dynamics; the posterior sampler wants speed.}
 
 \vspace{0.5em}
 \begin{columns}[T,onlytextwidth]
@@ -189,13 +189,13 @@ I use the same idea for a nonlinear DSGE transition map:
 
 \vspace{0.55em}
 \begin{center}
-\normalsize The question is not whether nonlinearities matter. The question is whether we can estimate them at scale.
+\normalsize The goal is not to replace linear methods everywhere. It is to know when linear is enough and when the nonlinear correction changes inference.
 \end{center}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Question}
-\claim{How can we estimate nonlinear DSGE models without solving the model at every posterior draw?}
+\claim{Can we move the nonlinear solve outside the posterior loop without losing the likelihood?}
 
 \vspace{0.8em}
 \textbf{The empirical problem}
@@ -211,7 +211,7 @@ and observables. The same structure makes nonlinear estimation expensive.
 \begin{itemize}
   \item Structural parameters with posterior uncertainty.
   \item Likelihood comparisons across nonlinear mechanisms.
-  \item Diagnostics that say when linearization is misleading.
+  \item Period-level diagnostics that say when linearization is enough.
 \end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
@@ -219,7 +219,7 @@ and observables. The same structure makes nonlinear estimation expensive.
 \begin{itemize}
   \item Repeated nonlinear solves.
   \item Numerical failures away from the mode.
-  \item Slow or noisy likelihood evaluations.
+  \item Slow, noisy, or non-differentiable likelihood evaluations.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -237,7 +237,7 @@ Approach & Main idea & Limitation for this talk \\
 Particle-filter likelihoods & Integrate nonlinear latent states & Accurate; costly and noisy in large systems \\
 Projection / OBC filtering & Approximate policy functions and split regimes & Stable near constraints; still costly in estimation \\
 Global NN solvers / MKR & Amortize nonlinear objects over states and parameters & Need likelihood validation and support checks \\
-\textbf{This paper} & \textbf{Switching ROM1/NN likelihood} & \textbf{Reported support and approximation error} \\
+\textbf{This paper} & \textbf{ROM1 by default, NN residual when supported} & \textbf{A smooth HMC likelihood with reported support and error} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -245,7 +245,7 @@ Global NN solvers / MKR & Amortize nonlinear objects over states and parameters 
 \vspace{0.35em}
 \begin{center}
 \normalsize
-The gain is not ``NN instead of economics.'' The gain is \textbf{ROM1 first, NN on checked support, SEP as benchmark}.
+The neural net is not the model. It is the correction to the linear solution, trained against SEP and used only where checked.
 \end{center}
 
 \sourcefoot{Closest strands: particle-filter likelihoods; projection and piecewise OBC methods such as Gust et al.; and neural-network global solvers such as Kase, Melosi, and Rottner (MKR).}
@@ -253,7 +253,7 @@ The gain is not ``NN instead of economics.'' The gain is \textbf{ROM1 first, NN 
 
 % -----------------------------------------------------------------------------
 \begin{frame}{The Computational Problem}
-\claim{The nonlinear solver sits in the wrong loop.}
+\claim{The nonlinear solve is too expensive to repeat at every HMC proposal.}
 
 \vspace{0.25em}
 \begin{center}
@@ -290,13 +290,13 @@ The gain is not ``NN instead of economics.'' The gain is \textbf{ROM1 first, NN 
   \text{MCMC proposal}
 \]
 \end{center}
-The expensive object is recomputed exactly where the sampler needs speed.
+The expensive object is recomputed at the point where the sampler needs thousands of fast, stable evaluations.
 \sourcefoot{Benchmark approaches put nonlinear filtering or solution work inside the likelihood loop; see Fern\'andez-Villaverde--Rubio-Ram\'irez (2007), Fern\'andez-Villaverde--Rubio-Ram\'irez--Schorfheide (2016), and Herbst--Schorfheide (2016).}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{The Solution in One Picture}
-\claim{The likelihood switches across a solution ladder, not across models.}
+\claim{One model, one likelihood, three solution orders.}
 
 \vspace{0.2em}
 \begin{columns}[T,onlytextwidth]
@@ -307,8 +307,8 @@ The expensive object is recomputed exactly where the sampler needs speed.
   box/.style={draw, rounded corners, thick, align=center, minimum height=0.72cm, minimum width=3.05cm, font=\scriptsize},
   arr/.style={-{Latex[length=2mm]}, thick}
 ]
-\node[box, fill=PaleBlue] (rom) {\textbf{1. ROM1}\\ cheap baseline};
-\node[box, fill=PaleGreen, below=of rom] (nn) {\textbf{2. ROM1 + NN}\\ validated residual correction};
+\node[box, fill=PaleBlue] (rom) {\textbf{1. ROM1}\\ use when enough};
+\node[box, fill=PaleGreen, below=of rom] (nn) {\textbf{2. ROM1 + NN}\\ use where nonlinear};
 \node[box, fill=PaleOrange, below=of nn] (sep) {\textbf{3. Direct SEP}\\ teacher and benchmark};
 \draw[arr] (rom) -- node[right,font=\tiny] {support says nonlinear} (nn);
 \draw[arr] (nn) -- node[right,font=\tiny] {benchmark where needed} (sep);
@@ -334,12 +334,12 @@ The expensive object is recomputed exactly where the sampler needs speed.
 \end{column}
 \end{columns}
 
-\smallnote{The object is a switching solution-order likelihood. The posterior tells us when first-order dynamics suffice and when nonlinear solution information matters.}
+\smallnote{The switch is inside the likelihood evaluation. The posterior draw does not choose a different model; it reveals where first-order dynamics suffice and where nonlinear solution information enters.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Algorithm: Switching Solution-Order Likelihood}
-\claim{The algorithm is a likelihood evaluator with an observed solution-order switch.}
+\claim{The algorithm returns a likelihood value and a record of which solution order was used.}
 
 \vspace{0.15em}
 \scriptsize
@@ -349,11 +349,11 @@ The expensive object is recomputed exactly where the sampler needs speed.
 \toprule
 Stage & Operation & Comparison to related methods \\
 \midrule
-Offline 1 & Solve SEP at design triples \((\state,\eps,\theta)\). & SEP teacher, not an online likelihood engine. \\
-Offline 2 & Compute ROM1 at identical triples and train \(r_\phi\approx g^\sep-g^\rom\). & Residual surrogate, not a full policy-function or likelihood surrogate. \\
-Online 1 & Given \(\theta\), invert or sample shocks and compute support score \(d_t\). & Filter-free shock treatment follows Childers et al.; inversion gives the medium-scale profile target. \\
-Online 2 & Evaluate \(\widehat g_t=g^\rom_\theta+\omega(d_t)r_\phi\). & Solution order switches by date: ROM1 unless validated nonlinear correction is supported. \\
-Online 3 & Accumulate likelihood and use HMC/NUTS on the differentiable target. & HMC sees one smooth target plus diagnostics on where nonlinear information enters. \\
+Offline 1 & Solve SEP at design triples \((\state,\eps,\theta)\). & SEP is the expensive teacher, not the online likelihood engine. \\
+Offline 2 & Compute ROM1 at the same triples and train \(r_\phi\approx g^\sep-g^\rom\). & The NN learns only what the linear solution misses. \\
+Online 1 & Given \(\theta\), recover or sample shocks and compute support score \(d_t\). & Filter-free shock treatment follows Childers et al.; inversion gives the medium-scale profile target. \\
+Online 2 & Evaluate \(\widehat g_t=g^\rom_\theta+\omega(d_t)r_\phi\). & If \(\omega_t\simeq0\), this is linear; if \(\omega_t\simeq1\), the SEP residual is active. \\
+Online 3 & Accumulate likelihood and use HMC/NUTS on the differentiable target. & HMC sees one smooth target; the output records where nonlinear information enters. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -363,7 +363,7 @@ Online 3 & Accumulate likelihood and use HMC/NUTS on the differentiable target. 
 
 % -----------------------------------------------------------------------------
 \begin{frame}{What Exactly Is Approximated?}
-\claim{The neural net approximates the solved transition map, not the model equations.}
+\claim{The NN approximates a residual map, not preferences, constraints, or equilibrium conditions.}
 
 \vspace{0.35em}
 \begin{columns}[T,onlytextwidth]
@@ -406,19 +406,20 @@ is imposed by SEP offline, including expectations and constraints.
 
 \vspace{0.45em}
 \begin{center}
-\small This distinction matters for econometrics: the approximation is a controlled change to the likelihood, not a new behavioral model.
+\small If ROM1 is exact, the residual is zero. If nonlinear dynamics matter, the residual is precisely the object the NN has to learn.
 \end{center}
 \sourcefoot{Relative to deep equilibrium nets and NN policy-function solvers (Maliar--Maliar--Winant, 2021; Azinovic--Gaegauf--Scheidegger, 2022), the network here emulates the SEP-implied transition residual used by the likelihood.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{How the Switching Rule Operates}
-\claim{The gate chooses the solution order period by period.}
+\claim{The gate adds the NN correction only on checked support.}
 
-\vspace{0.15em}
+\vspace{-0.15em}
 \begin{center}
+\resizebox{0.88\textwidth}{!}{%
 \begin{tikzpicture}[
-  node distance=0.54cm and 0.74cm,
+  node distance=0.48cm and 0.66cm,
   box/.style={draw, rounded corners, thick, align=center, font=\scriptsize, minimum height=0.64cm, minimum width=2.0cm},
   wide/.style={draw, rounded corners, thick, align=center, font=\scriptsize, minimum height=0.76cm, minimum width=2.55cm},
   arr/.style={-{Latex[length=1.8mm]}, thick},
@@ -437,9 +438,10 @@ is imposed by SEP offline, including expectations and constraints.
 \draw[arr] (nn) -- (like);
 \draw[arr] (romonly) -- (like);
 \end{tikzpicture}
+}
 \end{center}
 
-\vspace{0.05em}
+\vspace{-0.1em}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{0.50\textwidth}
 \small
@@ -456,29 +458,22 @@ is imposed by SEP offline, including expectations and constraints.
 \small
 \textbf{What the switch reports}
 \begin{itemize}
-  \item Where ROM1 is enough.
-  \item Where the NN correction is active.
-  \item Which periods need direct SEP benchmark checks.
+  \item ROM1 periods.
+  \item SEP--ROM1 correction periods.
+  \item Weak-support periods to benchmark.
 \end{itemize}
 \end{column}
 \end{columns}
 
-\vspace{-0.05em}
+\vspace{-0.2em}
 \begin{center}
-\begin{tikzpicture}[x=0.40cm,y=0.28cm]
-\draw[black!35] (0,0) -- (20.5,0);
-\foreach \x/\w/\c in {0/4/PaleBlue,4.1/2.1/PaleGreen,6.3/5.0/PaleBlue,11.5/2.4/PaleOrange,14.1/3.4/PaleGreen,17.7/2.2/PaleBlue}
-  \draw[fill=\c,draw=black!35] (\x,-0.25) rectangle ++(\w,0.5);
-\node[font=\tiny,anchor=west] at (0,-0.78) {mostly ROM1};
-\node[font=\tiny,anchor=west] at (4.1,-0.78) {NN correction};
-\node[font=\tiny,anchor=west] at (11.5,-0.78) {benchmark / weak support};
-\end{tikzpicture}
+\scriptsize Output: likelihood contribution plus period-level solution-order diagnostic.
 \end{center}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 0: Choose the Estimation Target}
-\claim{Be explicit about the object before approximating it.}
+\claim{First define the likelihood; then decide how to approximate its transition map.}
 
 \vspace{0.25em}
 \[
@@ -505,18 +500,18 @@ is imposed by SEP offline, including expectations and constraints.
   \item Direct measurement-error likelihood or inversion/profile criterion.
   \item Which parameters vary in training and HMC.
   \item Parameter and shock support.
-  \item What is benchmarked with direct SEP.
+  \item Which regions are checked against direct SEP.
 \end{itemize}
 \end{column}
 \end{columns}
 
-\smallnote{The approximation must be judged relative to this target, not relative to a generic forecast exercise.}
+\smallnote{A surrogate that is accurate for one target need not be accurate for another. This is why the validation is tied to the likelihood, not only to one-step forecasts.}
 \sourcefoot{The target notation follows the nonlinear state-space estimation tradition in Fern\'andez-Villaverde--Rubio-Ram\'irez (2007), Fern\'andez-Villaverde--Rubio-Ram\'irez--Schorfheide (2016), and Herbst--Schorfheide (2016).}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 1: Solve the Nonlinear Model Offline}
-\claim{Use SEP as an offline teacher.}
+\claim{Use SEP where accuracy matters most: to create the training target and benchmark cells.}
 
 \vspace{0.2em}
 For sampled triples \((\state,\eps,\theta)\), compute the nonlinear transition
@@ -539,7 +534,7 @@ For sampled triples \((\state,\eps,\theta)\), compute the nonlinear transition
 \begin{itemize}
   \item Keeps the nonlinear equations.
   \item Handles occasionally binding constraints.
-  \item Gives direct objects for validation.
+  \item Produces the solved transition that ROM1 and the NN are compared to.
 \end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
@@ -557,7 +552,7 @@ For sampled triples \((\state,\eps,\theta)\), compute the nonlinear transition
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 2: Compute the Linear Baseline at the Same Points}
-\claim{Use the linear solution as the baseline, not as the answer.}
+\claim{Linearization is the control variate: cheap, stable, and often already right.}
 
 \vspace{0.4em}
 At the same inputs, compute
@@ -569,8 +564,8 @@ At the same inputs, compute
 \textbf{Reason}
 
 \softline
-The linear solution is cheap and often accurate near the steady state. The NN
-should not waste capacity relearning what ROM1 already does well.
+ROM1 is fast and often accurate near the steady state. The NN should learn only
+the forecast error of ROM1 relative to SEP.
 
 \vspace{0.4em}
 \begin{center}
@@ -580,7 +575,7 @@ should not waste capacity relearning what ROM1 already does well.
   =
   \text{linear baseline}
   +
-  \text{nonlinear correction}.
+  \text{learned nonlinear correction}.
 \]
 \end{center}
 \sourcefoot{ROM1 uses the perturbation/linear rational-expectations workhorse logic associated with Sims (2002) and the perturbation literature; here it is a control variate and fallback, not the final nonlinear estimator.}
@@ -588,7 +583,7 @@ should not waste capacity relearning what ROM1 already does well.
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 3: Train the Residual Surrogate}
-\claim{Train the nonlinear correction.}
+\claim{Train the smallest object that carries the nonlinearity.}
 
 \vspace{0.4em}
 Train \(r_{\phi}\) on the residual
@@ -606,7 +601,7 @@ Train \(r_{\phi}\) on the residual
 \textbf{Why residual learning}
 \begin{itemize}
   \item Smaller target.
-  \item Easier extrapolation around the linear region.
+  \item Zero target where ROM1 is already right.
   \item Directly measures what linearization misses.
 \end{itemize}
 \end{column}
@@ -626,7 +621,7 @@ Train \(r_{\phi}\) on the residual
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 4: Validate the Surrogate Before Estimation}
-\claim{Do not estimate before the surrogate passes basic checks.}
+\claim{The gate can only be trusted where direct SEP checks say the residual is accurate.}
 
 \vspace{0.25em}
 \begin{columns}[T,onlytextwidth]
@@ -639,13 +634,13 @@ Train \(r_{\phi}\) on the residual
   \item Held-out direct SEP points.
   \item RMSE and relative RMSE by observable.
   \item Regime-specific accuracy: binding, non-binding, near-boundary.
-  \item Finite likelihood and finite-gradient checks.
+  \item Finite likelihood and finite-gradient checks for HMC.
 \end{itemize}
 \vspace{0.25em}
 \textbf{Rule}
 
 \softline
-The surrogate is only credible on the support where it has been checked.
+Outside checked support, fall back toward ROM1 or benchmark the draw with direct SEP.
 \end{column}
 \end{columns}
 \sourcefoot{The validation logic follows surrogate-model practice: out-of-sample errors, support checks, and posterior-level diagnostics; compare Kennedy--O'Hagan (2001), Peherstorfer--Willcox--Gunzburger (2018), and HMC diagnostics in Hoffman--Gelman (2014).}
@@ -653,7 +648,7 @@ The surrogate is only credible on the support where it has been checked.
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 5: Build the Likelihood}
-\claim{The likelihood determines what the validation has to prove.}
+\claim{The direct benchmark and the medium-scale target answer different questions.}
 
 \vspace{0.15em}
 \begin{columns}[T,onlytextwidth]
@@ -675,7 +670,7 @@ The surrogate is only credible on the support where it has been checked.
   \obs_t;h(\state_t^m;\theta),\Sigma_y
   \right).
 \]
-\scriptsize This is the clean synthetic-data benchmark: direct SEP-HMC versus surrogate-HMC.
+\scriptsize This is the clean synthetic-data benchmark: does surrogate-HMC recover the same posterior as direct SEP-HMC?
 \end{column}
 \begin{column}{0.46\textwidth}
 \textbf{Medium-scale profiled target}
@@ -691,7 +686,7 @@ The surrogate is only credible on the support where it has been checked.
   +
   \omega_t r_{\phi}(\state_t,\widehat{\eps}_{t+1},\theta).
 \]
-\scriptsize Here inversion fixes shocks period by period; the gate reports when the criterion relies on the nonlinear correction.
+\scriptsize Here shocks are recovered period by period. The gate reports when the likelihood uses the nonlinear correction rather than ROM1.
 \end{column}
 \end{columns}
 \sourcefoot{The direct validation target uses the filter-free latent-shock formulation of Childers et al. (2022). The profiled target differs from particle/Kalman filtering by recovering shocks period by period and reporting the solution-order switch.}
@@ -699,7 +694,7 @@ The surrogate is only credible on the support where it has been checked.
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Step 6: Sample Parameters with HMC}
-\claim{The differentiable surrogate is what makes HMC practical.}
+\claim{Filter-free HMC moves parameters and shocks together through a differentiable recursion.}
 
 \vspace{0.05em}
 \[
@@ -722,7 +717,7 @@ The surrogate is only credible on the support where it has been checked.
 \end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
-\textbf{What HMC checks}
+\textbf{What HMC tests}
 \begin{itemize}
   \item The recursion is differentiable.
   \item Gradients are available through \(\widehat g_t\).
@@ -732,13 +727,13 @@ The surrogate is only credible on the support where it has been checked.
 \end{column}
 \end{columns}
 
-\smallnote{The validation standard is posterior agreement within Monte Carlo error, not only a low one-step prediction error.}
+\smallnote{For validation, a low surrogate RMSE is not enough. The posterior from surrogate-HMC must agree with the posterior from direct SEP-HMC within Monte Carlo error.}
 \sourcefoot{Filter-free per-period likelihood evaluation follows Childers et al. (2022); NUTS/HMC diagnostics follow Hoffman--Gelman (2014) and Betancourt (2017).}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Diagnostics: Report What the Switch Uses}
-\claim{Diagnostics are reporting requirements, not a separate estimator step.}
+\claim{The likelihood should leave an audit trail: where was it linear, where nonlinear, and where unsupported?}
 
 \vspace{0.35em}
 \begin{table}
@@ -759,13 +754,13 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 
 \vspace{0.4em}
 \begin{center}
-\small The replication package should make these checks mechanical, not narrative.
+\small The replication package should make these checks mechanical: every likelihood run should report support, gate weights, residual error, gradients, and HMC behavior.
 \end{center}
 \sourcefoot{These diagnostics distinguish the method from black-box neural estimation: the likelihood reports support, residual error, gradients, HMC behavior, and direct SEP checks where feasible.}
 \end{frame}
 
 \begin{frame}{Validation: A Hard Nonlinearity}
-\claim{The validation needs a region where linearization actually fails.}
+\claim{Validation is meaningful only where the nonlinear model visibly differs from ROM1.}
 
 \vspace{-0.05em}
 \begin{center}
@@ -776,7 +771,7 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Validation: Same Inputs, Three Objects}
-\claim{A convincing validation holds the shock, state, and parameter vector fixed.}
+\claim{Hold the inputs fixed, then ask what each solution order predicts.}
 
 \vspace{0.15em}
 \begin{center}
@@ -811,7 +806,7 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 \]
 \end{column}
 \begin{column}{0.47\textwidth}
-\textbf{Econometric question}
+\textbf{Posterior question}
 \[
   p_{\phi}(\theta\mid y_{1:T})
   \approx
@@ -821,13 +816,13 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 \end{columns}
 
 \begin{center}
-\parbox{0.90\linewidth}{\centering\scriptsize This is why I report solver support, held-out residuals, finite gradients, HMC diagnostics, and direct SEP posterior comparisons separately.}
+\parbox{0.90\linewidth}{\centering\scriptsize The first question tests the map. The second tests the likelihood. A conference audience should see both.}
 \end{center}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Validation: What the Small Model Shows}
-\claim{The small model is a controlled benchmark for the likelihood pipeline.}
+\claim{The small model asks whether the full estimation loop can recover known nonlinear parameters.}
 
 \vspace{0.4em}
 \begin{columns}[T,onlytextwidth]
@@ -843,7 +838,7 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 \begin{column}{0.48\textwidth}
 \textbf{Interpretation}
 \begin{itemize}
-  \item The pipeline can recover parameters in a controlled nonlinear setting.
+  \item The pipeline can recover parameters when the data are generated by the nonlinear model.
   \item The validation is local to the model and support.
   \item It is a feasibility proof, not a universal theorem.
 \end{itemize}
@@ -854,7 +849,7 @@ Direct SEP checks & Does SEP confirm key cells? & Unsupported extrapolation \\
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Preliminary Application: Smets--Wouters}
-\claim{The medium-scale model is where the computational problem becomes real.}
+\claim{Smets--Wouters is the stress test: many states, many shocks, and several nonlinear mechanisms.}
 
 \vspace{0.4em}
 \textbf{Empirical laboratory}
@@ -870,7 +865,7 @@ utilization, Kimball pricing and wages, and occasionally binding constraints.
 \begin{itemize}
   \item Standard empirical DSGE laboratory.
   \item Rich enough to stress nonlinear mechanisms.
-  \item Economically interpretable diagnostic shifts.
+  \item Mechanisms are interpretable: investment, utilization, pricing, wages, constraints.
 \end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
@@ -878,7 +873,7 @@ utilization, Kimball pricing and wages, and occasionally binding constraints.
 \begin{itemize}
   \item Higher-dimensional state.
   \item Fragile nonlinear solves.
-  \item Strong need for out-of-support diagnostics.
+  \item Strong need to know whether posterior draws stay inside checked support.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -886,7 +881,7 @@ utilization, Kimball pricing and wages, and occasionally binding constraints.
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Preliminary HLT Evidence}
-\claim{Near the posterior region, the largest local curvature is on the real side.}
+\claim{Near the posterior region, ROM1's largest SEP error comes from real-side curvature.}
 
 \vspace{-0.05em}
 \begin{center}
@@ -897,7 +892,7 @@ utilization, Kimball pricing and wages, and occasionally binding constraints.
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Preliminary Stress Test: Kimball Can Matter Away From the Posterior Region}
-\claim{Kimball curvature can dominate after moving to a deliberately high-curvature neighborhood.}
+\claim{Kimball curvature matters in a high-curvature neighborhood, but that is not the posterior region.}
 
 \vspace{0.35em}
 \begin{columns}[T,onlytextwidth]
@@ -915,15 +910,15 @@ neighborhood, Kimball curvature can dominate the local forecast-error surface.
 \textbf{What this means}
 
 \softline
-The investment-channel diagnostic is a posterior-region finding, not a global
-claim about every DSGE calibration.
+The posterior-region result says where the likelihood needs nonlinear help in
+this estimation problem. It is not a claim that Kimball curvature never matters.
 \end{column}
 \end{columns}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Computational Accounting}
-\claim{The computational gain is a switched target with amortized nonlinear solves.}
+\claim{The computational gain comes from paying the nonlinear price only once, then using it selectively.}
 
 \vspace{0.35em}
 \begin{table}
@@ -936,7 +931,7 @@ Task & Solution order & Role \\
 SEP solves & benchmark order & expensive teacher \\
 ROM1 solution & first order & cheap default \\
 ROM1 + NN residual & switched-in order & nonlinear correction \\
-Gate/support rule & estimator & chooses order by date \\
+Gate/support rule & reporting rule & chooses order by date \\
 HMC & posterior sampler & explores switched target \\
 \bottomrule
 \end{tabular}
@@ -944,13 +939,13 @@ HMC & posterior sampler & explores switched target \\
 
 \vspace{0.55em}
 \begin{center}
-\normalsize The win is not only offline versus online.\\
-The win is that the estimator changes solution order only where support has been checked.
+\normalsize The online estimator is cheap because ROM1 carries the easy part.\\
+The NN is valuable because it adds only the nonlinear part SEP teaches offline.
 \end{center}
 \end{frame}
 
 \begin{frame}{Preliminary Evidence: What the Diagnostics Say}
-\claim{The evidence is preliminary, but the diagnostics are informative.}
+\claim{The current evidence supports the pipeline, while the full posterior run is still being extended.}
 
 \vspace{0.45em}
 \begin{columns}[T,onlytextwidth]
@@ -970,7 +965,7 @@ The win is that the estimator changes solution order only where support has been
   \item The switching likelihood is operational in controlled settings.
   \item The medium-scale evidence should be read as diagnostic, not final.
   \item The full 18-parameter production posterior is still being extended.
-  \item The relevant question is posterior-region support, not average fit.
+  \item The relevant question is whether the posterior lies on checked support.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -978,20 +973,21 @@ The win is that the estimator changes solution order only where support has been
 
 % -----------------------------------------------------------------------------
 \begin{frame}{Closing Takeaways}
-\claim{The method is promising because the approximation is explicit and checkable.}
+\claim{A good nonlinear DSGE estimator should know when not to be nonlinear.}
 
 \vspace{0.35em}
 \begin{enumerate}
   \item The computational obstacle is clear: global nonlinear solves are too
         expensive for the inner likelihood loop.
-  \item The proposed solution is simple: use ROM1 first, switch in the learned
-        SEP residual where support has been checked, and keep direct SEP as the benchmark.
-  \item The small nonlinear validation checks posterior agreement, not only fit.
+  \item The solution is simple: ROM1 does the cheap part; the NN adds the
+        SEP residual only where support has been checked.
+  \item Direct SEP remains the teacher and benchmark, not the online estimator.
+  \item The small nonlinear validation checks posterior agreement, not only map fit.
   \item The preliminary Smets--Wouters evidence is useful because it is tied to
         solver support, residual errors, gradients, and HMC diagnostics.
 \end{enumerate}
 
-\smallnote{For this audience, the main object is not a black-box NN. It is a likelihood whose solution order is observed, gated, and benchmarked.}
+\smallnote{For this audience, the key object is not a black-box NN. It is a structural likelihood whose solution order is observed, gated, and benchmarked.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -1024,7 +1020,7 @@ Kase--Melosi--Rottner & Neural-network objects over states and parameters & Fast
 
 \vspace{0.45em}
 \begin{center}
-\small The shared idea is amortization. The distinction is the likelihood object: I train a ROM1 residual against direct SEP and report posterior-support checks explicitly.
+\small The shared idea is amortization. The distinction is the likelihood object: I train the SEP--ROM1 residual, keep ROM1 as the default online transition, and report posterior-support checks explicitly.
 \end{center}
 \end{frame}
 
